@@ -1,0 +1,55 @@
+# スキル群自体の品質担保 — 設計原則
+
+本スキル群(dev-skills)を構成するドキュメントそのものの品質を担保するための設計原則。`meta-*` スキルはこの原則に従う。レビューの観点カタログは `./doc-perspectives.md` を正とする。
+
+## 1. 2 つの品質の対象(対象レベルとメタレベル)
+
+品質の対象を 2 つに分ける。両者は層(0/1/2)ではなく、同じ品質哲学を**適用する対象が違う 2 つの面**である。混同すると担保機構を取り違える(D-005)。
+
+- **成果物の品質(対象レベル)**: スキル群が**生成する成果物**(spec.md・tasks.md・release-report.md 等)。担保機構は既存で揃う: `../../dev-core/scripts/check.py`(機械検査)、各部品の内蔵文書ゲート(`../../dev-core/templates/doc-gate-prompt.md`)、承認パネル(`../../dev-core/references/review-perspectives.md` の文書ゲート系観点)。dev 分類が担う。
+- **スキル群自体の品質(メタレベル)**: スキル群**自体を構成するドキュメント**(`.claude/` 配下の SKILL・references・templates・agents・scripts、workflow 定義、`.meta/`、README)。本書と `meta-*`(meta 分類)が担う。
+
+後者は前者の**メタレベル(自己適用)**である。同じ品質哲学(コードが SSoT・承認ゲート・決定論的検査・観点レビュー)を、適用対象を「生成物」から「スキル群自体」へ向け直したもの。`meta-*` は 1 段上位からスキル群全体を入力データとして検査・生成する(一方向: `meta-*` → 対象)。
+
+本書はスキル群自体の品質(メタレベル)の設計原則の正本である。
+
+## 2. SSoT は `.claude`
+
+- `.claude/` 配下の実体(SKILL・references・templates・agents・scripts)と各 `workflow.json` が、**実際に実行される定義**であり、スキル群の唯一の正本(SSoT)とする。
+- 人間向けの俯瞰ドキュメント(`.meta/DESIGN.md`)は、この SSoT からの**導出物**であり従属する。両者が食い違ったら `.claude` を正とする。
+- 根拠: 本スキル群の中心思想「コードが SSoT、説明は導出」(`../../dev-core/references/source-driven.md`)を、スキル群自身に再帰適用する。実行される定義とは別に説明を手書きで二重管理すると、必ずドリフトする(今回の spec 移行で、状態名・ゲート名・参照の追随がリスクとして顕在化した)。
+
+## 3. DESIGN の 2 層分離
+
+`.meta/DESIGN.md` が持つ情報を性質で分け、SSoT を分離する。判断の根拠は `.claude` の手順本文からは導出できないため、生成物に含めると失われる。
+
+- **構造層 = `DESIGN.md`(導出・現状のみ)**: 構成要素・レイヤー構造・DFD・処理シーケンス。`.claude` から導出できる現状の構造だけを表す生成物。正本は `.claude`。`meta-doc` がテンプレート(`meta-doc/templates/design-template.md`)に沿って生成し、更新時は**全上書き**する。**手書きしない**(D-004)。
+- **判断層 = `.meta/decisions/`(手書き SSoT・履歴)**: 設計判断の根拠・経緯。`.claude` から導出できない。1 判断 1 ファイル(`D-<番号>-<スラグ>.md`)。必須節と索引の規約は `../../../../.meta/decisions/README.md` を正本とする(本書で再掲しない)。**人間が手書き**し、`meta-doc` は生成・改変しない。
+- `DESIGN.md` は判断・履歴を持たず、根拠が要る箇所は `decisions/` の ID(`D-###`)で参照する。
+
+## 4. 依存規律
+
+- **`dev-*` / `flow-*` / `ext-*` は `meta-*` を参照しない**。これらの SKILL・reference・template の本文に `meta-*` へのリンク・パスを書かない。
+- `meta-*` がこれらを走査・読解して検査・生成するのは「入力データ化」であり依存ではない(一方向: `meta-*` → 対象)。
+- `meta-*` は `dev-core` の汎用リファレンス(`notation.md`・`git-convention.md` 等)を読んでよい(`dev-*` が Layer 0 を読むのと同じ)。ただし**スキル群自体の品質に固有の観点・原則は `meta-core` 側に置き、`dev-core` に混ぜない**(`dev-*` が inject・参照で読める場所に置くと混線する)。
+- `meta-*` 相互は `meta-core` を共有正本として参照してよい。
+
+## 5. `meta-*` の構成
+
+- **meta-core**: スキル群自体の品質の正本(`references/`)と決定論スクリプト(`scripts/`)を持つ。`SKILL.md` は持たない(参照専用。`dev-core` と同型)。
+- **meta-check**: `.claude` 群の機械的整合検査。検査項目の正本は `../../meta-check/SKILL.md` 3.(参照の実在・frontmatter・inject 先の実在・依存規律・状態整合・部品名の実在・未記入マーカー・description のトリガ)であり、本書では再掲しない。決定論で判定できるものを対象とし、編集前の結果を基準に回帰(新規に増えた指摘)を区別できる。
+- **meta-review**: `./doc-perspectives.md` の観点による LLM レビュー(意味判断)。
+- **meta-doc**: `.claude` から `DESIGN.md` の構造層を生成・更新する。
+- 配布: `meta-*` は dev-skills リポジトリ自身の保守用のため、消費プロジェクトへは**配布しない**(`install.py core` は `meta-*` を除外し、`dev-*` / `flow-*` のみをハードコピーする。D-006)。`meta-*` は dev-skills リポジトリを直接開いて使う。
+
+## 6. 規律(厳守)
+
+- `DESIGN.md` を**手書きで直さない**(`meta-doc` 経由の全上書き。3.・D-004)。
+- 判断層(`decisions/`)は**人間が書く**。`meta-*` は生成・改変しない。
+- `dev-*` は `meta-*` を参照しない(4.)。
+- スキル群自体の品質に固有の観点を `dev-core` に混ぜない(4.)。
+
+## 7. 出典
+
+- 自己適用の根拠: `../../dev-core/references/source-driven.md`(コードが SSoT、説明は導出)。
+- 非対称依存の先例: 本スキル群の拡張規律(拡張は本体に依存してよいが、本体は拡張を知らない)。`meta-*` はこの向きをメタレイヤーへ延長したものである。

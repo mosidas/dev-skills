@@ -1,0 +1,149 @@
+{
+  "説明": "description のトリガ検査の仕様。trigger_check.py が読む。肯定例(should_trigger: true)は対象スキルが類似度 1 位になること、否定例(false)は語彙が近いが別スキルを呼ぶべき依頼で対象スキルが 1 位にならないことを求める。",
+  "cases": [
+    {
+      "id": "spec-pos-1",
+      "skill": "dev-spec",
+      "prompt": "作りたい機能の公開インターフェースとデータ構造を対話で決めて、受け入れ基準つきの仕様にまとめたい",
+      "should_trigger": true
+    },
+    {
+      "id": "spec-pos-2",
+      "skill": "dev-spec",
+      "prompt": "既存の spec.md を更新して契約を固め直したい",
+      "should_trigger": true
+    },
+    {
+      "id": "spec-neg-1",
+      "skill": "dev-spec",
+      "prompt": "確定済みの仕様をもとに実装タスクの一覧へ分解してほしい",
+      "should_trigger": false
+    },
+    {
+      "id": "decompose-pos-1",
+      "skill": "dev-decompose",
+      "prompt": "spec.md から実装タスク一覧を作り、変更するファイルの計画も立てて",
+      "should_trigger": true
+    },
+    {
+      "id": "decompose-pos-2",
+      "skill": "dev-decompose",
+      "prompt": "実装に入る前にタスクを依存関係つきで分解しておきたい",
+      "should_trigger": true
+    },
+    {
+      "id": "decompose-neg-1",
+      "skill": "dev-decompose",
+      "prompt": "作りたい API の入出力を壁打ちで決めて受け入れ基準を書きたい",
+      "should_trigger": false
+    },
+    {
+      "id": "implement-pos-1",
+      "skill": "dev-implement",
+      "prompt": "tasks.md のタスクを 1 件ずつ TDD で実装して、レビューと検証まで回して",
+      "should_trigger": true
+    },
+    {
+      "id": "implement-pos-2",
+      "skill": "dev-implement",
+      "prompt": "この設定変更を実装して。タスク定義は無いので必要なことは聞いて",
+      "should_trigger": true
+    },
+    {
+      "id": "implement-neg-1",
+      "skill": "dev-implement",
+      "prompt": "コードは変更せず、整合性を検査して指摘だけレポートしてほしい",
+      "should_trigger": false
+    },
+    {
+      "id": "release-pos-1",
+      "skill": "dev-release",
+      "prompt": "実装したものを本番へ出す前に出荷可否を判定して、ロールバック手順まで計画したい",
+      "should_trigger": true
+    },
+    {
+      "id": "release-pos-2",
+      "skill": "dev-release",
+      "prompt": "フィーチャーフラグと段階ロールアウトのリリース計画を作って",
+      "should_trigger": true
+    },
+    {
+      "id": "release-neg-1",
+      "skill": "dev-release",
+      "prompt": "実装したタスクの最終検証をレビューパネルで通したい",
+      "should_trigger": false
+    },
+    {
+      "id": "check-pos-1",
+      "skill": "dev-check",
+      "prompt": "コードベースの命名とパターンの一貫性、テストと実装の対応を read-only で点検して",
+      "should_trigger": true
+    },
+    {
+      "id": "check-pos-2",
+      "skill": "dev-check",
+      "prompt": "リファクタ前にコードの現状を検査して重大度つきのレポートがほしい",
+      "should_trigger": true
+    },
+    {
+      "id": "check-neg-1",
+      "skill": "dev-check",
+      "prompt": "dev-skills のスキル群自体の参照と依存規律を機械検査して",
+      "should_trigger": false
+    },
+    {
+      "id": "sdd-pos-1",
+      "skill": "flow-sdd",
+      "prompt": "SDD で進めて",
+      "should_trigger": true
+    },
+    {
+      "id": "sdd-pos-2",
+      "skill": "flow-sdd",
+      "prompt": "仕様から実装まで通しで、承認ゲートを挟みながら進めてほしい",
+      "should_trigger": true
+    },
+    {
+      "id": "sdd-neg-1",
+      "skill": "flow-sdd",
+      "prompt": "この 1 タスクだけ実装して",
+      "should_trigger": false
+    },
+    {
+      "id": "meta-check-pos-1",
+      "skill": "meta-check",
+      "prompt": "スキル群を編集したので、参照の実在と依存規律を機械検査して",
+      "should_trigger": true
+    },
+    {
+      "id": "meta-check-neg-1",
+      "skill": "meta-check",
+      "prompt": "SKILL.md の書き方が観点に照らして妥当かレビューして",
+      "should_trigger": false
+    },
+    {
+      "id": "meta-review-pos-1",
+      "skill": "meta-review",
+      "prompt": "SKILL や reference を観点カタログで意味的にレビューして、リライトの是非を評価して",
+      "should_trigger": true
+    },
+    {
+      "id": "meta-review-neg-1",
+      "skill": "meta-review",
+      "prompt": "変更したコードをレビューして受け入れ基準を満たすか判定して",
+      "should_trigger": false
+    },
+    {
+      "id": "meta-doc-pos-1",
+      "skill": "meta-doc",
+      "prompt": "スキルを追加したので DESIGN.md を .claude から生成し直して",
+      "should_trigger": true
+    },
+    {
+      "id": "meta-doc-neg-1",
+      "skill": "meta-doc",
+      "prompt": "スキル群の整合を検査してレポートして",
+      "should_trigger": false
+    }
+  ]
+}

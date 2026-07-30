@@ -1,0 +1,6 @@
+# テンプレート類を機械整形の対象から除外する。
+# 理由: コードフェンスの入れ子(````markdown 内の ```mermaid 等)や生の frontmatter を
+# 含むテンプレートに prettier を当てるとフェンスが破損し、構造が壊れる。
+# カタログ QG-1 の「非ソースの整形除外」を配布物自身に適用する。
+extensions/*/*/templates/
+.claude/skills/*/templates/
