@@ -25,3 +25,4 @@
 - [D-008](D-008-model-invocation-policy.md): 配布する部品をモデル自動起動の対象に置いたままにする
 - [D-009](D-009-glossary-as-durable-info.md): 恒久情報の配置に用語集を追加する
 - [D-010](D-010-script-unit-tests.md): スクリプトの単体テストを tests/ に置き、配布しない
+- [D-011](D-011-skill-groups-outside-dotclaude.md): 配布するスキルを `.claude` の外の用途グループへ置く

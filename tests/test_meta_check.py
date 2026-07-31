@@ -29,16 +29,16 @@ class MetaCheckTestCase(helpers.TempDirTestCase):
     def setUp(self) -> None:
         super().setUp()
         self.root = self.tmp / "repo"
-        (self.root / ".claude" / "skills").mkdir(parents=True)
-        (self.root / ".claude" / "agents").mkdir(parents=True)
+        (self.root / "dev" / "skills").mkdir(parents=True)
+        (self.root / "dev" / "agents").mkdir(parents=True)
 
     def add_skill(self, name: str, **kwargs) -> None:
-        d = self.root / ".claude" / "skills" / name
+        d = self.root / "dev" / "skills" / name
         d.mkdir(parents=True, exist_ok=True)
         (d / "SKILL.md").write_text(skill_md(name, **kwargs), encoding="utf-8")
 
     def add_agent(self, name: str, text: str | None = None) -> None:
-        path = self.root / ".claude" / "agents" / f"{name}.md"
+        path = self.root / "dev" / "agents" / f"{name}.md"
         path.write_text(text or skill_md(name), encoding="utf-8")
 
     def add_port(self, rel: str, text: str) -> None:
@@ -62,7 +62,7 @@ class FrontmatterTest(MetaCheckTestCase):
         self.assertEqual(self.run_check().findings, [])
 
     def test_name_と配置の不一致を_error_にする(self) -> None:
-        d = self.root / ".claude" / "skills" / "dev-spec"
+        d = self.root / "dev" / "skills" / "dev-spec"
         d.mkdir(parents=True)
         (d / "SKILL.md").write_text(skill_md("dev-other"), encoding="utf-8")
         report = self.run_check()
@@ -70,7 +70,7 @@ class FrontmatterTest(MetaCheckTestCase):
         self.assertAnyContains(self.messages(report.findings), "配置 'dev-spec' と一致しない")
 
     def test_引用符つきの_name_を不一致にしない(self) -> None:
-        d = self.root / ".claude" / "skills" / "dev-spec"
+        d = self.root / "dev" / "skills" / "dev-spec"
         d.mkdir(parents=True)
         (d / "SKILL.md").write_text(
             '---\nname: "dev-spec"\ndescription: 説明\n---\n', encoding="utf-8"
@@ -78,7 +78,7 @@ class FrontmatterTest(MetaCheckTestCase):
         self.assertEqual(self.run_check().count("error"), 0)
 
     def test_ブロックスカラーの_description_を欠落にしない(self) -> None:
-        d = self.root / ".claude" / "skills" / "dev-spec"
+        d = self.root / "dev" / "skills" / "dev-spec"
         d.mkdir(parents=True)
         (d / "SKILL.md").write_text(
             "---\nname: dev-spec\ndescription: >-\n  複数行の\n  説明\n---\n",
@@ -87,7 +87,7 @@ class FrontmatterTest(MetaCheckTestCase):
         self.assertEqual(self.run_check().count("error"), 0)
 
     def test_description_の欠落を_error_にする(self) -> None:
-        d = self.root / ".claude" / "skills" / "dev-spec"
+        d = self.root / "dev" / "skills" / "dev-spec"
         d.mkdir(parents=True)
         (d / "SKILL.md").write_text("---\nname: dev-spec\n---\n", encoding="utf-8")
         self.assertAnyContains(
@@ -95,7 +95,7 @@ class FrontmatterTest(MetaCheckTestCase):
         )
 
     def test_frontmatter_が無ければ_error(self) -> None:
-        d = self.root / ".claude" / "skills" / "dev-spec"
+        d = self.root / "dev" / "skills" / "dev-spec"
         d.mkdir(parents=True)
         (d / "SKILL.md").write_text("# 見出しだけ\n", encoding="utf-8")
         self.assertAnyContains(
@@ -103,7 +103,7 @@ class FrontmatterTest(MetaCheckTestCase):
         )
 
     def test_解析できない記法を_warning_で区別する(self) -> None:
-        d = self.root / ".claude" / "skills" / "dev-spec"
+        d = self.root / "dev" / "skills" / "dev-spec"
         d.mkdir(parents=True)
         (d / "SKILL.md").write_text(
             "---\nname: dev-spec\ndescription: 説明\nnested:\n  key: value\n---\n",
@@ -173,7 +173,7 @@ class ReferenceTest(MetaCheckTestCase):
 
     def test_実在する相対参照は指摘しない(self) -> None:
         self.add_skill("dev-spec", body="参照: `../dev-core/references/x.md`")
-        refs = self.root / ".claude" / "skills" / "dev-core" / "references"
+        refs = self.root / "dev" / "skills" / "dev-core" / "references"
         refs.mkdir(parents=True)
         (refs / "x.md").write_text("内容", encoding="utf-8")
         self.assertEqual(self.report(meta_check.check_references).findings, [])
@@ -224,7 +224,7 @@ class InjectTargetTest(MetaCheckTestCase):
 
 class StateConsistencyTest(MetaCheckTestCase):
     def add_flow(self, states: list[str], body: str) -> None:
-        d = self.root / ".claude" / "skills" / "flow-x"
+        d = self.root / "dev" / "skills" / "flow-x"
         d.mkdir(parents=True)
         (d / "workflow.json").write_text(
             json.dumps({"name": "x", "states": states}), encoding="utf-8"
@@ -304,13 +304,13 @@ class BaselineTest(MetaCheckTestCase):
 
 
 class CliTest(MetaCheckTestCase):
-    def test_root_に_claude_が無ければ停止する(self) -> None:
+    def test_root_にスキルのグループが無ければ停止する(self) -> None:
         proc = run_script(META_CHECK_PY, "--root", self.tmp / "missing")
         self.assertEqual(proc.returncode, 1)
-        self.assertIn(".claude が無い", proc.stderr)
+        self.assertIn("スキルのグループが無い", proc.stderr)
 
     def test_error_があれば終了コード_1(self) -> None:
-        d = self.root / ".claude" / "skills" / "dev-spec"
+        d = self.root / "dev" / "skills" / "dev-spec"
         d.mkdir(parents=True)
         (d / "SKILL.md").write_text(skill_md("dev-other"), encoding="utf-8")
         proc = run_script(META_CHECK_PY, "--root", self.root)

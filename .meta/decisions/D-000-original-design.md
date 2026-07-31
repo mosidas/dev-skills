@@ -33,7 +33,7 @@
 
 ### 1.2. コードが SSoT
 
-恒久的な真実(SSoT)はソースコードのリポジトリにのみ置く。プロジェクト内の文書は「恒久情報 / 中間生成物(実装完了で凍結)/ 注入知識(1.5)」の 3 分類に限り、これ以外の恒久文書を作ってはならない。分類の定義と規律の正本は [principles.md](../../.claude/skills/dev-core/references/principles.md) §1、恒久情報の配置規約の正本は [durable-info.md](../../.claude/skills/dev-core/references/durable-info.md)。
+恒久的な真実(SSoT)はソースコードのリポジトリにのみ置く。プロジェクト内の文書は「恒久情報 / 中間生成物(実装完了で凍結)/ 注入知識(1.5)」の 3 分類に限り、これ以外の恒久文書を作ってはならない。分類の定義と規律の正本は [principles.md](../../dev/skills/dev-core/references/principles.md) §1、恒久情報の配置規約の正本は [durable-info.md](../../dev/skills/dev-core/references/durable-info.md)。
 
 この転換の帰結として、ドキュメント SSoT の維持コスト(上流変更のカスケード再生成、コード↔文書の再整合)は構造ごと消える。凍結された中間生成物には整合を保つ義務がない。
 
@@ -58,7 +58,7 @@
 
 ### 1.6. 共通原則
 
-SDD に依存しない共通原則(根拠主義・コンテキスト効率・承認ゲート・決定論的補完・オーケストレーション安全則)を基盤(Layer 0)の原則として定める。各原則の定義の正本は [principles.md](../../.claude/skills/dev-core/references/principles.md)(オーケストレーション安全則の詳細は [orchestration-patterns.md](../../.claude/skills/dev-core/references/orchestration-patterns.md)「中核原則」)。
+SDD に依存しない共通原則(根拠主義・コンテキスト効率・承認ゲート・決定論的補完・オーケストレーション安全則)を基盤(Layer 0)の原則として定める。各原則の定義の正本は [principles.md](../../dev/skills/dev-core/references/principles.md)(オーケストレーション安全則の詳細は [orchestration-patterns.md](../../dev/skills/dev-core/references/orchestration-patterns.md)「中核原則」)。
 
 ## 2. レイヤー構造
 
@@ -168,7 +168,7 @@ dev-skills/
 
 成果物の中身のフォーマットは部品の `templates/` が定義する。部品間で参照し合う ID 記法(トレーサビリティ)は dev-core の記法規約に従う。
 
-port の配置(共通ルート `docs/dev/ports/`・自由階層)・frontmatter による宣言(`name` / `inject` / `condition`)・走査と選択の優先順は、**ポートマッピング**として [ports.md](../../.claude/skills/dev-core/references/ports.md) を正本とする。設計判断として本書に残すのは次の 2 点である。第一に、識別は配置パスではなく frontmatter の `name` で行い、ルート以下の階層を人間の整理用として意味から切り離す(利用側の整理の自由と機械照合の両立)。第二に、注入先は port 側が宣言する。これにより port の追加・削除・移動が 1 ファイルで完結し、スキル側の変更を要しない(開放閉鎖が port にも及ぶ)。選択結果は Implementation Notes 等に記録する(再現性の担保)。
+port の配置(共通ルート `docs/dev/ports/`・自由階層)・frontmatter による宣言(`name` / `inject` / `condition`)・走査と選択の優先順は、**ポートマッピング**として [ports.md](../../dev/skills/dev-core/references/ports.md) を正本とする。設計判断として本書に残すのは次の 2 点である。第一に、識別は配置パスではなく frontmatter の `name` で行い、ルート以下の階層を人間の整理用として意味から切り離す(利用側の整理の自由と機械照合の両立)。第二に、注入先は port 側が宣言する。これにより port の追加・削除・移動が 1 ファイルで完結し、スキル側の変更を要しない(開放閉鎖が port にも及ぶ)。選択結果は Implementation Notes 等に記録する(再現性の担保)。
 
 拡張を隠しディレクトリではなく `docs/` 配下に置くのは、Docs-as-Code(拡張も Git 管理・PR レビュー対象にする)を継承するためである。
 
@@ -178,7 +178,7 @@ port の配置(共通ルート `docs/dev/ports/`・自由階層)・frontmatter �
 
 ### 6.4. 中間生成物のライフサイクル
 
-サブ部品の出力(spec.md・tasks.md 等)は、実装完了までは上流の変更に応じて更新してよい。実装完了(状態機械の完了状態への到達)をもって凍結とし、以後は参照専用とする。実装後に判明した仕様との差異は、中間生成物ではなくコードと恒久情報(テスト・ADR 等)へ反映する。凍結の機械的な表現と検査の正本は [static-check.md](../../.claude/skills/dev-core/references/static-check.md)。
+サブ部品の出力(spec.md・tasks.md 等)は、実装完了までは上流の変更に応じて更新してよい。実装完了(状態機械の完了状態への到達)をもって凍結とし、以後は参照専用とする。実装後に判明した仕様との差異は、中間生成物ではなくコードと恒久情報(テスト・ADR 等)へ反映する。凍結の機械的な表現と検査の正本は [static-check.md](../../dev/skills/dev-core/references/static-check.md)。
 
 ## 7. 状態管理
 
@@ -194,7 +194,7 @@ foundation に汎用状態機械エンジン(スクリプト)を置き、各 com
 
 ### 7.2. 定義データとインスタンス状態
 
-定義データは composition が持ち(例: `flow-sdd/workflow.json`)、エンジンは workdir 内に `state.json` を生成・更新する。定義データのスキーマ(states / initial / final / transitions / gate / artifacts)、エンジンの操作(init / set-state / approve / show / status / scan)、凍結(完了状態への到達時に成果物の sha256 を記録し、以後の変更を静的チェッカが検出する)の正本は [static-check.md](../../.claude/skills/dev-core/references/static-check.md)。
+定義データは composition が持ち(例: `flow-sdd/workflow.json`)、エンジンは workdir 内に `state.json` を生成・更新する。定義データのスキーマ(states / initial / final / transitions / gate / artifacts)、エンジンの操作(init / set-state / approve / show / status / scan)、凍結(完了状態への到達時に成果物の sha256 を記録し、以後の変更を静的チェッカが検出する)の正本は [static-check.md](../../dev/skills/dev-core/references/static-check.md)。
 
 手書きでの state.json 編集はしない(エンジンの検証を通さない状態変更を許すと、遷移の妥当性検査と凍結の検出が無効になるため)。
 
@@ -218,7 +218,7 @@ gate の機械的強制が対象とするのは、`set-state` による承認の
 
 ### 8.2. 多観点レビュー(判定器 1 + 観点カタログ)
 
-レビューの多観点化(セキュリティ・コード構造・パフォーマンス・要件整合等)は、ペルソナ別のエージェント定義ではなく「汎用判定器 1 体(dev-reviewer)+ 観点カタログ(データ)」で実現する。観点の一覧・各観点の専門手順・返却契約・起動形態(観点別の並列 fan-out と軽量な文書ゲート)・port による追加差し替えの正本は [review-perspectives.md](../../.claude/skills/dev-core/references/review-perspectives.md)。
+レビューの多観点化(セキュリティ・コード構造・パフォーマンス・要件整合等)は、ペルソナ別のエージェント定義ではなく「汎用判定器 1 体(dev-reviewer)+ 観点カタログ(データ)」で実現する。観点の一覧・各観点の専門手順・返却契約・起動形態(観点別の並列 fan-out と軽量な文書ゲート)・port による追加差し替えの正本は [review-perspectives.md](../../dev/skills/dev-core/references/review-perspectives.md)。
 
 この方式を採る理由は 2 つある。第一に、観点の追加・差し替えがエージェント定義の追加ではなくデータの追加で済む(開放閉鎖)。第二に、各観点を独立したクリーンな文脈で当て、結果を保守的にマージする(1 観点でも Critical なら不合格)ことで、単一文脈の一括レビューより見落としを減らせる。
 
@@ -251,7 +251,7 @@ gate の機械的強制が対象とするのは、`set-state` による承認の
 | ------------------------ | ------------------------------------------------------------------------------------------------------ |
 | 部品ごとの契約の具体値   | 各部品の SKILL.md「契約」セクション                                                                    |
 | 恒久情報の配置規約の詳細 | dev-core/references/durable-info.md                                                                    |
-| 知識 port の選択機構     | ポートマッピング(6.2。選択の優先順の正本は [ports.md](../../.claude/skills/dev-core/references/ports.md)) |
+| 知識 port の選択機構     | ポートマッピング(6.2。選択の優先順の正本は [ports.md](../../dev/skills/dev-core/references/ports.md)) |
 
 残課題:
 

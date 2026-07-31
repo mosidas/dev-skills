@@ -4,7 +4,7 @@ dev スキル群の port(拡張点)のサンプルと雛形。**この場所の�
 
 ## 1. port の仕組み
 
-部品は「port があればそれに従い、なければ部品内のデフォルトで動く」という規約を持つ。port の共通ルートは利用側プロジェクトの `docs/dev/ports/` で、**ルート以下のフォルダ構成は自由**(本サンプル集の階層は整理の一例にすぎない)。規約の正本は dev-core の [ports リファレンス](../.claude/skills/dev-core/references/ports.md)。
+部品は「port があればそれに従い、なければ部品内のデフォルトで動く」という規約を持つ。port の共通ルートは利用側プロジェクトの `docs/dev/ports/` で、**ルート以下のフォルダ構成は自由**(本サンプル集の階層は整理の一例にすぎない)。規約の正本は dev-core の [ports リファレンス](../dev/skills/dev-core/references/ports.md)。
 
 - **識別は frontmatter の `name`**(ツリー内で一意)で行い、配置パスに意味を持たせない。各ファイルは frontmatter で注入先を宣言する: `inject` = 注入先スキル名のリスト、`condition` = `常時` または自然言語の条件。
 - スキルは全ファイルの frontmatter だけを再帰的に一括走査し、自分が inject に含まれ条件に該当する port のみ本文を読む。tasks.md の `_Knowledge:` 注記は最優先の明示指定。

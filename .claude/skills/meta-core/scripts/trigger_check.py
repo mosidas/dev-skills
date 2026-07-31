@@ -52,13 +52,6 @@ def die(msg: str) -> None:
     sys.exit(1)
 
 
-def find_root(start: Path) -> Path | None:
-    for d in (start, *start.parents):
-        if (d / ".claude").is_dir():
-            return d
-    return None
-
-
 def bigrams(text: str) -> set[str]:
     """文字 bigram の集合を返す(記号・空白は除去する)。"""
     s = NON_WORD_RE.sub("", text.lower())
@@ -73,16 +66,16 @@ def similarity(a: set[str], b: set[str]) -> float:
 
 
 def load_descriptions(root: Path) -> dict[str, str]:
-    """`.claude/skills/*/SKILL.md` の frontmatter から {name: description} を作る。
+    """各スキルの SKILL.md の frontmatter から {name: description} を作る。
 
     解析は `meta_lib` の YAML サブセット(引用符つきスカラー・ブロックスカラーを含む)。
     meta_check.py と同じ解析器を使い、同じフィールドで別の結論を出さないようにする。
     """
     result: dict[str, str] = {}
-    skills_dir = root / ".claude" / "skills"
-    if not skills_dir.is_dir():
-        return result
-    for path in sorted(skills_dir.glob("*/SKILL.md")):
+    for skill in meta_lib.skill_dirs(root):
+        path = skill / "SKILL.md"
+        if not path.is_file():
+            continue
         try:
             text = path.read_text(encoding="utf-8")
         except (OSError, UnicodeDecodeError):
@@ -106,7 +99,9 @@ def rank(prompt: str, grams: dict[str, set[str]]) -> list[tuple[str, float]]:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="description のトリガ検査(read-only)")
-    parser.add_argument("--root", help="dev-skills のルート(既定: .claude を上方向に探索)")
+    parser.add_argument(
+        "--root", help="dev-skills のルート(既定: スキルのグループを上方向に探索)"
+    )
     parser.add_argument("--cases", help="仕様ファイル(既定: meta-core/trigger-cases.json)")
     parser.add_argument(
         "--collision-threshold",
@@ -119,18 +114,20 @@ def main() -> None:
 
     if args.root:
         root = Path(args.root).resolve()
-        if not (root / ".claude").is_dir():
-            die(f"--root に .claude が無い: {root}")
+        if not meta_lib.is_root(root):
+            die(f"--root にスキルのグループが無い: {root}")
     else:
-        found = find_root(Path.cwd())
+        found = meta_lib.find_root(Path.cwd())
         if found is None:
-            die(".claude を含むルートが見つからない(--root で指定する)")
+            die("スキルのグループを含むルートが見つからない(--root で指定する)")
         root = found
 
+    # 既定の仕様ファイルは本スクリプトと同じスキル(meta-core)の直下から解決する
+    # (スキルの配置が変わってもスキル内の相対関係は変わらない)。
     cases_path = (
         Path(args.cases)
         if args.cases
-        else root / ".claude" / "skills" / "meta-core" / "trigger-cases.json"
+        else Path(__file__).resolve().parent.parent / "trigger-cases.json"
     )
     try:
         spec = json.loads(cases_path.read_text(encoding="utf-8"))

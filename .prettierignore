@@ -3,4 +3,5 @@
 # 含むテンプレートに prettier を当てるとフェンスが破損し、構造が壊れる。
 # カタログ QG-1 の「非ソースの整形除外」を配布物自身に適用する。
 extensions/*/*/templates/
+*/skills/*/templates/
 .claude/skills/*/templates/

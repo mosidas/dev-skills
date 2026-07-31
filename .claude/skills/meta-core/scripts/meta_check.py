@@ -1,19 +1,19 @@
 #!/usr/bin/env python3
 """スキル群自体の機械的整合検査(read-only)。
 
-スキル群自体を構成するドキュメント(`.claude/` 群・`.meta/`・`ports/`・README 等)を
-規約に照らして決定論的に検査する。ファイルを一切書き換えない。意味的な判断(内容の
-妥当性・観点レビュー)は meta-review に委ねる。設計原則の正本は
+スキル群自体を構成するドキュメント(用途グループの `skills/`・`agents/`・`.claude/` 群・
+`.meta/`・`ports/`・README 等)を規約に照らして決定論的に検査する。ファイルを一切書き換え
+ない。意味的な判断(内容の妥当性・観点レビュー)は meta-review に委ねる。設計原則の正本は
 `../references/principles.md`、観点カタログは `../references/doc-perspectives.md`。
 
 検査項目(doc-perspectives.md §3 横断観点のうち機械化できるもの + principles.md §4 依存規律):
   参照実在     SKILL・reference・template 間の相対パス参照(../ ./ で md/py/json を指す)が実在する
   frontmatter  スキル・エージェントの name が配置(ディレクトリ名・ファイル名)と一致し、description がある
                (解析は meta_lib の YAML サブセット。サブセット外の記法は warning で区別して報告する)
-  inject 実在  port frontmatter の inject 先スキル名が `.claude/skills/` に実在する
+  inject 実在  port frontmatter の inject 先スキル名が実在する
   依存規律     dev-* / flow-* / ext-* の本文が meta-* を参照していない(一方向依存)
   状態整合     workflow.json の状態名が、同じ部品の SKILL.md に記述されている(取り違え・陳腐化の検出)
-  部品名実在   `.claude/` 群の本文が参照する dev-*/flow-*/meta-* の部品・エージェント名が実在する
+  部品名実在   スキル群の本文が参照する dev-*/flow-*/meta-* の部品・エージェント名が実在する
   未記入       未記入マーカーが残っていない(インラインコード・コードブロック・URL は除く)
 
 重大度:
@@ -99,14 +99,6 @@ def load_baseline(path: Path) -> set[tuple[str, str]]:
     }
 
 
-def find_root(start: Path) -> Path | None:
-    """`.claude` を持つディレクトリを start から上方向に探す。"""
-    for d in (start, *start.parents):
-        if (d / ".claude").is_dir():
-            return d
-    return None
-
-
 def read_text(path: Path) -> str | None:
     try:
         return path.read_text(encoding="utf-8")
@@ -130,24 +122,16 @@ def rel(root: Path, path: Path) -> str:
 
 
 def skill_names(root: Path) -> set[str]:
-    d = root / ".claude" / "skills"
-    return {p.name for p in d.iterdir() if p.is_dir()} if d.is_dir() else set()
+    return {p.name for p in meta_lib.skill_dirs(root)}
 
 
 def agent_names(root: Path) -> set[str]:
-    d = root / ".claude" / "agents"
-    return {p.stem for p in d.glob("*.md")} if d.is_dir() else set()
-
-
-def claude_docs(root: Path) -> list[Path]:
-    """`.claude/` 配下の全 Markdown(SKILL・references・templates・agents)。"""
-    base = root / ".claude"
-    return sorted(p for p in base.rglob("*.md") if p.is_file())
+    return {p.stem for p in meta_lib.agent_files(root)}
 
 
 def all_docs(root: Path) -> list[Path]:
-    """参照実在検査の対象(`.claude`・`.meta`・`ports`・`extensions`・`tests`・ルート直下の md)。"""
-    docs: list[Path] = list(claude_docs(root))
+    """参照実在検査の対象(スキル群・`.meta`・`ports`・`extensions`・`tests`・ルート直下の md)。"""
+    docs: list[Path] = list(meta_lib.group_docs(root))
     for sub in (".meta", "ports", "extensions", "tests"):
         d = root / sub
         if d.is_dir():
@@ -220,16 +204,12 @@ def check_inject_targets(root: Path, skills: set[str], report: Report) -> None:
 
 def check_dependency_discipline(root: Path, report: Report) -> None:
     """dev-* / flow-* / ext-* の本文が meta-* を参照していないか(principles.md §4)。"""
-    skills_dir = root / ".claude" / "skills"
     targets: list[Path] = []
-    if skills_dir.is_dir():
-        for skill in skills_dir.iterdir():
-            # dev-core も含む(Layer 0 の汎用正本にも同じ一方向依存を要求する)。
-            if skill.is_dir() and skill.name.split("-")[0] in ("dev", "flow", "ext"):
-                targets.extend(p for p in skill.rglob("*.md") if p.is_file())
-    agents_dir = root / ".claude" / "agents"
-    if agents_dir.is_dir():
-        targets.extend(p for p in agents_dir.glob("*.md"))
+    for skill in meta_lib.skill_dirs(root):
+        # dev-core も含む(Layer 0 の汎用正本にも同じ一方向依存を要求する)。
+        if skill.name.split("-")[0] in ("dev", "flow", "ext"):
+            targets.extend(p for p in skill.rglob("*.md") if p.is_file())
+    targets.extend(meta_lib.agent_files(root))
     for path in sorted(set(targets)):
         text = read_text(path)
         if text is None:
@@ -244,10 +224,11 @@ def check_dependency_discipline(root: Path, report: Report) -> None:
 
 def check_state_consistency(root: Path, report: Report) -> None:
     """workflow.json の状態名と、同じ部品 SKILL.md の記述の整合。"""
-    skills_dir = root / ".claude" / "skills"
-    if not skills_dir.is_dir():
-        return
-    for wf in sorted(skills_dir.glob("*/workflow.json")):
+    workflows = sorted(
+        (wf for skill in meta_lib.skill_dirs(root) for wf in skill.glob("workflow.json")),
+        key=lambda p: p.parent.name,
+    )
+    for wf in workflows:
         try:
             defn = json.loads(wf.read_text(encoding="utf-8"))
         except (OSError, UnicodeDecodeError, json.JSONDecodeError) as e:
@@ -286,15 +267,12 @@ def check_frontmatter(root: Path, report: Report) -> None:
     解析は YAML のサブセット(`meta_lib`)で行い、サブセット外の記法は「一致しない」
     と断定せず、解析できない記法として別に報告する。
     """
-    targets: list[tuple[Path, str]] = []
-    skills_dir = root / ".claude" / "skills"
-    if skills_dir.is_dir():
-        targets.extend(
-            (p, p.parent.name) for p in sorted(skills_dir.glob("*/SKILL.md"))
-        )
-    agents_dir = root / ".claude" / "agents"
-    if agents_dir.is_dir():
-        targets.extend((p, p.stem) for p in sorted(agents_dir.glob("*.md")))
+    targets: list[tuple[Path, str]] = [
+        (skill / "SKILL.md", skill.name)
+        for skill in meta_lib.skill_dirs(root)
+        if (skill / "SKILL.md").is_file()
+    ]
+    targets.extend((p, p.stem) for p in meta_lib.agent_files(root))
 
     for path, expected in targets:
         text = read_text(path)
@@ -354,9 +332,9 @@ def check_placeholders(root: Path, report: Report) -> None:
 
 
 def check_part_names(root: Path, skills: set[str], agents: set[str], report: Report) -> None:
-    """`.claude/` 群が参照する部品・エージェント名が実在するか。"""
+    """スキル群の本文が参照する部品・エージェント名が実在するか。"""
     known = skills | agents | PART_EXCLUDE
-    for path in claude_docs(root):
+    for path in meta_lib.group_docs(root):
         text = read_text(path)
         if text is None:
             continue
@@ -371,7 +349,9 @@ def check_part_names(root: Path, skills: set[str], agents: set[str], report: Rep
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="スキル群自体の機械的整合検査(read-only)")
-    parser.add_argument("--root", help="dev-skills のルート(既定: .claude を上方向に探索)")
+    parser.add_argument(
+        "--root", help="dev-skills のルート(既定: スキルのグループを上方向に探索)"
+    )
     parser.add_argument(
         "--baseline",
         help="編集前に取得した JSON 出力。今回新規に増えた指摘を NEW として印す(回帰検出)",
@@ -381,12 +361,12 @@ def main() -> None:
 
     if args.root:
         root = Path(args.root).resolve()
-        if not (root / ".claude").is_dir():
-            die(f"--root に .claude が無い: {root}")
+        if not meta_lib.is_root(root):
+            die(f"--root にスキルのグループが無い: {root}")
     else:
-        found = find_root(Path.cwd())
+        found = meta_lib.find_root(Path.cwd())
         if found is None:
-            die(".claude を含むルートが見つからない(--root で指定する)")
+            die("スキルのグループを含むルートが見つからない(--root で指定する)")
         root = found
 
     skills = skill_names(root)
