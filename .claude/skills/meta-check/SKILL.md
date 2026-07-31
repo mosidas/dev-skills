@@ -1,6 +1,6 @@
 ---
 name: meta-check
-description: スキル群自体の機械的整合検査(read-only)。dev-skills のスキル群・`.meta/`・`ports/`・README を対象に、参照の実在・frontmatter の name と配置の一致・inject 先スキルの実在・依存規律(配布するスキルが meta-* を参照しない)・状態機械と SKILL の整合・部品名の実在・グループの規約宣言の可読性・未記入マーカーの残存を決定論スクリプトで検査し、あわせて description のトリガ(意図した依頼で選ばれ紛らわしい依頼で選ばれないか)を検査して、重大度付きレポートを返す。編集前の結果を基準に渡すと新規に増えた指摘を回帰として区別する。ファイルを書き換えない。スキル群を編集した後の整合確認、リリース前の健全性確認、meta-review の前段の機械検査をしたいときに使う。
+description: スキル群自体の機械的整合検査(read-only)。dev-skills のスキル群・グループ配下の `ports/`・`extensions/`・`.meta/`・README を対象に、参照の実在・frontmatter の name と配置の一致・inject 先スキルの実在・依存規律(配布するスキルが meta-* を参照しない)・状態機械と SKILL の整合・部品名の実在・グループの規約宣言の可読性・未記入マーカーの残存を決定論スクリプトで検査し、あわせて description のトリガ(意図した依頼で選ばれ紛らわしい依頼で選ばれないか)を検査して、重大度付きレポートを返す。編集前の結果を基準に渡すと新規に増えた指摘を回帰として区別する。ファイルを書き換えない。スキル群を編集した後の整合確認、リリース前の健全性確認、meta-review の前段の機械検査をしたいときに使う。
 ---
 
 # meta-check — スキル群自体の機械的整合検査(read-only)
@@ -32,7 +32,7 @@ description: スキル群自体の機械的整合検査(read-only)。dev-skills 
 | 外部参照    | ルート外へ抜ける参照(前身プロジェクト等への引用)は検証できないため指摘に留める            | warning |
 | frontmatter | スキル・エージェントの `name` が配置(ディレクトリ名・ファイル名)と一致し `description` がある | error   |
 | 記法        | frontmatter に、解析器(YAML のサブセット)が解釈できない記法が無い(解釈できない記法を「値が違う」と断定しない) | warning |
-| inject 実在 | port frontmatter の `inject:` 先スキル名が実在する                                          | error   |
+| inject 実在 | port frontmatter の `inject:` 先スキル名が実在する(走査はグループ配下の `ports/`)        | error   |
 | 依存規律    | `dev-*`/`flow-*`/`ext-*` の本文が `meta-*` を参照していない(一方向依存。principles.md §4) | error   |
 | 状態整合    | `workflow.json` の状態名が同じ部品の SKILL.md に記述され、SKILL.md の状態名が定義に実在する | warning |
 | 部品名実在  | スキル群の本文が参照する部品・エージェント名が実在する(名前らしさの判定はグループの規約) | warning |

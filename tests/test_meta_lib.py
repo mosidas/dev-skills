@@ -119,10 +119,32 @@ class LayoutTest(helpers.TempDirTestCase):
         self.assertEqual([p.name for p in meta_lib.groups(self.root)], ["dev", ".claude"])
 
     def test_skills_を持たないディレクトリをグループにしない(self) -> None:
-        (self.root / "extensions" / "group-a").mkdir(parents=True)
+        (self.root / "tests" / "fixtures").mkdir(parents=True)
         self.assertEqual(
             [p.name for p in meta_lib.distributed_groups(self.root)], ["dev"]
         )
+
+    def test_グループの機構を全グループ横断で集める(self) -> None:
+        """`ports/`・`extensions/` はグループ配下に置く(D-014)。"""
+        (self.root / "dev" / meta_lib.PORTS_SUBDIR).mkdir()
+        (self.root / ".claude" / meta_lib.PORTS_SUBDIR).mkdir()
+        self.assertEqual(
+            [
+                str(p.relative_to(self.root))
+                for p in meta_lib.group_subdirs(self.root, meta_lib.PORTS_SUBDIR)
+            ],
+            ["dev/ports", ".claude/ports"],
+        )
+
+    def test_実在しない機構のディレクトリを返さない(self) -> None:
+        self.assertEqual(
+            meta_lib.group_subdirs(self.root, meta_lib.EXTENSIONS_SUBDIR), []
+        )
+
+    def test_リポジトリ直下の同名ディレクトリを機構にしない(self) -> None:
+        """走査対象はグループ配下に限る(直下の同名ディレクトリを拾わない)。"""
+        (self.root / meta_lib.PORTS_SUBDIR).mkdir()
+        self.assertEqual(meta_lib.group_subdirs(self.root, meta_lib.PORTS_SUBDIR), [])
 
     def test_スキルをグループ横断で名前順に返す(self) -> None:
         self.add_skill("dev", "dev-core")

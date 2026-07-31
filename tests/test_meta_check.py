@@ -62,8 +62,13 @@ class MetaCheckTestCase(helpers.TempDirTestCase):
         path = self.root / "dev" / "agents" / f"{name}.md"
         path.write_text(text or skill_md(name), encoding="utf-8")
 
-    def add_port(self, rel: str, text: str) -> None:
-        path = self.root / "ports" / rel
+    def add_group(self, group: str, skill: str) -> None:
+        """スキルを 1 件持つグループを足す(グループの成立条件は `skills/` の存在)。"""
+        (self.root / group / "skills" / skill).mkdir(parents=True, exist_ok=True)
+
+    def add_port(self, rel: str, text: str, group: str = "dev") -> None:
+        """port はグループの機構のため、グループ配下の `ports/` に置く(D-014)。"""
+        path = self.root / group / "ports" / rel
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(text, encoding="utf-8")
 
@@ -206,6 +211,19 @@ class ReferenceTest(MetaCheckTestCase):
         (refs / "x.md").write_text("内容", encoding="utf-8")
         self.assertEqual(self.report(meta_check.check_references).findings, [])
 
+    def test_グループの機構の文書も対象にする(self) -> None:
+        """`<グループ>/ports`・`<グループ>/extensions` の md を走査する(D-014)。"""
+        self.add_skill("dev-spec")
+        self.add_port("a.md", "参照: `./missing-port.md`")
+        ext = self.root / "dev" / "extensions" / "sample" / "ext-x"
+        ext.mkdir(parents=True)
+        (ext / "SKILL.md").write_text(
+            skill_md("ext-x", body="参照: `./missing-ext.md`"), encoding="utf-8"
+        )
+        messages = self.messages(self.report(meta_check.check_references).findings)
+        self.assertAnyContains(messages, "missing-port.md")
+        self.assertAnyContains(messages, "missing-ext.md")
+
     def test_ルート外への参照は_warning_に留める(self) -> None:
         self.add_skill("dev-spec", body="参照: `../../../../outside.md`")
         report = self.report(meta_check.check_references)
@@ -246,6 +264,30 @@ class InjectTargetTest(MetaCheckTestCase):
         self.add_port(
             "templates/knowledge-port.md",
             "---\nname: <name>\ndescription: x\ninject:\n  - <注入先スキル>\ncondition: 常時\n---\n",
+        )
+        self.assertEqual(self.run_check().findings, [])
+
+    def test_他のグループの_port_も走査する(self) -> None:
+        """走査対象は全グループ配下の `ports/`(dev グループに限らない。D-014)。"""
+        self.add_skill("dev-spec")
+        self.add_group("writing", "japanese-writing")
+        self.add_port(
+            "a.md",
+            "---\nname: a\ndescription: x\ninject:\n  - dev-unknown\ncondition: 常時\n---\n",
+            group="writing",
+        )
+        self.assertAnyContains(
+            self.messages(self.run_check().findings), "inject 先スキルが存在しない"
+        )
+
+    def test_リポジトリ直下の_ports_は走査しない(self) -> None:
+        """port はグループの機構であり、直下の同名ディレクトリを対象にしない(D-014)。"""
+        self.add_skill("dev-spec")
+        path = self.root / "ports" / "a.md"
+        path.parent.mkdir(parents=True)
+        path.write_text(
+            "---\nname: a\ndescription: x\ninject:\n  - dev-unknown\ncondition: 常時\n---\n",
+            encoding="utf-8",
         )
         self.assertEqual(self.run_check().findings, [])
 

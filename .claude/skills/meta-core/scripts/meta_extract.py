@@ -143,26 +143,25 @@ def extract_state_machines(root: Path) -> list[dict]:
 def extract_inject_graph(root: Path) -> dict:
     """port name -> {inject: [skills], condition, description}。
 
-    `ports/templates/` は新規 port の雛形(プレースホルダ)のため除く。
+    port はグループの機構のため、各グループ直下の `ports/` を走査する(D-014)。
+    その配下の `templates/` は新規 port の雛形(プレースホルダ)のため除く。
     """
-    ports_dir = root / "ports"
     graph: dict = {}
-    if not ports_dir.is_dir():
-        return graph
-    for path in sorted(ports_dir.rglob("*.md")):
-        if "templates" in path.relative_to(ports_dir).parts:
-            continue
-        parsed = meta_lib.parse_frontmatter(read_text(path))
-        if parsed is None:
-            continue
-        data = parsed[0]
-        injects = data.get("inject")
-        key = meta_lib.scalar(data, "name") or path.stem
-        graph[key] = {
-            "inject": list(injects) if isinstance(injects, list) else [],
-            "condition": meta_lib.scalar(data, "condition"),
-            "description": meta_lib.scalar(data, "description"),
-        }
+    for ports_dir in meta_lib.group_subdirs(root, meta_lib.PORTS_SUBDIR):
+        for path in sorted(ports_dir.rglob("*.md")):
+            if "templates" in path.relative_to(ports_dir).parts:
+                continue
+            parsed = meta_lib.parse_frontmatter(read_text(path))
+            if parsed is None:
+                continue
+            data = parsed[0]
+            injects = data.get("inject")
+            key = meta_lib.scalar(data, "name") or path.stem
+            graph[key] = {
+                "inject": list(injects) if isinstance(injects, list) else [],
+                "condition": meta_lib.scalar(data, "condition"),
+                "description": meta_lib.scalar(data, "description"),
+            }
     return graph
 
 
