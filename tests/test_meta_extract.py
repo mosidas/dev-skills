@@ -20,35 +20,56 @@ import meta_extract
 EXTRACT_PY = META_SCRIPTS / "meta_extract.py"
 
 
-def skill_path(group: str, name: str) -> Path:
-    """グループ配下のスキルディレクトリのパスを組み立てる(実在は不要)。"""
-    return Path("/repo") / group / "skills" / name
+DEV_LAYERS = {"0": ["dev-core"], "2": ["flow-*"], "3": ["ext-*"]}
 
 
-class ClassifyTest(unittest.TestCase):
+class ClassifyTest(helpers.TempDirTestCase):
+    """分類はグループ名から、レイヤーはグループの規約から決まる(D-013)。"""
+
+    def setUp(self) -> None:
+        super().setUp()
+        self.root = self.tmp / "repo"
+        self.write_group("dev", {"layers": DEV_LAYERS})
+        self.write_group(".claude", {"layers": {"0": ["meta-core"]}})
+        self.write_group("ops", None)
+
+    def write_group(self, group: str, config: dict | None) -> None:
+        (self.root / group / "skills").mkdir(parents=True)
+        if config is not None:
+            (self.root / group / "group.json").write_text(
+                json.dumps(config), encoding="utf-8"
+            )
+
+    def skill(self, group: str, name: str) -> Path:
+        return self.root / group / "skills" / name
+
     def test_基盤スキルをレイヤー_0_にする(self) -> None:
-        self.assertEqual(meta_extract.classify(skill_path("dev", "dev-core")), ("dev", 0))
+        self.assertEqual(meta_extract.classify(self.skill("dev", "dev-core")), ("dev", 0))
         self.assertEqual(
-            meta_extract.classify(skill_path(".claude", "meta-core")), ("meta", 0)
+            meta_extract.classify(self.skill(".claude", "meta-core")), ("meta", 0)
         )
 
     def test_部品をレイヤー_1_にする(self) -> None:
-        self.assertEqual(meta_extract.classify(skill_path("dev", "dev-spec")), ("dev", 1))
+        self.assertEqual(meta_extract.classify(self.skill("dev", "dev-spec")), ("dev", 1))
         self.assertEqual(
-            meta_extract.classify(skill_path(".claude", "meta-check")), ("meta", 1)
+            meta_extract.classify(self.skill(".claude", "meta-check")), ("meta", 1)
         )
 
     def test_composition_をレイヤー_2_にする(self) -> None:
-        self.assertEqual(meta_extract.classify(skill_path("dev", "flow-sdd")), ("dev", 2))
+        self.assertEqual(meta_extract.classify(self.skill("dev", "flow-sdd")), ("dev", 2))
 
     def test_拡張をレイヤー_3_にする(self) -> None:
         self.assertEqual(
-            meta_extract.classify(skill_path("dev", "ext-anything")), ("dev", 3)
+            meta_extract.classify(self.skill("dev", "ext-anything")), ("dev", 3)
         )
 
     def test_分類をグループ名から決める(self) -> None:
         """名前ではなく配置(どのグループに置いたか)が分類を決める。"""
-        self.assertEqual(meta_extract.classify(skill_path("ops", "ops-deploy"))[0], "ops")
+        self.assertEqual(meta_extract.classify(self.skill("ops", "ops-deploy"))[0], "ops")
+
+    def test_規約を持たないグループは全て部品にする(self) -> None:
+        """レイヤー構造を持たない群でも、規約を書かずに抽出が成立する。"""
+        self.assertEqual(meta_extract.classify(self.skill("ops", "dev-core")), ("ops", 1))
 
 
 class ExtractTest(helpers.TempDirTestCase):
@@ -99,6 +120,9 @@ class ExtractTest(helpers.TempDirTestCase):
         self.assertEqual(meta_extract.extract_parts(self.root)[0]["role"], "仕様部品")
 
     def test_スクリプトの所有部品と役割を返す(self) -> None:
+        (self.root / "dev" / "group.json").write_text(
+            json.dumps({"layers": DEV_LAYERS}), encoding="utf-8"
+        )
         d = self.root / "dev" / "skills" / "dev-core" / "scripts"
         d.mkdir(parents=True)
         (d / "sample.py").write_text('"""サンプルの役割。\n\n続き。\n"""\n', encoding="utf-8")

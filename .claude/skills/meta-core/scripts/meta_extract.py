@@ -2,7 +2,8 @@
 """DESIGN.md 構造層の素材抽出(read-only)。
 
 スキル群の定義(SSoT)から、DESIGN.md の構造層(部品一覧・レイヤー構成・状態機械・
-inject グラフ・エージェント)を決定論的に抽出し、JSON で出力する。meta-doc が
+inject グラフ・エージェント)を決定論的に抽出し、JSON で出力する。分類とレイヤーは
+グループの規約(`group.json`)が決め、規約を持たないグループは全スキルを部品として扱う。meta-doc が
 この JSON をもとに構造層の散文を生成する。判断層(根拠・トレードオフ)は含まない
 (それは `.meta/decisions/` の担当。principles.md §3)。ファイルを書き換えない。
 
@@ -45,21 +46,11 @@ def parse_frontmatter_scalars(text: str) -> dict:
 def classify(skill: Path) -> tuple[str, int]:
     """スキルのディレクトリから (分類, レイヤー番号) を決める。
 
-    分類: スキルを収めるグループ名(`.claude` に置く meta-* は "meta")。
-    レイヤー: dev-core / meta-core = 0(基盤)、flow-* = 2(composition)、
-              ext-* = 3(拡張)、その他の部品(dev-* / meta-check 等)= 1。
+    分類はスキルを収めるグループ名(`.claude` に置く meta-* は "meta")。レイヤーは
+    グループの規約(`group.json` の layers)が割り当て、割り当てが無ければ部品(1)と
+    する。レイヤー構造を持たないグループは規約を書かず、全スキルが部品になる(D-013)。
     """
-    name = skill.name
-    family = meta_lib.family_of(meta_lib.group_of(skill))
-    if name in ("dev-core", "meta-core"):
-        layer = 0
-    elif name.startswith("flow-"):
-        layer = 2
-    elif name.startswith("ext-"):
-        layer = 3
-    else:
-        layer = 1
-    return family, layer
+    return meta_lib.family_of(meta_lib.group_of(skill)), meta_lib.layer_of(skill)
 
 
 def extract_parts(root: Path) -> list[dict]:
@@ -176,6 +167,11 @@ def extract_inject_graph(root: Path) -> dict:
 
 
 def extract_agents(root: Path) -> list[dict]:
+    """エージェント定義を抽出する。
+
+    エージェントはグループの実行資源であり、スキルから名前で参照される。属する
+    グループの基盤(レイヤー 0)として扱う。
+    """
     agents: list[dict] = []
     for path in meta_lib.agent_files(root):
         fm = parse_frontmatter_scalars(read_text(path))

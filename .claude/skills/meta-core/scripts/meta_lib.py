@@ -18,10 +18,18 @@ meta_check.py・meta_extract.py・meta_loc.py・trigger_check.py が共有し、
   スキル本体は用途グループ(ルート直下で `skills/` を持つディレクトリ。例: `dev/`)に置く。
   `meta-*` は配布せず自リポジトリで使うため `.claude/skills/` に置く。両者を同じ関数で
   列挙し、検査・抽出・集計が配置の違いを個別に持たないようにする。
+
+グループ固有の規約(D-013):
+  グループごとに異なる規約(部品名のプレフィックス・状態名の語尾・レイヤーの割り当て)は
+  グループ直下の `group.json` が宣言する。宣言を持たないグループは既定(部品名の照合を
+  行わない・状態名の語尾を持たない・レイヤーは 1)で成立し、`meta-*` は特定のグループの
+  構造を前提にしない。
 """
 
 from __future__ import annotations
 
+import fnmatch
+import json
 import re
 from pathlib import Path
 
@@ -33,6 +41,10 @@ SKILLS_SUBDIR = "skills"
 AGENTS_SUBDIR = "agents"
 # 自リポジトリ保守用(meta-*)の置き場所。Claude Code がこのリポジトリで読み込む場所でもある。
 LOCAL_GROUP = ".claude"
+# グループ固有の規約の宣言(グループ直下。skills/・agents/ の外にあるため配布されない)。
+GROUP_CONFIG = "group.json"
+# 規約が割り当てないスキルのレイヤー(部品)。
+DEFAULT_LAYER = 1
 
 
 def _unquote(value: str) -> str:
@@ -190,6 +202,74 @@ def agent_files(root: Path) -> list[Path]:
         ),
         key=lambda p: p.name,
     )
+
+
+class GroupConfigError(Exception):
+    """グループの規約宣言を読めない(構文が壊れている・型が違う)。"""
+
+
+def group_config(group: Path) -> dict:
+    """グループの規約宣言(`group.json`)を読む。
+
+    宣言が無いグループは空の規約として扱う(既定で成立させる)。読めない宣言は
+    黙って既定に落とさず `GroupConfigError` を送出し、呼び出し側が報告する。
+    """
+    path = group / GROUP_CONFIG
+    if not path.is_file():
+        return {}
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError) as e:
+        raise GroupConfigError(f"{path} を JSON として読めない: {e}") from e
+    if not isinstance(data, dict):
+        raise GroupConfigError(f"{path} の最上位がオブジェクトでない")
+    return data
+
+
+def _string_list(config: dict, key: str) -> list[str]:
+    value = config.get(key)
+    if value is None:
+        return []
+    if not isinstance(value, list) or not all(isinstance(v, str) for v in value):
+        raise GroupConfigError(f"{key} は文字列のリストでなければならない")
+    return list(value)
+
+
+def part_prefixes(root: Path) -> list[str]:
+    """全グループが宣言する部品名のプレフィックスを集める(重複を除く)。
+
+    部品名らしいトークンの判定に使う。宣言しないグループのスキルは、この判定の
+    対象にならない(実在しない名前を見つけられない代わりに、誤検出も出さない)。
+    """
+    found: list[str] = []
+    for group in groups(root):
+        for prefix in _string_list(group_config(group), "part_prefixes"):
+            if prefix not in found:
+                found.append(prefix)
+    return found
+
+
+def state_suffixes(skill: Path) -> list[str]:
+    """スキルが属するグループが宣言する、状態名らしいトークンの語尾。"""
+    return _string_list(group_config(group_of(skill)), "state_suffixes")
+
+
+def layer_of(skill: Path) -> int:
+    """スキルのレイヤーを、属するグループの規約から決める(既定は部品)。"""
+    layers = group_config(group_of(skill)).get("layers")
+    if layers is None:
+        return DEFAULT_LAYER
+    if not isinstance(layers, dict):
+        raise GroupConfigError("layers はオブジェクトでなければならない")
+    for layer, patterns in sorted(layers.items()):
+        if not isinstance(patterns, list):
+            raise GroupConfigError(f"layers.{layer} は配列でなければならない")
+        if any(fnmatch.fnmatchcase(skill.name, str(p)) for p in patterns):
+            try:
+                return int(layer)
+            except ValueError as e:
+                raise GroupConfigError(f"layers のキー {layer!r} が整数でない") from e
+    return DEFAULT_LAYER
 
 
 def family_of(group: Path) -> str:

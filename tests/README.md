@@ -33,8 +33,8 @@ python3 -m unittest discover -s tests -t tests -p test_state.py
 | `test_state.py`         | `dev-core/state.py`        | 遷移の拒否・承認ゲートの強制・完了時の凍結・横断集約                   |
 | `test_check.py`         | `dev-core/check.py`        | 状態検査・凍結違反・トレーサビリティ・対象ファイルの行数               |
 | `test_ports.py`         | `dev-core/ports.py`        | frontmatter の走査と規約違反の警告                                     |
-| `test_meta_lib.py`      | `meta-core/meta_lib.py`    | frontmatter の YAML サブセット解析・スキル群の配置の走査               |
-| `test_meta_check.py`    | `meta-core/meta_check.py`  | 参照・frontmatter・依存規律・状態整合・未記入マーカー・回帰検出        |
+| `test_meta_lib.py`      | `meta-core/meta_lib.py`    | frontmatter の YAML サブセット解析・配置の走査・グループ規約の読み込み |
+| `test_meta_check.py`    | `meta-core/meta_check.py`  | 参照・frontmatter・依存規律・状態整合・グループ規約・未記入マーカー・回帰検出 |
 | `test_trigger_check.py` | `meta-core/trigger_check.py` | 肯定例・否定例・近接衝突・ケース網羅・仕様ファイルの異常系            |
 | `test_meta_extract.py`  | `meta-core/meta_extract.py` | 部品・スクリプト・エージェント・状態機械・inject グラフの抽出         |
 | `test_meta_loc.py`      | `meta-core/meta_loc.py`    | 領域の割り当て・行数の数え方・除外条件                                 |

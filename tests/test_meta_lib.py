@@ -164,5 +164,74 @@ class LayoutTest(helpers.TempDirTestCase):
         self.assertEqual(names, ["SKILL.md", "SKILL.md", "x.md"])
 
 
+class GroupConfigTest(helpers.TempDirTestCase):
+    """グループ固有の規約(`group.json`)の読み込み(D-013)。"""
+
+    def setUp(self) -> None:
+        super().setUp()
+        self.root = self.tmp / "repo"
+        (self.root / "dev" / "skills" / "dev-core").mkdir(parents=True)
+        (self.root / "dev" / "skills" / "flow-sdd").mkdir(parents=True)
+        (self.root / "writing" / "skills" / "japanese-writing").mkdir(parents=True)
+
+    def write_config(self, group: str, text: str) -> None:
+        (self.root / group / meta_lib.GROUP_CONFIG).write_text(text, encoding="utf-8")
+
+    def test_宣言が無ければ空の規約にする(self) -> None:
+        self.assertEqual(meta_lib.group_config(self.root / "writing"), {})
+
+    def test_宣言したプレフィックスを全グループ分集める(self) -> None:
+        self.write_config("dev", '{"part_prefixes": ["dev", "flow"]}')
+        self.write_config("writing", '{"part_prefixes": ["japanese"]}')
+        self.assertEqual(
+            meta_lib.part_prefixes(self.root), ["dev", "flow", "japanese"]
+        )
+
+    def test_同じプレフィックスを重複させない(self) -> None:
+        self.write_config("dev", '{"part_prefixes": ["dev"]}')
+        self.write_config("writing", '{"part_prefixes": ["dev"]}')
+        self.assertEqual(meta_lib.part_prefixes(self.root), ["dev"])
+
+    def test_宣言が無いグループの語尾は空(self) -> None:
+        self.assertEqual(
+            meta_lib.state_suffixes(self.root / "writing" / "skills" / "japanese-writing"),
+            [],
+        )
+
+    def test_レイヤーを名前の照合で割り当てる(self) -> None:
+        self.write_config("dev", '{"layers": {"0": ["dev-core"], "2": ["flow-*"]}}')
+        skills = self.root / "dev" / "skills"
+        self.assertEqual(meta_lib.layer_of(skills / "dev-core"), 0)
+        self.assertEqual(meta_lib.layer_of(skills / "flow-sdd"), 2)
+
+    def test_割り当てが無ければ部品にする(self) -> None:
+        self.write_config("dev", '{"layers": {"0": ["dev-core"]}}')
+        self.assertEqual(
+            meta_lib.layer_of(self.root / "dev" / "skills" / "flow-sdd"),
+            meta_lib.DEFAULT_LAYER,
+        )
+
+    def test_規約を持たないグループのスキルも部品にする(self) -> None:
+        self.assertEqual(
+            meta_lib.layer_of(self.root / "writing" / "skills" / "japanese-writing"),
+            meta_lib.DEFAULT_LAYER,
+        )
+
+    def test_壊れた_JSON_を既定に落とさず送出する(self) -> None:
+        self.write_config("dev", "{壊れた")
+        with self.assertRaises(meta_lib.GroupConfigError):
+            meta_lib.group_config(self.root / "dev")
+
+    def test_型が違う宣言を送出する(self) -> None:
+        self.write_config("dev", '{"part_prefixes": "dev"}')
+        with self.assertRaises(meta_lib.GroupConfigError):
+            meta_lib.part_prefixes(self.root)
+
+    def test_レイヤーのキーが整数でなければ送出する(self) -> None:
+        self.write_config("dev", '{"layers": {"基盤": ["dev-core"]}}')
+        with self.assertRaises(meta_lib.GroupConfigError):
+            meta_lib.layer_of(self.root / "dev" / "skills" / "dev-core")
+
+
 if __name__ == "__main__":
     unittest.main()
