@@ -19,8 +19,8 @@ description: スキル群自体の観点レビュー(read-only)。dev-skills を
 
 - スキル群自体の品質の設計原則: `../meta-core/references/principles.md`
 - 観点カタログ(種別判定 §1・種別別 §2・横断 §3・適用 §4): `../meta-core/references/doc-perspectives.md`
-- 委譲プロンプトの雛形: `../dev-core/templates/doc-gate-prompt.md`(合格基準と返却契約の型)
-- 分業パターン: `../dev-core/references/orchestration-patterns.md`(観点別 fan-out・単一オーケストレーター)
+- 委譲プロンプトの雛形: `../../../dev/skills/dev-core/templates/doc-gate-prompt.md`(合格基準と返却契約の型)
+- 分業パターン: `../../../dev/skills/dev-core/references/orchestration-patterns.md`(観点別 fan-out・単一オーケストレーター)
 
 ## 3. ステップ
 

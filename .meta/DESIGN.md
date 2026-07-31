@@ -1,28 +1,28 @@
 # dev スキル群 構成(DESIGN)
 
-> 現状の構造を表す生成物。`meta-doc` が `.claude`(SSoT)から生成し、更新時は全上書きする。設計判断の根拠・履歴は [decisions/](./decisions/README.md)(`D-###`)にある。構成の詳細の正本は各 SKILL.md・スクリプトの docstring・`workflow.json` であり、本書と差異がある場合はそれらを正とする。
+> 現状の構造を表す生成物。`meta-doc` がスキルの定義(SSoT)から生成し、更新時は全上書きする。設計判断の根拠・履歴は [decisions/](./decisions/README.md)(`D-###`)にある。構成の詳細の正本は各 SKILL.md・スクリプトの docstring・`workflow.json` であり、本書と差異がある場合はそれらを正とする。
 
 ## 概要
 
 `dev-skills` は汎用の開発スキル群である。SSoT をソースコードに置き(コードが SSoT、仕様は実装までの中間生成物)、単機能の部品スキルと、それを状態機械で束ねる composition で構成する。依存はオニオン型に外側から内側への一方向に限る(Layer 0: foundation 〜 Layer 3: extension)。SDD はこの部品群から組み立てる composition の一つ(flow-sdd)である。
 
-これと直交する軸として、スキル群**自体**を構成するドキュメント(SKILL・references・templates・agents・scripts・`.meta`)の品質を担保する meta 分類(`meta-*`)を持つ。meta 分類も同じくレイヤー構造をとる(レイヤー 0: meta-core / レイヤー 1: meta-check・meta-review・meta-doc)。
+これと直交する軸として、スキル群**自体**を構成するドキュメント(SKILL・references・templates・agents・scripts・`.meta`)の品質を担保する meta 分類(`meta-*`)を持つ。配布するスキルは用途グループ(`dev/skills`・`dev/agents`)に置き、配布しない `meta-*` は `.claude/skills` に置く(D-011)。meta 分類も同じくレイヤー構造をとる(レイヤー 0: meta-core / レイヤー 1: meta-check・meta-review・meta-doc)。
 
-導入・削除は展開スクリプト `install.py` が `.claude/skills/*`・`.claude/agents/*` をハードコピーして行う(`meta-*` を除く。利用側の明示操作)。設計判断の根拠は D-000(初版設計の全体像)・D-001(スキル群自体の品質と DESIGN 2 層分離)・D-004(本書のテンプレート化と全上書き方針)・D-005(品質の対象の呼称)・D-006(導入をハードコピーにし meta-* を配布しない)・D-007(多段オーケストレーションの禁止対象をエージェント主導に限定)・D-008(配布する部品をモデル自動起動の対象に置いたままにする)・D-009(恒久情報の配置に用語集を追加)・D-010(スクリプトの単体テストを tests/ に置き配布しない)を参照。
+導入・削除は展開スクリプト `install.py` が用途グループの `skills/*`・`agents/*` を利用側の `.claude/` へハードコピーして行う(グループ外の `meta-*` は配布しない。利用側の明示操作)。設計判断の根拠は D-000(初版設計の全体像)・D-001(スキル群自体の品質と DESIGN 2 層分離)・D-004(本書のテンプレート化と全上書き方針)・D-005(品質の対象の呼称)・D-006(導入をハードコピーにし meta-* を配布しない)・D-007(多段オーケストレーションの禁止対象をエージェント主導に限定)・D-008(配布する部品をモデル自動起動の対象に置いたままにする)・D-009(恒久情報の配置に用語集を追加)・D-010(スクリプトの単体テストを tests/ に置き配布しない)・D-011(配布するスキルを `.claude` の外の用途グループへ置く)を参照。
 
 ## 原則
 
 スキル群自体の品質担保の設計原則。正本は [principles.md](../.claude/skills/meta-core/references/principles.md) で、本節はその要約である。
 
 - **2 つの品質の対象(対象レベル / メタレベル)**: 生成する成果物(spec.md 等 = 成果物の品質)と、スキル群自体を構成するドキュメント(SKILL・references・templates・scripts・`.meta` 等 = スキル群自体の品質)を分けて担保する。前者は dev 分類(check.py・文書ゲート)、後者は meta 分類(`meta-*`)が担う。後者は前者のメタレベル(同じ品質哲学の自己適用)。層 0/1/2 とは別軸(D-005)。
-- **SSoT は `.claude`**: 実際に実行される定義(`.claude` 配下と `workflow.json`)がスキル群の唯一の正本。DESIGN.md 等の俯瞰文書はその導出物で、食い違えば `.claude` を正とする(「コードが SSoT、説明は導出」の自己適用)。
+- **SSoT はスキルの定義**: 実際に実行される定義(各グループの `skills/`・`agents/` と `workflow.json`)がスキル群の唯一の正本。DESIGN.md 等の俯瞰文書はその導出物で、食い違えばスキルの定義を正とする(「コードが SSoT、説明は導出」の自己適用)。
 - **DESIGN の 2 層分離**: 現状の構造は DESIGN.md(生成・全上書き)、判断の根拠・履歴は `decisions/`(手書き)。DESIGN.md は判断を持たず `D-###` で参照する(D-004)。
 - **依存規律(一方向)**: `dev-*`/`flow-*`/`ext-*` は `meta-*` を参照しない。`meta-*` が対象を走査・検査・生成するのは一方向(`meta-*` → 対象)。スキル群自体の品質に固有の観点は `meta-core` に置き `dev-core` に混ぜない。
 - **`meta-*` の構成**: `meta-core`(原則・観点・スクリプトの正本)+ `meta-check`(機械検査)+ `meta-review`(観点レビュー)+ `meta-doc`(DESIGN 生成)。
 
 ## 構成要素
 
-`.claude/` 配下のスキル・スクリプト・エージェント(役割の正本は各 SKILL.md の frontmatter・スクリプトの docstring)。hook を持つ拡張(Layer 3)は現在なし。
+各グループのスキル・スクリプト・エージェント(役割の正本は各 SKILL.md の frontmatter・スクリプトの docstring)。hook を持つ拡張(Layer 3)は現在なし。
 
 | 分類 | レイヤー | 種別 | 名前 | 役割 |
 | ---- | -------- | ---- | ---- | ---- |
@@ -47,7 +47,7 @@
 | meta | 1 | スキル | meta-review | 観点カタログによる意味レビュー(read-only) |
 | meta | 1 | スキル | meta-doc | 本書(DESIGN.md)を .claude から生成 |
 | meta | 0 | スクリプト | meta-core/scripts/meta_check.py | スキル群自体の機械的整合検査(参照実在・依存規律・状態整合等) |
-| meta | 0 | スクリプト | meta-core/scripts/meta_lib.py | meta-* スクリプトの共通ロジック(frontmatter の YAML サブセット解析) |
+| meta | 0 | スクリプト | meta-core/scripts/meta_lib.py | meta-* スクリプトの共通ロジック(frontmatter の YAML サブセット解析・スキル群の配置の走査) |
 | meta | 0 | スクリプト | meta-core/scripts/meta_extract.py | DESIGN.md 生成用の構造抽出(部品・状態機械・inject・エージェント) |
 | meta | 0 | スクリプト | meta-core/scripts/meta_loc.py | スキル群のコード行数の集計(領域ごと・種別ごと・read-only) |
 | meta | 0 | スクリプト | meta-core/scripts/trigger_check.py | description のトリガ検査(肯定例・near-miss 否定例・近接衝突・read-only) |

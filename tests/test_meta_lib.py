@@ -1,15 +1,15 @@
 """meta-core/scripts/meta_lib.py の単体テスト。
 
-frontmatter の YAML サブセット解析を対象にする。meta_check・meta_extract・
-trigger_check が同じ解析器を共有するため、ここの取りこぼしは複数のスクリプトが
-同じフィールドについて別の結論を出す状態を生む。
+frontmatter の YAML サブセット解析と、スキル群の配置の走査を対象にする。
+meta_check・meta_extract・meta_loc・trigger_check が同じ解析器と同じ走査を共有するため、
+ここの取りこぼしは複数のスクリプトが同じ対象について別の結論を出す状態を生む。
 """
 
 from __future__ import annotations
 
 import unittest
 
-import helpers  # noqa: F401  (sys.path の設定のため)
+import helpers
 
 import meta_lib
 
@@ -87,6 +87,81 @@ class ScalarTest(unittest.TestCase):
 
     def test_未定義のキーは_None(self) -> None:
         self.assertIsNone(meta_lib.scalar({}, "a"))
+
+
+class LayoutTest(helpers.TempDirTestCase):
+    """配置の走査(用途グループ + `.claude`)。"""
+
+    def setUp(self) -> None:
+        super().setUp()
+        self.root = self.tmp / "repo"
+        self.add_skill("dev", "dev-spec")
+        self.add_skill(".claude", "meta-check")
+
+    def add_skill(self, group: str, name: str) -> None:
+        d = self.root / group / "skills" / name
+        d.mkdir(parents=True)
+        (d / "SKILL.md").write_text(
+            f"---\nname: {name}\ndescription: 説明\n---\n", encoding="utf-8"
+        )
+
+    def add_agent(self, group: str, name: str) -> None:
+        d = self.root / group / "agents"
+        d.mkdir(parents=True, exist_ok=True)
+        (d / f"{name}.md").write_text(f"---\nname: {name}\n---\n", encoding="utf-8")
+
+    def test_配布対象のグループにドット始まりを含めない(self) -> None:
+        self.assertEqual(
+            [p.name for p in meta_lib.distributed_groups(self.root)], ["dev"]
+        )
+
+    def test_走査の対象に_claude_を含める(self) -> None:
+        self.assertEqual([p.name for p in meta_lib.groups(self.root)], ["dev", ".claude"])
+
+    def test_skills_を持たないディレクトリをグループにしない(self) -> None:
+        (self.root / "extensions" / "group-a").mkdir(parents=True)
+        self.assertEqual(
+            [p.name for p in meta_lib.distributed_groups(self.root)], ["dev"]
+        )
+
+    def test_スキルをグループ横断で名前順に返す(self) -> None:
+        self.add_skill("dev", "dev-core")
+        self.assertEqual(
+            [p.name for p in meta_lib.skill_dirs(self.root)],
+            ["dev-core", "dev-spec", "meta-check"],
+        )
+
+    def test_エージェントをグループ横断で返す(self) -> None:
+        self.add_agent("dev", "dev-reviewer")
+        self.assertEqual(
+            [p.name for p in meta_lib.agent_files(self.root)], ["dev-reviewer.md"]
+        )
+
+    def test_分類をグループ名から決める(self) -> None:
+        self.assertEqual(meta_lib.family_of(self.root / "dev"), "dev")
+        self.assertEqual(meta_lib.family_of(self.root / ".claude"), "meta")
+
+    def test_スキルからグループを引く(self) -> None:
+        skill = self.root / "dev" / "skills" / "dev-spec"
+        self.assertEqual(meta_lib.group_of(skill), self.root / "dev")
+
+    def test_グループを持つディレクトリをルートとみなす(self) -> None:
+        self.assertTrue(meta_lib.is_root(self.root))
+        self.assertFalse(meta_lib.is_root(self.tmp))
+
+    def test_ルートを上方向に探す(self) -> None:
+        start = self.root / "dev" / "skills" / "dev-spec"
+        self.assertEqual(meta_lib.find_root(start), self.root)
+        self.assertIsNone(meta_lib.find_root(self.tmp))
+
+    def test_スキル群の_Markdown_だけを集める(self) -> None:
+        (self.root / "dev" / "skills" / "dev-spec" / "references").mkdir()
+        (self.root / "dev" / "skills" / "dev-spec" / "references" / "x.md").write_text(
+            "参照", encoding="utf-8"
+        )
+        (self.root / "README.md").write_text("ルート", encoding="utf-8")
+        names = [p.name for p in meta_lib.group_docs(self.root)]
+        self.assertEqual(names, ["SKILL.md", "SKILL.md", "x.md"])
 
 
 if __name__ == "__main__":

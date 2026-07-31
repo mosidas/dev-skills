@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """DESIGN.md 構造層の素材抽出(read-only)。
 
-`.claude/`(SSoT)から、DESIGN.md の構造層(部品一覧・レイヤー構成・状態機械・
+スキル群の定義(SSoT)から、DESIGN.md の構造層(部品一覧・レイヤー構成・状態機械・
 inject グラフ・エージェント)を決定論的に抽出し、JSON で出力する。meta-doc が
 この JSON をもとに構造層の散文を生成する。判断層(根拠・トレードオフ)は含まない
 (それは `.meta/decisions/` の担当。principles.md §3)。ファイルを書き換えない。
@@ -27,13 +27,6 @@ def die(msg: str) -> None:
     sys.exit(1)
 
 
-def find_root(start: Path) -> Path | None:
-    for d in (start, *start.parents):
-        if (d / ".claude").is_dir():
-            return d
-    return None
-
-
 def read_text(path: Path) -> str:
     return path.read_text(encoding="utf-8")
 
@@ -49,14 +42,15 @@ def parse_frontmatter_scalars(text: str) -> dict:
     return {k: v for k, v in parsed[0].items() if isinstance(v, str) and v.strip()}
 
 
-def classify(name: str) -> tuple[str, int]:
-    """スキル名から (分類, レイヤー番号) を決める(命名規約ベース)。
+def classify(skill: Path) -> tuple[str, int]:
+    """スキルのディレクトリから (分類, レイヤー番号) を決める。
 
-    分類: meta-* は "meta"、それ以外(dev-*・flow-*・ext-*)は "dev"。
+    分類: スキルを収めるグループ名(`.claude` に置く meta-* は "meta")。
     レイヤー: dev-core / meta-core = 0(基盤)、flow-* = 2(composition)、
               ext-* = 3(拡張)、その他の部品(dev-* / meta-check 等)= 1。
     """
-    family = "meta" if name.startswith("meta-") else "dev"
+    name = skill.name
+    family = meta_lib.family_of(meta_lib.group_of(skill))
     if name in ("dev-core", "meta-core"):
         layer = 0
     elif name.startswith("flow-"):
@@ -69,16 +63,11 @@ def classify(name: str) -> tuple[str, int]:
 
 
 def extract_parts(root: Path) -> list[dict]:
-    skills_dir = root / ".claude" / "skills"
     parts: list[dict] = []
-    if not skills_dir.is_dir():
-        return parts
-    for skill in sorted(skills_dir.iterdir()):
-        if not skill.is_dir():
-            continue
+    for skill in meta_lib.skill_dirs(root):
         skill_md = skill / "SKILL.md"
         fm = parse_frontmatter_scalars(read_text(skill_md)) if skill_md.is_file() else {}
-        family, layer = classify(skill.name)
+        family, layer = classify(skill)
         parts.append(
             {
                 "name": skill.name,
@@ -106,34 +95,32 @@ def _module_doc_first_line(text: str) -> str:
 
 
 def extract_scripts(root: Path) -> list[dict]:
-    """`.claude/skills/*/scripts/*.py` を抽出する(分類・レイヤー・役割)。"""
-    skills_dir = root / ".claude" / "skills"
+    """各スキルの `scripts/*.py` を抽出する(分類・レイヤー・役割)。"""
     scripts: list[dict] = []
-    if not skills_dir.is_dir():
-        return scripts
-    for py in sorted(skills_dir.glob("*/scripts/*.py")):
-        if py.name == "__init__.py":
-            continue
-        owner = py.parent.parent.name
-        family, layer = classify(owner)
-        scripts.append(
-            {
-                "name": f"{owner}/scripts/{py.name}",
-                "family": family,
-                "layer": layer,
-                "kind": "スクリプト",
-                "role": _module_doc_first_line(read_text(py)),
-            }
-        )
+    for skill in meta_lib.skill_dirs(root):
+        family, layer = classify(skill)
+        for py in sorted((skill / "scripts").glob("*.py")):
+            if py.name == "__init__.py":
+                continue
+            scripts.append(
+                {
+                    "name": f"{skill.name}/scripts/{py.name}",
+                    "family": family,
+                    "layer": layer,
+                    "kind": "スクリプト",
+                    "role": _module_doc_first_line(read_text(py)),
+                }
+            )
     return scripts
 
 
 def extract_state_machines(root: Path) -> list[dict]:
-    skills_dir = root / ".claude" / "skills"
     machines: list[dict] = []
-    if not skills_dir.is_dir():
-        return machines
-    for wf in sorted(skills_dir.glob("*/workflow.json")):
+    workflows = sorted(
+        (wf for skill in meta_lib.skill_dirs(root) for wf in skill.glob("workflow.json")),
+        key=lambda p: p.parent.name,
+    )
+    for wf in workflows:
         try:
             defn = json.loads(read_text(wf))
         except (OSError, json.JSONDecodeError) as e:
@@ -189,16 +176,13 @@ def extract_inject_graph(root: Path) -> dict:
 
 
 def extract_agents(root: Path) -> list[dict]:
-    agents_dir = root / ".claude" / "agents"
     agents: list[dict] = []
-    if not agents_dir.is_dir():
-        return agents
-    for path in sorted(agents_dir.glob("*.md")):
+    for path in meta_lib.agent_files(root):
         fm = parse_frontmatter_scalars(read_text(path))
         agents.append(
             {
                 "name": fm.get("name", path.stem),
-                "family": "dev",
+                "family": meta_lib.family_of(meta_lib.group_of(path)),
                 "layer": 0,
                 "kind": "エージェント",
                 "model": fm.get("model", ""),
@@ -210,7 +194,9 @@ def extract_agents(root: Path) -> list[dict]:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="DESIGN.md 構造層の素材抽出(read-only)")
-    parser.add_argument("--root", help="dev-skills のルート(既定: .claude を上方向に探索)")
+    parser.add_argument(
+        "--root", help="dev-skills のルート(既定: スキルのグループを上方向に探索)"
+    )
     parser.add_argument(
         "--json", action="store_true", help="JSON で出力する(既定でも JSON)"
     )
@@ -218,12 +204,12 @@ def main() -> None:
 
     if args.root:
         root = Path(args.root).resolve()
-        if not (root / ".claude").is_dir():
-            die(f"--root に .claude が無い: {root}")
+        if not meta_lib.is_root(root):
+            die(f"--root にスキルのグループが無い: {root}")
     else:
-        found = find_root(Path.cwd())
+        found = meta_lib.find_root(Path.cwd())
         if found is None:
-            die(".claude を含むルートが見つからない(--root で指定する)")
+            die("スキルのグループを含むルートが見つからない(--root で指定する)")
         root = found
 
     inventory = {

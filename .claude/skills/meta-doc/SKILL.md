@@ -1,16 +1,16 @@
 ---
 name: meta-doc
-description: DESIGN.md(`.meta/DESIGN.md`)を `.claude`(SSoT)から生成する(メタレベル)。DESIGN.md は現状の構造のみを表す生成物で、更新時は既存記述を全上書きする(履歴・判断は decisions/ に残す)。テンプレート(design-template.md)に沿い、構成要素・レイヤー構造・DFD・処理シーケンスを meta_extract.py の抽出と一致させる。スキルの追加・改名・状態機械の変更を DESIGN.md へ反映したいときに使う。
+description: DESIGN.md(`.meta/DESIGN.md`)をスキルの定義(SSoT)から生成する(メタレベル)。DESIGN.md は現状の構造のみを表す生成物で、更新時は既存記述を全上書きする(履歴・判断は decisions/ に残す)。テンプレート(design-template.md)に沿い、構成要素・レイヤー構造・DFD・処理シーケンスを meta_extract.py の抽出と一致させる。スキルの追加・改名・状態機械の変更を DESIGN.md へ反映したいときに使う。
 ---
 
-# meta-doc — DESIGN.md の生成(`.claude` → DESIGN)
+# meta-doc — DESIGN.md の生成(スキルの定義 → DESIGN)
 
-人間向けの俯瞰ドキュメント `.meta/DESIGN.md` を、SSoT である `.claude` から生成するメタ部品。「コードが SSoT、説明は導出」(`../dev-core/references/source-driven.md`)をスキル群自身へ再帰適用したもの(principles.md §2)。
+人間向けの俯瞰ドキュメント `.meta/DESIGN.md` を、SSoT であるスキルの定義から生成するメタ部品。「コードが SSoT、説明は導出」(`../../../dev/skills/dev-core/references/source-driven.md`)をスキル群自身へ再帰適用したもの(principles.md §2)。
 
 ## 1. 方針(D-004)
 
 - **DESIGN.md は現状の構造のみを表す**。設計判断の根拠・却下案・経緯・履歴は書かない。それらは `.meta/decisions/`(`D-###`)が正本で、DESIGN.md からは `D-###` で参照するだけ。
-- **更新は全上書き**(差分追記をしない)。`.claude` の現状を都度まるごと反映する。
+- **更新は全上書き**(差分追記をしない)。スキルの定義の現状を都度まるごと反映する。
 - 構成はテンプレート `./templates/design-template.md` を正とする(概要 / 構成要素 / 相関図〔レイヤー構造・DFD〕/ 処理シーケンス)。図は Mermaid で書く。
 
 ## 2. 契約
@@ -24,7 +24,7 @@ description: DESIGN.md(`.meta/DESIGN.md`)を `.claude`(SSoT)から生成する(�
 - 生成テンプレート(構成の正本): `./templates/design-template.md`
 - スキル群自体の品質の設計原則(2 層分離): `../meta-core/references/principles.md` §2–3
 - 判断層の正本(参照のみ): `../../../.meta/decisions/README.md`(索引。各 `D-###` の実体は同ディレクトリ)
-- 自己適用の根拠: `../dev-core/references/source-driven.md`
+- 自己適用の根拠: `../../../dev/skills/dev-core/references/source-driven.md`
 
 ## 4. ステップ
 
@@ -34,7 +34,7 @@ description: DESIGN.md(`.meta/DESIGN.md`)を `.claude`(SSoT)から生成する(�
 $ python3 ../meta-core/scripts/meta_extract.py [--root <ルート>]
 ```
 
-- 出力 JSON(`parts`・`state_machines`・`inject_graph`・`agents`)が構成の素材の正本。DESIGN.md の記述は、この JSON と一致させる(食い違ったら JSON = `.claude` を正とする)。
+- 出力 JSON(`parts`・`state_machines`・`inject_graph`・`agents`)が構成の素材の正本。DESIGN.md の記述は、この JSON と一致させる(食い違ったら JSON = スキルの定義を正とする)。
 
 ### Step 2: 判断参照の把握
 
@@ -44,7 +44,7 @@ $ python3 ../meta-core/scripts/meta_extract.py [--root <ルート>]
 
 - `./templates/design-template.md` の節構成に沿って DESIGN.md をまるごと生成し、既存の DESIGN.md を全上書きする。
   - **概要**: スキル群の位置づけ・レイヤー構成・SSoT を文章で(根拠は `D-###` 参照)。
-  - **原則**: `../meta-core/references/principles.md` の要約(2 つの品質の対象〔成果物の品質 / スキル群自体の品質〕・SSoT は .claude・DESIGN の 2 層分離・依存規律・meta-* の構成)。正本へリンクし、要約である旨を明記する。
+  - **原則**: `../meta-core/references/principles.md` の要約(2 つの品質の対象〔成果物の品質 / スキル群自体の品質〕・SSoT はスキルの定義・DESIGN の 2 層分離・依存規律・meta-* の構成)。正本へリンクし、要約である旨を明記する。
   - **構成要素**: 表(分類 / レイヤー / 種別 / 名前 / 役割)。Step 1 の JSON の `parts`・`scripts`・`agents`(・hook)を列挙する。分類 = dev/meta(family)、レイヤー = 0/1/2(layer)、種別 = スキル/エージェント/スクリプト/フック(kind)。基盤・コア・サブ・オプション等の位置づけは役割に自由記述する。
   - **相関図 / レイヤー構造**: Mermaid。dev 分類・meta 分類の**どちらもレイヤー構造**としてネスト subgraph で描き(dev: 3⊃2⊃1⊃0、meta: 1⊃0)、外→内の一方向依存を内包で示す。meta は dev と直交し、走査・生成を破線で結ぶ。
   - **相関図 / DFD**: Mermaid flowchart。プロセス(部品)は矩形、ドキュメント/成果物(spec.md・tasks.md・コード等)は平行四辺形のエンティティ、データストア(port・state.json)はシリンダ、外部(依頼・出荷)はスタジアムで区別する。ドキュメントは矢印ラベルでなくノードとして置く。**すべての矢印に説明文を付け**、**凡例を Mermaid 図の中に置く**(`subgraph LEGEND["凡例"]`)。
@@ -64,5 +64,5 @@ $ python3 ../meta-core/scripts/meta_extract.py [--root <ルート>]
 
 - `decisions/` を生成・改変しない(判断層は人間の手書き)。
 - DESIGN.md に判断・根拠・履歴を書かない。現状の構造だけを書き、根拠は `D-###` 参照にする(D-004)。
-- 構成は `.claude`(= meta_extract.py の JSON)を正とし、乖離は再生成(全上書き)で解消する。
+- 構成はスキルの定義(= meta_extract.py の JSON)を正とし、乖離は再生成(全上書き)で解消する。
 - コミットはユーザーの明示操作。本部品は差分提示で停止する。

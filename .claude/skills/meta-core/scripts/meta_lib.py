@@ -1,8 +1,8 @@
 """meta-* スクリプトの共通ロジック。
 
-frontmatter(YAML のサブセット)の解析を 1 箇所に集約する。meta_check.py・
-meta_extract.py・trigger_check.py が共有し、同じフィールドに対して別々の結論を
-出さないようにする。Python 3 標準ライブラリのみを使用する。
+frontmatter(YAML のサブセット)の解析と、スキル群の配置の走査を 1 箇所に集約する。
+meta_check.py・meta_extract.py・meta_loc.py・trigger_check.py が共有し、同じ対象に
+対して別々の結論を出さないようにする。Python 3 標準ライブラリのみを使用する。
 
 解釈する記法(サブセット):
   key: value            スカラー(前後の引用符を剥がす)
@@ -13,15 +13,26 @@ meta_extract.py・trigger_check.py が共有し、同じフィールドに対し
 
 解釈できない行は捨てずに `unparsable` として返す。呼び出し側はこれを「値が違う」
 と断定せず、「この解析器が解釈できない記法」として区別して報告する。
+
+配置の走査(D-011):
+  スキル本体は用途グループ(ルート直下で `skills/` を持つディレクトリ。例: `dev/`)に置く。
+  `meta-*` は配布せず自リポジトリで使うため `.claude/skills/` に置く。両者を同じ関数で
+  列挙し、検査・抽出・集計が配置の違いを個別に持たないようにする。
 """
 
 from __future__ import annotations
 
 import re
+from pathlib import Path
 
 KEY_RE = re.compile(r"^([A-Za-z_][\w-]*):\s*(.*)$")
 SEQ_ITEM_RE = re.compile(r"^\s+-\s+(.*)$")
 BLOCK_SCALAR_RE = re.compile(r"^([|>])([+-]?)(\d*)\s*$")
+
+SKILLS_SUBDIR = "skills"
+AGENTS_SUBDIR = "agents"
+# 自リポジトリ保守用(meta-*)の置き場所。Claude Code がこのリポジトリで読み込む場所でもある。
+LOCAL_GROUP = ".claude"
 
 
 def _unquote(value: str) -> str:
@@ -111,3 +122,92 @@ def scalar(data: dict, key: str) -> str | None:
     """スカラー値を取り出す(リスト等の非スカラーは None)。"""
     value = data.get(key)
     return value if isinstance(value, str) else None
+
+
+# ---------------------------------------------------------------------------
+# 配置の走査
+
+
+def distributed_groups(root: Path) -> list[Path]:
+    """配布対象の用途グループを列挙する(ルート直下で `skills/` を持つディレクトリ)。
+
+    ドットで始まるディレクトリは対象外にする(`.claude` は配布しない meta-* の置き場所)。
+    """
+    if not root.is_dir():
+        return []
+    return sorted(
+        p
+        for p in root.iterdir()
+        if p.is_dir()
+        and not p.name.startswith(".")
+        and (p / SKILLS_SUBDIR).is_dir()
+    )
+
+
+def groups(root: Path) -> list[Path]:
+    """スキルを収めるグループを列挙する(配布対象のグループ + `.claude`)。"""
+    found = distributed_groups(root)
+    local = root / LOCAL_GROUP
+    if (local / SKILLS_SUBDIR).is_dir():
+        found.append(local)
+    return found
+
+
+def skill_dirs(root: Path) -> list[Path]:
+    """スキル 1 件ごとのディレクトリを列挙する(全グループ横断)。"""
+    return sorted(
+        (
+            skill
+            for group in groups(root)
+            for skill in (group / SKILLS_SUBDIR).iterdir()
+            if skill.is_dir()
+        ),
+        key=lambda p: p.name,
+    )
+
+
+def agent_files(root: Path) -> list[Path]:
+    """エージェント定義の Markdown を列挙する(全グループ横断)。"""
+    return sorted(
+        (
+            f
+            for group in groups(root)
+            if (group / AGENTS_SUBDIR).is_dir()
+            for f in (group / AGENTS_SUBDIR).glob("*.md")
+        ),
+        key=lambda p: p.name,
+    )
+
+
+def family_of(group: Path) -> str:
+    """グループのディレクトリから分類名を返す(`.claude` は meta-* を収めるため "meta")。"""
+    return "meta" if group.name == LOCAL_GROUP else group.name
+
+
+def group_of(path: Path) -> Path:
+    """スキルディレクトリ・エージェントファイルから、それを収めるグループを返す。"""
+    return path.parent.parent
+
+
+def is_root(path: Path) -> bool:
+    """dev-skills のルートか(スキルを収めるグループを 1 つ以上持つか)。"""
+    return bool(groups(path))
+
+
+def find_root(start: Path) -> Path | None:
+    """スキルを収めるグループを持つディレクトリを start から上方向に探す。"""
+    for d in (start, *start.parents):
+        if is_root(d):
+            return d
+    return None
+
+
+def group_docs(root: Path) -> list[Path]:
+    """スキル群を構成する Markdown を列挙する(SKILL・references・templates・agents)。"""
+    docs: list[Path] = []
+    for group in groups(root):
+        for sub in (SKILLS_SUBDIR, AGENTS_SUBDIR):
+            d = group / sub
+            if d.is_dir():
+                docs.extend(p for p in d.rglob("*.md") if p.is_file())
+    return sorted(set(docs))

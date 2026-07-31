@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import json
 import unittest
+from pathlib import Path
 
 import helpers
 
@@ -19,31 +20,46 @@ import meta_extract
 EXTRACT_PY = META_SCRIPTS / "meta_extract.py"
 
 
+def skill_path(group: str, name: str) -> Path:
+    """グループ配下のスキルディレクトリのパスを組み立てる(実在は不要)。"""
+    return Path("/repo") / group / "skills" / name
+
+
 class ClassifyTest(unittest.TestCase):
     def test_基盤スキルをレイヤー_0_にする(self) -> None:
-        self.assertEqual(meta_extract.classify("dev-core"), ("dev", 0))
-        self.assertEqual(meta_extract.classify("meta-core"), ("meta", 0))
+        self.assertEqual(meta_extract.classify(skill_path("dev", "dev-core")), ("dev", 0))
+        self.assertEqual(
+            meta_extract.classify(skill_path(".claude", "meta-core")), ("meta", 0)
+        )
 
     def test_部品をレイヤー_1_にする(self) -> None:
-        self.assertEqual(meta_extract.classify("dev-spec"), ("dev", 1))
-        self.assertEqual(meta_extract.classify("meta-check"), ("meta", 1))
+        self.assertEqual(meta_extract.classify(skill_path("dev", "dev-spec")), ("dev", 1))
+        self.assertEqual(
+            meta_extract.classify(skill_path(".claude", "meta-check")), ("meta", 1)
+        )
 
     def test_composition_をレイヤー_2_にする(self) -> None:
-        self.assertEqual(meta_extract.classify("flow-sdd"), ("dev", 2))
+        self.assertEqual(meta_extract.classify(skill_path("dev", "flow-sdd")), ("dev", 2))
 
     def test_拡張をレイヤー_3_にする(self) -> None:
-        self.assertEqual(meta_extract.classify("ext-anything"), ("dev", 3))
+        self.assertEqual(
+            meta_extract.classify(skill_path("dev", "ext-anything")), ("dev", 3)
+        )
+
+    def test_分類をグループ名から決める(self) -> None:
+        """名前ではなく配置(どのグループに置いたか)が分類を決める。"""
+        self.assertEqual(meta_extract.classify(skill_path("ops", "ops-deploy"))[0], "ops")
 
 
 class ExtractTest(helpers.TempDirTestCase):
     def setUp(self) -> None:
         super().setUp()
         self.root = self.tmp / "repo"
-        (self.root / ".claude" / "skills").mkdir(parents=True)
-        (self.root / ".claude" / "agents").mkdir(parents=True)
+        (self.root / "dev" / "skills").mkdir(parents=True)
+        (self.root / "dev" / "agents").mkdir(parents=True)
 
     def add_skill(self, name: str, description: str = "説明") -> None:
-        d = self.root / ".claude" / "skills" / name
+        d = self.root / "dev" / "skills" / name
         d.mkdir(parents=True, exist_ok=True)
         (d / "SKILL.md").write_text(
             f"---\nname: {name}\ndescription: {description}\n---\n", encoding="utf-8"
@@ -58,14 +74,24 @@ class ExtractTest(helpers.TempDirTestCase):
         self.assertEqual(parts[0]["role"], "仕様部品")
         self.assertTrue(parts[0]["has_skill_md"])
 
+    def test_配布しないグループの部品も返す(self) -> None:
+        """`.claude` に置く meta-* も抽出の対象にする(DESIGN の構成要素に載せるため)。"""
+        d = self.root / ".claude" / "skills" / "meta-check"
+        d.mkdir(parents=True)
+        (d / "SKILL.md").write_text(
+            "---\nname: meta-check\ndescription: 機械検査\n---\n", encoding="utf-8"
+        )
+        parts = meta_extract.extract_parts(self.root)
+        self.assertEqual([(p["name"], p["family"]) for p in parts], [("meta-check", "meta")])
+
     def test_SKILL_を持たない基盤も部品として返す(self) -> None:
-        (self.root / ".claude" / "skills" / "dev-core" / "references").mkdir(parents=True)
+        (self.root / "dev" / "skills" / "dev-core" / "references").mkdir(parents=True)
         parts = meta_extract.extract_parts(self.root)
         self.assertFalse(parts[0]["has_skill_md"])
         self.assertEqual(parts[0]["role"], "")
 
     def test_引用符つきの_description_を剥がして返す(self) -> None:
-        d = self.root / ".claude" / "skills" / "dev-spec"
+        d = self.root / "dev" / "skills" / "dev-spec"
         d.mkdir(parents=True)
         (d / "SKILL.md").write_text(
             '---\nname: dev-spec\ndescription: "仕様部品"\n---\n', encoding="utf-8"
@@ -73,7 +99,7 @@ class ExtractTest(helpers.TempDirTestCase):
         self.assertEqual(meta_extract.extract_parts(self.root)[0]["role"], "仕様部品")
 
     def test_スクリプトの所有部品と役割を返す(self) -> None:
-        d = self.root / ".claude" / "skills" / "dev-core" / "scripts"
+        d = self.root / "dev" / "skills" / "dev-core" / "scripts"
         d.mkdir(parents=True)
         (d / "sample.py").write_text('"""サンプルの役割。\n\n続き。\n"""\n', encoding="utf-8")
         scripts = meta_extract.extract_scripts(self.root)
@@ -82,7 +108,7 @@ class ExtractTest(helpers.TempDirTestCase):
         self.assertEqual(scripts[0]["layer"], 0)
 
     def test_エージェントの_model_と役割を返す(self) -> None:
-        (self.root / ".claude" / "agents" / "dev-reviewer.md").write_text(
+        (self.root / "dev" / "agents" / "dev-reviewer.md").write_text(
             "---\nname: dev-reviewer\ndescription: 判定器\nmodel: opus\n---\n",
             encoding="utf-8",
         )
@@ -91,7 +117,7 @@ class ExtractTest(helpers.TempDirTestCase):
         self.assertEqual(agents[0]["role"], "判定器")
 
     def test_状態機械の状態とゲートを返す(self) -> None:
-        d = self.root / ".claude" / "skills" / "flow-x"
+        d = self.root / "dev" / "skills" / "flow-x"
         d.mkdir(parents=True)
         (d / "workflow.json").write_text(
             json.dumps(helpers.WORKFLOW_DEF, ensure_ascii=False), encoding="utf-8"
@@ -102,7 +128,7 @@ class ExtractTest(helpers.TempDirTestCase):
         self.assertIn("completed", machines[0]["final"])
 
     def test_壊れた状態機械定義をエラーとして返す(self) -> None:
-        d = self.root / ".claude" / "skills" / "flow-x"
+        d = self.root / "dev" / "skills" / "flow-x"
         d.mkdir(parents=True)
         (d / "workflow.json").write_text("{壊れた", encoding="utf-8")
         self.assertIn("error", meta_extract.extract_state_machines(self.root)[0])

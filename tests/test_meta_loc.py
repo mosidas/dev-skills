@@ -22,12 +22,15 @@ LOC_PY = META_SCRIPTS / "meta_loc.py"
 class AreaTest(unittest.TestCase):
     def test_スキルごとの領域に割り当てる(self) -> None:
         self.assertEqual(
-            meta_loc.area_of(Path(".claude/skills/dev-spec/SKILL.md")), "dev-spec"
+            meta_loc.area_of(Path("dev/skills/dev-spec/SKILL.md")), "dev-spec"
+        )
+        self.assertEqual(
+            meta_loc.area_of(Path(".claude/skills/meta-core/SKILL.md")), "meta-core"
         )
 
-    def test_エージェントを_1_つの領域にまとめる(self) -> None:
+    def test_エージェントをグループごとの領域にまとめる(self) -> None:
         self.assertEqual(
-            meta_loc.area_of(Path(".claude/agents/dev-reviewer.md")), ".claude/agents"
+            meta_loc.area_of(Path("dev/agents/dev-reviewer.md")), "dev/agents"
         )
 
     def test_meta_と_ports_と_extensions_を領域にする(self) -> None:
@@ -58,10 +61,10 @@ class CollectTest(helpers.TempDirTestCase):
     def setUp(self) -> None:
         super().setUp()
         self.root = self.tmp / "repo"
-        (self.root / ".claude" / "skills" / "dev-spec").mkdir(parents=True)
+        (self.root / "dev" / "skills" / "dev-spec").mkdir(parents=True)
 
     def test_領域と種別ごとに集計する(self) -> None:
-        (self.root / ".claude" / "skills" / "dev-spec" / "SKILL.md").write_text(
+        (self.root / "dev" / "skills" / "dev-spec" / "SKILL.md").write_text(
             "a\nb\n", encoding="utf-8"
         )
         (self.root / "README.md").write_text("a\n", encoding="utf-8")
@@ -72,11 +75,11 @@ class CollectTest(helpers.TempDirTestCase):
         self.assertEqual(result["grand"].total, 3)
 
     def test_キャッシュとバイトコードを除外する(self) -> None:
-        cache = self.root / ".claude" / "skills" / "dev-spec" / "__pycache__"
+        cache = self.root / "dev" / "skills" / "dev-spec" / "__pycache__"
         cache.mkdir()
         (cache / "x.pyc").write_bytes(b"\x00")
-        (self.root / ".claude" / "skills" / "dev-spec" / "y.pyc").write_bytes(b"\x00")
-        (self.root / ".claude" / "skills" / "dev-spec" / "SKILL.md").write_text(
+        (self.root / "dev" / "skills" / "dev-spec" / "y.pyc").write_bytes(b"\x00")
+        (self.root / "dev" / "skills" / "dev-spec" / "SKILL.md").write_text(
             "a\n", encoding="utf-8"
         )
         result = meta_loc.collect(self.root)
@@ -90,10 +93,10 @@ class CollectTest(helpers.TempDirTestCase):
 
 
 class CliTest(helpers.TempDirTestCase):
-    def test_root_に_claude_が無ければ停止する(self) -> None:
+    def test_root_にスキルのグループが無ければ停止する(self) -> None:
         proc = run_script(LOC_PY, "--root", self.tmp)
         self.assertEqual(proc.returncode, 1)
-        self.assertIn(".claude が無い", proc.stderr)
+        self.assertIn("スキルのグループが無い", proc.stderr)
 
     def test_実リポジトリで集計を返す(self) -> None:
         proc = run_script(LOC_PY, "--root", helpers.REPO_ROOT, "--json")

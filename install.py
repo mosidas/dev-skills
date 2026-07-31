@@ -5,9 +5,11 @@
 シンボリックリンクは使わない(devcontainer 等でホスト側パスが解決できない環境でも動くように、
 また利用側が導入物を自リポジトリに Git 管理できるように。D-006)。
 
-- core:   `.claude/skills/*`(dev-* / flow-* のみ)・`.claude/agents/*.md` をコピーする。
-          `meta-*` は dev-skills 自身の保守用のため配布しない。更新(再実行)では、前回コピーして
-          今回の配布元に無くなったスキル・エージェント(廃止分)を削除する。記録は core lock。
+- core:   用途グループ(配布ルート直下で `skills/` を持つディレクトリ。例: `dev/`)の
+          `skills/*`・`agents/*.md` を `.claude/skills/`・`.claude/agents/` へコピーする。
+          `meta-*` は dev-skills 自身の保守用で `.claude/skills/` に置き、グループ外のため
+          配布されない(D-006・D-011)。更新(再実行)では、前回コピーして今回の配布元に
+          無くなったスキル・エージェント(廃止分)を削除する。記録は core lock。
 - ext:    拡張バンドル(`extensions/<グループ名>/<name>/`)のスキル本体を `.claude/skills/<name>/` へ
           コピーし、同梱 `agents/` のコピー・`settings.snippet.json` のマージ(hooks・permissions.deny)・
           同梱 `ports/` のコピー(既存は上書きしない)を行い、ext lock に記録する。
@@ -30,9 +32,9 @@ CORE_LOCK_REL = ".claude/dev-core.lock.json"
 LOCK_REL = ".claude/dev-extensions.lock.json"
 SETTINGS_REL = ".claude/settings.json"
 
-# meta-* は dev-skills リポジトリ自身の品質を保守する道具で、消費プロジェクトでは使わない。
-# core の配布対象から除外する(D-006)。
-CORE_EXCLUDE_PREFIX = "meta-"
+# 用途グループ配下でスキル・エージェントを収めるディレクトリ名。
+SKILLS_SUBDIR = "skills"
+AGENTS_SUBDIR = "agents"
 # 拡張バンドルのうち、スキル本体としてコピーしないエントリ(別経路で扱う)。
 EXT_NON_SKILL = {"agents", "ports", "settings.snippet.json"}
 IGNORE = shutil.ignore_patterns("__pycache__", "*.pyc")
@@ -152,11 +154,23 @@ def unmerge_deny(settings: dict, managed: list) -> None:
         settings.pop("permissions", None)
 
 
+def core_groups(root: Path) -> list[Path]:
+    """配布対象の用途グループを列挙する(ルート直下で `skills/` を持つディレクトリ)。
+
+    ドットで始まるディレクトリは対象外にする。`meta-*` を置く `.claude/` はこれにより
+    配布対象から外れる(名前による除外を持たない。D-011)。
+    """
+    return sorted(
+        p
+        for p in root.iterdir()
+        if p.is_dir() and not p.name.startswith(".") and (p / SKILLS_SUBDIR).is_dir()
+    )
+
+
 def cmd_core(root: Path, target: Path, dry: bool) -> None:
-    skills_src = root / ".claude" / "skills"
-    agents_src = root / ".claude" / "agents"
-    if not skills_src.is_dir():
-        die(f"配布ルートに .claude/skills が無い: {root}")
+    groups = core_groups(root)
+    if not groups:
+        die(f"配布ルートに用途グループ(<グループ>/{SKILLS_SUBDIR})が無い: {root}")
 
     core_lock_path = target / CORE_LOCK_REL
     old = load_json(core_lock_path, {})
@@ -164,16 +178,24 @@ def cmd_core(root: Path, target: Path, dry: bool) -> None:
     old_agents = old.get("agents", [])
 
     new_skills: list[str] = []
-    for d in sorted(p for p in skills_src.iterdir() if p.is_dir()):
-        if d.name.startswith(CORE_EXCLUDE_PREFIX):
-            continue  # meta-* は消費側へ配布しない(D-006)
-        copy_tree(d, target / ".claude" / "skills" / d.name, dry)
-        new_skills.append(d.name)
-
     new_agents: list[str] = []
-    for f in sorted(agents_src.glob("*.md")):
-        copy_file(f, target / ".claude" / "agents" / f.name, dry)
-        new_agents.append(f".claude/agents/{f.name}")
+    for group in groups:
+        for d in sorted(p for p in (group / SKILLS_SUBDIR).iterdir() if p.is_dir()):
+            if d.name in new_skills:
+                die(f"スキル名 {d.name} が複数のグループに存在する(導入先で衝突する)")
+            copy_tree(d, target / ".claude" / "skills" / d.name, dry)
+            new_skills.append(d.name)
+        agents_src = group / AGENTS_SUBDIR
+        if not agents_src.is_dir():
+            continue
+        for f in sorted(agents_src.glob("*.md")):
+            rel_agent = f".claude/agents/{f.name}"
+            if rel_agent in new_agents:
+                die(f"エージェント名 {f.name} が複数のグループに存在する(導入先で衝突する)")
+            copy_file(f, target / ".claude" / "agents" / f.name, dry)
+            new_agents.append(rel_agent)
+    new_skills.sort()
+    new_agents.sort()
 
     # 更新: 前回コピーして今回の配布元に無いスキル・エージェント(廃止分)を削除する。
     for name in old_skills:
@@ -188,8 +210,9 @@ def cmd_core(root: Path, target: Path, dry: bool) -> None:
         [a for a in old_agents if a not in new_agents]
     )
     print(
-        f"core: スキル {len(new_skills)} 件・エージェント {len(new_agents)} 件をコピー"
-        f"(meta-* は配布しない。廃止削除 {stale} 件。記録: {CORE_LOCK_REL})"
+        f"core: グループ {', '.join(g.name for g in groups)} から"
+        f"スキル {len(new_skills)} 件・エージェント {len(new_agents)} 件をコピー"
+        f"(廃止削除 {stale} 件。記録: {CORE_LOCK_REL})"
     )
 
 

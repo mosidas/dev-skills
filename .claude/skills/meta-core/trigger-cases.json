@@ -136,7 +136,7 @@
     {
       "id": "meta-doc-pos-1",
       "skill": "meta-doc",
-      "prompt": "スキルを追加したので DESIGN.md を .claude から生成し直して",
+      "prompt": "スキルを追加したので DESIGN.md をスキルの定義から生成し直して",
       "should_trigger": true
     },
     {

@@ -60,12 +60,12 @@ class TriggerCheckTestCase(helpers.TempDirTestCase):
     def setUp(self) -> None:
         super().setUp()
         self.root = self.tmp / "repo"
-        (self.root / ".claude" / "skills").mkdir(parents=True)
+        (self.root / "dev" / "skills").mkdir(parents=True)
         self.add_skill("dev-spec", SPEC_DESC)
         self.add_skill("dev-implement", IMPL_DESC)
 
     def add_skill(self, name: str, description: str) -> None:
-        d = self.root / ".claude" / "skills" / name
+        d = self.root / "dev" / "skills" / name
         d.mkdir(parents=True, exist_ok=True)
         (d / "SKILL.md").write_text(
             f"---\nname: {name}\ndescription: {description}\n---\n\n# {name}\n",
@@ -166,7 +166,7 @@ class CoverageTest(TriggerCheckTestCase):
         self.assertEqual(self.run_check(self.full_cases())["warnings"], 0)
 
     def test_description_を持たないスキルは対象にしない(self) -> None:
-        d = self.root / ".claude" / "skills" / "dev-core"
+        d = self.root / "dev" / "skills" / "dev-core"
         d.mkdir(parents=True)
         (d / "references").mkdir()
         self.assertEqual(self.run_check(self.full_cases())["warnings"], 0)
@@ -220,10 +220,10 @@ class SpecFileTest(TriggerCheckTestCase):
         self.assertEqual(proc.returncode, 1)
         self.assertIn("読めない", proc.stderr)
 
-    def test_root_に_claude_が無ければ停止する(self) -> None:
+    def test_root_にスキルのグループが無ければ停止する(self) -> None:
         proc = run_script(TRIGGER_PY, "--root", self.tmp / "missing")
         self.assertEqual(proc.returncode, 1)
-        self.assertIn(".claude が無い", proc.stderr)
+        self.assertIn("スキルのグループが無い", proc.stderr)
 
 
 class RealRepositoryTest(unittest.TestCase):

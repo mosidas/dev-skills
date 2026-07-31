@@ -1,17 +1,17 @@
 # DESIGN.md テンプレート
 
-`meta-doc` が `.claude`(SSoT)から `.meta/DESIGN.md` を生成する際の構成テンプレート。
+`meta-doc` がスキルの定義(SSoT)から `.meta/DESIGN.md` を生成する際の構成テンプレート。
 
 - DESIGN.md は**現状の構造のみ**を表す生成物である。更新時は既存記述を**全上書き**する(差分追記をしない)。
 - 設計判断の根拠・却下案・経緯・履歴は DESIGN.md に書かず、`.meta/decisions/`(`D-###`)に残す(D-004)。DESIGN.md からは必要に応じて `D-###` で参照する。
-- 図は Mermaid で書く。ノード名・状態名・部品名は `.claude`(`meta_extract.py` の抽出結果)と一致させる。
+- 図は Mermaid で書く。ノード名・状態名・部品名はスキルの定義(`meta_extract.py` の抽出結果)と一致させる。
 - 以下の骨組みの `<...>` を実値に置換して使う。セクションの並び・見出しは本テンプレートを正とする。
 
 ---
 
 # dev スキル群 構成(DESIGN)
 
-> 現状の構造を表す生成物。`meta-doc` が `.claude`(SSoT)から生成し、更新時は全上書きする。設計判断の根拠・履歴は decisions/(`D-###`)にある。生成時は DESIGN.md の位置(`.meta/`)から `decisions/README.md` への相対リンクを張る。
+> 現状の構造を表す生成物。`meta-doc` がスキルの定義(SSoT)から生成し、更新時は全上書きする。設計判断の根拠・履歴は decisions/(`D-###`)にある。生成時は DESIGN.md の位置(`.meta/`)から `decisions/README.md` への相対リンクを張る。
 
 ## 概要
 
@@ -19,11 +19,11 @@
 
 ## 原則
 
-<!-- meta-core/references/principles.md(スキル群自体の品質の設計原則)の要約。正本はそちらで、ここは要約であることを明記しリンクする。2 つの品質の対象(成果物の品質 / スキル群自体の品質)・SSoT は .claude・DESIGN の 2 層分離・依存規律(一方向)・meta-* の構成を数点にまとめる。 -->
+<!-- meta-core/references/principles.md(スキル群自体の品質の設計原則)の要約。正本はそちらで、ここは要約であることを明記しリンクする。2 つの品質の対象(成果物の品質 / スキル群自体の品質)・SSoT はスキルの定義・DESIGN の 2 層分離・依存規律(一方向)・meta-* の構成を数点にまとめる。 -->
 
 ## 構成要素
 
-<!-- .claude 配下のスキル・スクリプト・エージェントと、あれば hook を表化する(meta_extract.py の parts・scripts・agents)。列は次のとおり。
+<!-- 各グループのスキル・スクリプト・エージェントと、あれば hook を表化する(meta_extract.py の parts・scripts・agents)。列は次のとおり。
      - 分類: dev / meta(meta_extract.py の family)
      - レイヤー: 0 / 1 / 2(meta_extract.py の layer。0=基盤、1=部品、2=composition)
      - 種別: スキル / エージェント / スクリプト / フック(meta_extract.py の kind)

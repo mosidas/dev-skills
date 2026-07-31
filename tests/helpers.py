@@ -1,6 +1,6 @@
 """テストの共通ヘルパ。
 
-スクリプトの実体は `.claude/skills/*/scripts/` にあり、パッケージ化されていない
+スクリプトの実体は各スキルの `scripts/` にあり、パッケージ化されていない
 (利用側へハードコピーで配る単体のスクリプトのため)。テストからはそのディレクトリを
 `sys.path` へ追加して読み込む。exit code と日本語のエラーメッセージを確かめる検査は、
 `die()` が `sys.exit` を呼ぶためサブプロセスで実行する。
@@ -18,7 +18,7 @@ import unittest
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
-DEV_SCRIPTS = REPO_ROOT / ".claude" / "skills" / "dev-core" / "scripts"
+DEV_SCRIPTS = REPO_ROOT / "dev" / "skills" / "dev-core" / "scripts"
 META_SCRIPTS = REPO_ROOT / ".claude" / "skills" / "meta-core" / "scripts"
 
 for _d in (DEV_SCRIPTS, META_SCRIPTS):

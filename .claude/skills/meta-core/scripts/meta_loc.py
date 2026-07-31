@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """スキル群のコード行数の集計(read-only)。
 
-dev-skills を構成するファイル(`.claude`・`.meta`・`ports`・`extensions`・ルート直下)の
-行数を、領域(スキルごと・エージェント・`.meta` 等)と種別(拡張子)ごとに集計する。
-ファイルを書き換えない。標準ライブラリのみ(追加インストール不要の担保)。
+dev-skills を構成するファイル(用途グループ・`.claude`・`.meta`・`ports`・`extensions`・
+ルート直下)の行数を、領域(スキルごと・エージェント・`.meta` 等)と種別(拡張子)ごとに
+集計する。ファイルを書き換えない。標準ライブラリのみ(追加インストール不要の担保)。
 
 行数の定義:
   総行数   物理行(改行で区切った行の数)
@@ -24,20 +24,18 @@ import sys
 import unicodedata
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).parent))
+import meta_lib  # noqa: E402
+
 EXCLUDE_DIRS = {".git", "__pycache__"}
 EXCLUDE_SUFFIXES = {".pyc"}
+# 領域をそのディレクトリ名で表すもの(スキル群の外側)。
+NON_GROUP_TOPS = (".meta", "ports", "extensions")
 
 
 def die(msg: str) -> None:
     print(f"エラー: {msg}", file=sys.stderr)
     sys.exit(1)
-
-
-def find_root(start: Path) -> Path | None:
-    for d in (start, *start.parents):
-        if (d / ".claude").is_dir():
-            return d
-    return None
 
 
 def iter_files(root: Path):
@@ -54,14 +52,18 @@ def iter_files(root: Path):
 
 
 def area_of(rel: Path) -> str:
-    """相対パスから領域(集計の単位)を決める。"""
+    """相対パスから領域(集計の単位)を決める。
+
+    スキルは名前そのものを領域にする(グループが変わっても同じ領域名で追える)。
+    エージェントはグループ込みの `<グループ>/agents` を領域にする。
+    """
     parts = rel.parts
-    if len(parts) >= 3 and parts[0] == ".claude" and parts[1] == "skills":
-        return parts[2]
-    if len(parts) >= 2 and parts[0] == ".claude" and parts[1] == "agents":
-        return ".claude/agents"
-    if parts[0] in (".meta", "ports", "extensions"):
+    if parts[0] in NON_GROUP_TOPS:
         return parts[0]
+    if len(parts) >= 3 and parts[1] == meta_lib.SKILLS_SUBDIR:
+        return parts[2]
+    if len(parts) >= 3 and parts[1] == meta_lib.AGENTS_SUBDIR:
+        return f"{parts[0]}/{meta_lib.AGENTS_SUBDIR}"
     return "(ルート直下)"
 
 
@@ -159,7 +161,9 @@ def print_table(title: str, buckets: dict[str, Bucket], label: str) -> None:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="スキル群のコード行数の集計(read-only)")
-    parser.add_argument("--root", help="dev-skills のルート(既定: .claude を上方向に探索)")
+    parser.add_argument(
+        "--root", help="dev-skills のルート(既定: スキルのグループを上方向に探索)"
+    )
     parser.add_argument("--json", action="store_true", help="JSON で出力する")
     parser.add_argument(
         "--by-file", action="store_true", help="ファイルごとの行数も出力する"
@@ -168,12 +172,12 @@ def main() -> None:
 
     if args.root:
         root = Path(args.root).resolve()
-        if not (root / ".claude").is_dir():
-            die(f"--root に .claude が無い: {root}")
+        if not meta_lib.is_root(root):
+            die(f"--root にスキルのグループが無い: {root}")
     else:
-        found = find_root(Path.cwd())
+        found = meta_lib.find_root(Path.cwd())
         if found is None:
-            die(".claude を含むルートが見つからない(--root で指定する)")
+            die("スキルのグループを含むルートが見つからない(--root で指定する)")
         root = found
 
     result = collect(root)

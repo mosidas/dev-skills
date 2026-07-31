@@ -1,6 +1,6 @@
 # スクリプトの単体テスト
 
-`.claude/skills/*/scripts/` の決定論スクリプトに対する単体テスト。スキル群自体の品質(メタレベル)を担保する道具の 1 つで、機械検査(meta-check)が「文書間の整合」を見るのに対し、本テストは「スクリプトが主張どおり動くこと」を見る。
+各スキルの `scripts/` に置く決定論スクリプトと `install.py` に対する単体テスト。スキル群自体の品質(メタレベル)を担保する道具の 1 つで、機械検査(meta-check)が「文書間の整合」を見るのに対し、本テストは「スクリプトが主張どおり動くこと」を見る。
 
 ## 1. 実行
 
@@ -20,7 +20,7 @@ python3 -m unittest discover -s tests -t tests -p test_state.py
 
 ## 2. 配置と配布
 
-- テストは**配布物に含めない**。`install.py core` は `.claude/skills/*` と `.claude/agents/*` をコピーするため、`tests/` はその対象外になる。`meta-*` を配布しない方針(D-006)と同じ扱いである(D-010)。
+- テストは**配布物に含めない**。`install.py core` は用途グループの `skills/*` と `agents/*` をコピーするため、`tests/` はその対象外になる。`meta-*` を配布しない方針(D-006)と同じ扱いである(D-010)。
 - スクリプトはパッケージ化されていない(利用側へ単体でハードコピーするため)。テストからは `helpers.py` が `sys.path` へスクリプトのディレクトリを追加して読み込む。
 
 ## 3. 構成
@@ -28,11 +28,12 @@ python3 -m unittest discover -s tests -t tests -p test_state.py
 | ファイル                | 対象                       | 主な検査                                                             |
 | ----------------------- | -------------------------- | ---------------------------------------------------------------------- |
 | `helpers.py`            | —                          | 一時ディレクトリ・サブプロセス実行・共通のワークフロー定義             |
+| `test_install.py`       | `install.py`               | 用途グループの走査・配布対象・名前衝突・廃止分の削除                   |
 | `test_lib.py`           | `dev-core/lib.py`          | 定義データの検証・中間生成物のパース・依存循環の検出・凍結             |
 | `test_state.py`         | `dev-core/state.py`        | 遷移の拒否・承認ゲートの強制・完了時の凍結・横断集約                   |
 | `test_check.py`         | `dev-core/check.py`        | 状態検査・凍結違反・トレーサビリティ・対象ファイルの行数               |
 | `test_ports.py`         | `dev-core/ports.py`        | frontmatter の走査と規約違反の警告                                     |
-| `test_meta_lib.py`      | `meta-core/meta_lib.py`    | frontmatter の YAML サブセット解析                                     |
+| `test_meta_lib.py`      | `meta-core/meta_lib.py`    | frontmatter の YAML サブセット解析・スキル群の配置の走査               |
 | `test_meta_check.py`    | `meta-core/meta_check.py`  | 参照・frontmatter・依存規律・状態整合・未記入マーカー・回帰検出        |
 | `test_trigger_check.py` | `meta-core/trigger_check.py` | 肯定例・否定例・近接衝突・ケース網羅・仕様ファイルの異常系            |
 | `test_meta_extract.py`  | `meta-core/meta_extract.py` | 部品・スクリプト・エージェント・状態機械・inject グラフの抽出         |

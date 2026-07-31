@@ -34,7 +34,7 @@ $ python3 <dev のパス>/install.py remove <name> --target <利用側プロジ�
 導入はすべて**ハードコピー**(シンボリックリンクを使わない。devcontainer 等でホスト側パスが解決できない環境でも動き、利用側が導入物を自リポジトリに Git 管理できる。D-006)。
 
 - **バンドル名の解決**: `ext <バンドル名>` は全グループ(`extensions/*/`)から検索する。複数グループに同名バンドルがある場合はエラーになるため、`ext <グループ名>/<バンドル名>` で指定する。導入先(`.claude/skills/<バンドル名>/`)と lock の記録名にグループ名は含まない。
-- **core**: `dev-*` / `flow-*` の `.claude/skills/*` と `.claude/agents/*.md` をコピーする(`meta-*` は dev-skills 自身の保守用のため配布しない)。記録は `.claude/dev-core.lock.json`。再実行(更新)で、前回コピーして今回の配布元に無いスキル・エージェント(廃止分)を削除する。
+- **core**: 用途グループ(配布ルート直下で `skills/` を持つディレクトリ。例: `dev/`)の `skills/*` と `agents/*.md` を、利用側の `.claude/skills/`・`.claude/agents/` へコピーする(`meta-*` は dev-skills 自身の保守用で `.claude/skills/` に置くため、グループ外として配布されない。D-011)。記録は `.claude/dev-core.lock.json`。再実行(更新)で、前回コピーして今回の配布元に無いスキル・エージェント(廃止分)を削除する。
 - **拡張**: `.claude/skills/<name>/` にバンドルのスキル本体(`agents/`・`ports/`・`settings.snippet.json` を除く。`hooks/` は含む)をコピーする。コピーのため相対参照 `../dev-core/` は導入先の実体へ解決する(シンボリックリンクのようにディレクトリごとで壊れる問題がない)。
 - **hooks を持つ拡張**: `settings.snippet.json` を利用側 `.claude/settings.json` へ冪等マージし、管理集合を `.claude/dev-extensions.lock.json` に記録する。`remove` はこの記録に基づき hooks を取り消す(利用側の既存設定には触れない)。
 - **同梱 port**: バンドルの `ports/` を `docs/dev/ports/<name>/` へコピーする(既存ファイルは上書きしない)。コピー後は利用側の資産であり、`remove` でも削除しない。
