@@ -24,8 +24,8 @@
 ## 構成要素
 
 <!-- 各グループのスキル・スクリプト・エージェントと、あれば hook を表化する(meta_extract.py の parts・scripts・agents)。列は次のとおり。
-     - 分類: dev / meta(meta_extract.py の family)
-     - レイヤー: 0 / 1 / 2(meta_extract.py の layer。0=基盤、1=部品、2=composition)
+     - 分類: グループ名(meta_extract.py の family。`.claude` に置く meta-* は meta)
+     - レイヤー: 0 / 1 / 2 / 3(meta_extract.py の layer。0=基盤、1=部品、2=composition、3=拡張。グループの規約 group.json が割り当て、規約を持たないグループは全て 1)
      - 種別: スキル / エージェント / スクリプト / フック(meta_extract.py の kind)
      - 名前: スキル名、または scripts/agents の相対パス・名前
      - 役割: 1 行の要約(正本は各 SKILL.md・スクリプト docstring)。基盤・コア・サブ・オプション・composition 等の位置づけはこの列に自由記述する -->
@@ -38,12 +38,12 @@
 
 ### レイヤー構造
 
-<!-- 分類ごとのオニオン型レイヤー構造を Mermaid で表す。
-     - dev 分類・meta 分類の**どちらもレイヤー構造**である。それぞれをネストした subgraph で描き、内包(外側が内側を知り、内側は外側を知らない)で外→内の一方向依存を示す。
-       - dev: レイヤー 3(extension)⊃ 2(composition)⊃ 1(parts)⊃ 0(foundation)
-       - meta: レイヤー 1(parts)⊃ 0(foundation)
-     - meta 分類は dev 分類と直交する。meta の最外レイヤーから dev の最外レイヤーへ、一方向の走査/生成を破線で結ぶ。
-     - subgraph のラベルは「<分類>・レイヤー N — <役割名>(<所属スキル>)」の形にする。 -->
+<!-- 分類ごとのレイヤー構造を Mermaid で表す。
+     - **複数のレイヤーを持つ分類**(group.json の layers が 2 段以上を割り当てる分類)は、ネストした subgraph で描き、内包(外側が内側を知り、内側は外側を知らない)で外→内の一方向依存を示す。
+       - 例: dev はレイヤー 3(extension)⊃ 2(composition)⊃ 1(parts)⊃ 0(foundation)、meta はレイヤー 1(parts)⊃ 0(foundation)。
+     - **レイヤーが 1 段しかない分類**(規約を持たないグループ)は、ネストせず 1 つのノードで描く。存在しない階層を図に描かない。
+     - meta 分類は配布する分類と直交する。meta の最外レイヤーから各分類の最外レイヤーへ、一方向の走査/生成を破線で結ぶ。
+     - subgraph・ノードのラベルは「<分類>・レイヤー N — <役割名>(<所属スキル>)」の形にする。 -->
 
 ```mermaid
 <flowchart>
@@ -69,7 +69,7 @@
 
 ## 処理シーケンス
 
-<!-- flow-*(composition)ごとに 1 つの sequenceDiagram を書く。アクター(ユーザー)・composition・呼び出す部品・成果物・承認ゲート(状態遷移)を示す。 -->
+<!-- 状態機械を持つスキル(workflow.json を持つもの)ごとに 1 つの sequenceDiagram を書く。アクター(ユーザー)・そのスキル・呼び出す部品・成果物・承認ゲート(状態遷移)を示す。状態機械を持つスキルが無ければ、本節ごと省略する。 -->
 
 ### <flow-sdd>
 

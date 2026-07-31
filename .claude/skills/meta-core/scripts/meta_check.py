@@ -13,7 +13,9 @@
   inject 実在  port frontmatter の inject 先スキル名が実在する
   依存規律     配布するスキル・エージェントの本文が meta-* を参照していない(一方向依存)
   状態整合     workflow.json の状態名が、同じ部品の SKILL.md に記述されている(取り違え・陳腐化の検出)
-  部品名実在   スキル群の本文が参照する dev-*/flow-*/meta-* の部品・エージェント名が実在する
+  部品名実在   スキル群の本文が参照する部品・エージェント名が実在する(名前らしさの判定は
+               グループの規約 `group.json` の part_prefixes が決める)
+  グループ規約 グループ直下の `group.json` が読める(壊れた宣言を既定へ黙って落とさない)
   未記入       未記入マーカーが残っていない(インラインコード・コードブロック・URL は除く)
 
 重大度:
@@ -44,10 +46,6 @@ import meta_lib  # noqa: E402
 REF_RE = re.compile(r"(?<![\w<.])(\.\.?/[\w./-]+\.(?:md|py|json))")
 # バッククォートで囲まれた kebab-case トークン。
 BACKTICK_TOKEN_RE = re.compile(r"`([a-z][a-z0-9-]*)`")
-# 状態名らしいトークン(状態機械の命名規約: <名詞>-<過去分詞/進行>)。
-STATE_LIKE_SUFFIX = ("-generated", "-approved", "-ing", "-initialized")
-# 部品・エージェント名らしいトークン。
-PART_TOKEN_RE = re.compile(r"\b((?:dev|flow|meta|ext)-[a-z][a-z0-9-]*)\b")
 # 部品名検査の除外(リポジトリ名)。
 PART_EXCLUDE = {"dev-skills"}
 META_REF_RE = re.compile(r"\bmeta-(?:core|check|doc|review)\b")
@@ -250,11 +248,13 @@ def check_state_consistency(root: Path, report: Report) -> None:
                     f"{rel(root, skill_md)} に workflow.json の状態 {state!r} の記述が無い"
                 )
         # SKILL.md の状態名らしいトークンが定義に存在するか(取り違えの検出)。
-        mentioned = {
-            t
-            for t in BACKTICK_TOKEN_RE.findall(text)
-            if t.endswith(STATE_LIKE_SUFFIX)
-        }
+        # 状態名らしさの判定はグループの規約に従う(宣言が無ければ判定しない)。
+        suffixes = tuple(meta_lib.state_suffixes(wf.parent))
+        mentioned = (
+            {t for t in BACKTICK_TOKEN_RE.findall(text) if t.endswith(suffixes)}
+            if suffixes
+            else set()
+        )
         for token in sorted(mentioned - states):
             report.warning(
                 f"{rel(root, skill_md)} の状態名 `{token}` が workflow.json に無い"
@@ -334,20 +334,60 @@ def check_placeholders(root: Path, report: Report) -> None:
                 )
 
 
+def part_token_re(root: Path) -> re.Pattern | None:
+    """部品・エージェント名らしいトークンの検出パターンを規約から作る。
+
+    どのグループもプレフィックスを宣言しない場合は None を返し、この検査を行わない
+    (名前らしさの判定基準が無い状態で当て推量の指摘を出さない)。
+    """
+    prefixes = meta_lib.part_prefixes(root)
+    if not prefixes:
+        return None
+    alt = "|".join(re.escape(p) for p in prefixes)
+    return re.compile(rf"\b((?:{alt})-[a-z][a-z0-9-]*)\b")
+
+
 def check_part_names(root: Path, skills: set[str], agents: set[str], report: Report) -> None:
-    """スキル群の本文が参照する部品・エージェント名が実在するか。"""
+    """スキル群の本文が参照する部品・エージェント名が実在するか。
+
+    名前らしさの判定はグループの規約(`group.json` の part_prefixes)に従う。
+    """
+    pattern = part_token_re(root)
+    if pattern is None:
+        return
     known = skills | agents | PART_EXCLUDE
     for path in meta_lib.group_docs(root):
         text = read_text(path)
         if text is None:
             continue
         for line_no, line in iter_lines(text):
-            for token in PART_TOKEN_RE.findall(line):
+            for token in pattern.findall(line):
                 if token in known:
                     continue
                 report.warning(
                     f"{rel(root, path)}:{line_no} が参照する部品/エージェント名が実在しない: {token}"
                 )
+
+
+def check_group_configs(root: Path, report: Report) -> bool:
+    """グループの規約宣言が読めるか。読めれば True を返す。
+
+    読めない宣言を既定へ黙って落とすと、規約に依存する検査項目が静かに無効になる。
+    error で報告し、規約に依存する検査(状態整合の語尾判定・部品名の実在)は
+    この判定が False のとき実行しない(誤った前提で指摘を出さない)。
+    """
+    ok = True
+    for group in meta_lib.groups(root):
+        try:
+            meta_lib.group_config(group)
+            for skill in (group / meta_lib.SKILLS_SUBDIR).iterdir():
+                if skill.is_dir():
+                    meta_lib.layer_of(skill)
+                    meta_lib.state_suffixes(skill)
+        except meta_lib.GroupConfigError as e:
+            report.error(f"{rel(root, group)} の規約宣言が読めない: {e}")
+            ok = False
+    return ok
 
 
 def main() -> None:
@@ -376,12 +416,14 @@ def main() -> None:
     agents = agent_names(root)
 
     report = Report()
+    config_ok = check_group_configs(root, report)
     check_references(root, report)
     check_frontmatter(root, report)
     check_inject_targets(root, skills, report)
     check_dependency_discipline(root, report)
-    check_state_consistency(root, report)
-    check_part_names(root, skills, agents, report)
+    if config_ok:
+        check_state_consistency(root, report)
+        check_part_names(root, skills, agents, report)
     check_placeholders(root, report)
 
     baseline = load_baseline(Path(args.baseline)) if args.baseline else None

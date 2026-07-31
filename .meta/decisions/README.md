@@ -27,3 +27,4 @@
 - [D-010](D-010-script-unit-tests.md): スクリプトの単体テストを tests/ に置き、配布しない
 - [D-011](D-011-skill-groups-outside-dotclaude.md): 配布するスキルを `.claude` の外の用途グループへ置く
 - [D-012](D-012-generic-skill-groups.md): 汎用スキルを用途ごとのグループへ置き、グループ単位で導入する
+- [D-013](D-013-group-config-declaration.md): グループ固有の規約を宣言ファイルへ外出しする

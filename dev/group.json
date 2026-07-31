@@ -1,0 +1,10 @@
+{
+  "説明": "開発スキル群の検査規約。meta-* がこのグループを検査・抽出するときの前提を宣言する。",
+  "part_prefixes": ["dev", "flow", "ext"],
+  "state_suffixes": ["-generated", "-approved", "-ing", "-initialized"],
+  "layers": {
+    "0": ["dev-core"],
+    "2": ["flow-*"],
+    "3": ["ext-*"]
+  }
+}

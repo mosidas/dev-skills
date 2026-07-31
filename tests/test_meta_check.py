@@ -31,6 +31,21 @@ class MetaCheckTestCase(helpers.TempDirTestCase):
         self.root = self.tmp / "repo"
         (self.root / "dev" / "skills").mkdir(parents=True)
         (self.root / "dev" / "agents").mkdir(parents=True)
+        # 検査項目の一部はグループの規約に従う(D-013)。実リポジトリと同じ宣言を置く。
+        self.write_group_config(
+            "dev",
+            {
+                "part_prefixes": ["dev", "flow", "ext"],
+                "state_suffixes": ["-generated", "-approved", "-ing", "-initialized"],
+                "layers": {"0": ["dev-core"], "2": ["flow-*"], "3": ["ext-*"]},
+            },
+        )
+
+    def write_group_config(self, group: str, config: dict | str) -> None:
+        d = self.root / group
+        d.mkdir(parents=True, exist_ok=True)
+        text = config if isinstance(config, str) else json.dumps(config, ensure_ascii=False)
+        (d / "group.json").write_text(text, encoding="utf-8")
 
     def add_skill(self, name: str, **kwargs) -> None:
         d = self.root / "dev" / "skills" / name
@@ -285,6 +300,56 @@ class PartNameTest(MetaCheckTestCase):
     def test_実在する部品名とリポジトリ名は指摘しない(self) -> None:
         self.add_skill("dev-spec", body="dev-spec と dev-skills を挙げる")
         self.assertEqual(self.run_check().findings, [])
+
+
+    def test_規約を宣言しないグループのスキル名は照合しない(self) -> None:
+        """名前らしさの判定基準が無い群に、当て推量の指摘を出さない(D-013)。"""
+        d = self.root / "writing" / "skills" / "japanese-writing"
+        d.mkdir(parents=True)
+        (d / "SKILL.md").write_text(
+            skill_md("japanese-writing", body="japanese-nonexistent を挙げる"),
+            encoding="utf-8",
+        )
+        self.assertEqual(self.run_check().findings, [])
+
+    def test_宣言したプレフィックスなら他のグループでも照合する(self) -> None:
+        self.write_group_config("writing", {"part_prefixes": ["japanese"]})
+        d = self.root / "writing" / "skills" / "japanese-writing"
+        d.mkdir(parents=True)
+        (d / "SKILL.md").write_text(
+            skill_md("japanese-writing", body="japanese-nonexistent を挙げる"),
+            encoding="utf-8",
+        )
+        self.assertAnyContains(
+            self.messages(self.run_check().findings), "実在しない: japanese-nonexistent"
+        )
+
+
+class GroupConfigCheckTest(MetaCheckTestCase):
+    """グループの規約宣言そのものの検査(D-013)。"""
+
+    def test_読める宣言は指摘しない(self) -> None:
+        self.add_skill("dev-spec")
+        report = meta_check.Report()
+        self.assertTrue(meta_check.check_group_configs(self.root, report))
+        self.assertEqual(report.findings, [])
+
+    def test_壊れた宣言を_error_にする(self) -> None:
+        self.add_skill("dev-spec")
+        self.write_group_config("dev", "{壊れた")
+        report = meta_check.Report()
+        self.assertFalse(meta_check.check_group_configs(self.root, report))
+        self.assertAnyContains(self.messages(report.findings), "規約宣言が読めない")
+
+    def test_壊れた宣言なら規約に依存する検査を実行しない(self) -> None:
+        """誤った前提で指摘を出さない。宣言の誤り自体は error で報告済みとする。"""
+        self.add_skill("dev-spec", body="dev-nonexistent を呼ぶ")
+        self.write_group_config("dev", "{壊れた")
+        proc = run_script(META_CHECK_PY, "--root", self.root, "--json")
+        payload = json.loads(proc.stdout)
+        messages = [f["message"] for f in payload["findings"]]
+        self.assertAnyContains(messages, "規約宣言が読めない")
+        self.assertNoneContains(messages, "実在しない: dev-nonexistent")
 
 
 class BaselineTest(MetaCheckTestCase):
