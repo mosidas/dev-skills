@@ -158,7 +158,8 @@ class ExtractTest(helpers.TempDirTestCase):
         self.assertIn("error", meta_extract.extract_state_machines(self.root)[0])
 
     def test_inject_グラフを_name_で引けるようにする(self) -> None:
-        ports = self.root / "ports"
+        """port はグループの機構のため、グループ配下の `ports/` から抽出する(D-014)。"""
+        ports = self.root / "dev" / "ports"
         ports.mkdir()
         (ports / "a.md").write_text(
             "---\nname: alpha\ndescription: x\ninject:\n  - dev-spec\ncondition: 常時\n---\n",
@@ -169,10 +170,20 @@ class ExtractTest(helpers.TempDirTestCase):
         self.assertEqual(graph["alpha"]["condition"], "常時")
 
     def test_雛形を_inject_グラフから除く(self) -> None:
-        ports = self.root / "ports" / "templates"
+        ports = self.root / "dev" / "ports" / "templates"
         ports.mkdir(parents=True)
         (ports / "t.md").write_text(
             "---\nname: <name>\ndescription: x\ninject:\n  - <スキル>\ncondition: 常時\n---\n",
+            encoding="utf-8",
+        )
+        self.assertEqual(meta_extract.extract_inject_graph(self.root), {})
+
+    def test_リポジトリ直下の_ports_を抽出しない(self) -> None:
+        """走査対象はグループ配下に限る(直下の同名ディレクトリを拾わない)。"""
+        ports = self.root / "ports"
+        ports.mkdir()
+        (ports / "a.md").write_text(
+            "---\nname: alpha\ndescription: x\ninject:\n  - dev-spec\ncondition: 常時\n---\n",
             encoding="utf-8",
         )
         self.assertEqual(meta_extract.extract_inject_graph(self.root), {})

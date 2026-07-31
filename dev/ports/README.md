@@ -2,9 +2,11 @@
 
 dev スキル群の port(拡張点)のサンプルと雛形。**この場所のファイルは実行時に読まれない**。利用側プロジェクトの `docs/dev/ports/` へコピーし、プロジェクトに合わせて編集して使う。
 
+port は用途グループの機構であり、本サンプル集は dev グループ配下(`dev/ports/`)に置く。`skills/`・`agents/` の外にあるため配布されない(D-014)。
+
 ## 1. port の仕組み
 
-部品は「port があればそれに従い、なければ部品内のデフォルトで動く」という規約を持つ。port の共通ルートは利用側プロジェクトの `docs/dev/ports/` で、**ルート以下のフォルダ構成は自由**(本サンプル集の階層は整理の一例にすぎない)。規約の正本は dev-core の [ports リファレンス](../dev/skills/dev-core/references/ports.md)。
+部品は「port があればそれに従い、なければ部品内のデフォルトで動く」という規約を持つ。port の共通ルートは利用側プロジェクトの `docs/dev/ports/` で、**ルート以下のフォルダ構成は自由**(本サンプル集の階層は整理の一例にすぎない)。規約の正本は dev-core の [ports リファレンス](../skills/dev-core/references/ports.md)。
 
 - **識別は frontmatter の `name`**(ツリー内で一意)で行い、配置パスに意味を持たせない。各ファイルは frontmatter で注入先を宣言する: `inject` = 注入先スキル名のリスト、`condition` = `常時` または自然言語の条件。
 - スキルは全ファイルの frontmatter だけを再帰的に一括走査し、自分が inject に含まれ条件に該当する port のみ本文を読む。tasks.md の `_Knowledge:` 注記は最優先の明示指定。
@@ -13,7 +15,7 @@ dev スキル群の port(拡張点)のサンプルと雛形。**この場所の�
 ## 2. フォルダ構成
 
 ```
-ports/
+dev/ports/
 ├── templates/     テンプレート(新規 port の雛形)
 ├── swappable/     差し替えポート(部品デフォルトの差し替え)
 └── knowledge/     知識ポート(ジャンル別)

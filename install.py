@@ -12,9 +12,10 @@
           配布されない(D-006・D-011)。更新(再実行)では、前回コピーして今回の配布元に
           無くなったスキル・エージェント(廃止分)を削除する。グループを絞った実行では、
           触らないグループの導入物を削除しない。記録は core lock(グループごと。D-012)。
-- ext:    拡張バンドル(`extensions/<グループ名>/<name>/`)のスキル本体を `.claude/skills/<name>/` へ
-          コピーし、同梱 `agents/` のコピー・`settings.snippet.json` のマージ(hooks・permissions.deny)・
-          同梱 `ports/` のコピー(既存は上書きしない)を行い、ext lock に記録する。
+- ext:    拡張バンドル(`<用途グループ>/extensions/<バンドル群>/<バンドル名>/`)のスキル本体を
+          `.claude/skills/<バンドル名>/` へコピーし、同梱 `agents/` のコピー・`settings.snippet.json` の
+          マージ(hooks・permissions.deny)・同梱 `ports/` のコピー(既存は上書きしない)を行い、
+          ext lock に記録する。指定は末尾から照合し、短い指定で一意に定まらなければ前の階層を足す。
 - remove: ext で行った導入を lock に基づき取り消す(コピーした port は利用側資産のため削除しない)。
 - status: 導入状態を表示する。
 
@@ -34,9 +35,10 @@ CORE_LOCK_REL = ".claude/dev-core.lock.json"
 LOCK_REL = ".claude/dev-extensions.lock.json"
 SETTINGS_REL = ".claude/settings.json"
 
-# 用途グループ配下でスキル・エージェントを収めるディレクトリ名。
+# 用途グループ配下でスキル・エージェント・拡張バンドルを収めるディレクトリ名。
 SKILLS_SUBDIR = "skills"
 AGENTS_SUBDIR = "agents"
+EXTENSIONS_SUBDIR = "extensions"
 # 拡張バンドルのうち、スキル本体としてコピーしないエントリ(別経路で扱う)。
 EXT_NON_SKILL = {"agents", "ports", "settings.snippet.json"}
 IGNORE = shutil.ignore_patterns("__pycache__", "*.pyc")
@@ -287,23 +289,39 @@ def cmd_core(root: Path, target: Path, names: list[str], dry: bool) -> None:
 
 
 def resolve_ext(root: Path, name: str) -> Path:
-    """バンドル名(または <グループ名>/<バンドル名>)を extensions/ 配下のパスへ解決する。"""
-    ext_root = root / "extensions"
-    if "/" in name:
-        ext = ext_root / name
-        if not (ext / "SKILL.md").is_file():
-            die(f"拡張バンドルが見つからない(SKILL.md 必須): {ext}")
-        return ext
-    matches = sorted(
-        p for p in ext_root.glob(f"*/{name}") if (p / "SKILL.md").is_file()
-    )
-    if not matches:
-        die(f"拡張バンドルが見つからない(SKILL.md 必須): {ext_root}/*/{name}")
-    if len(matches) > 1:
-        groups = ", ".join(p.parent.name for p in matches)
+    """バンドルの指定を `<用途グループ>/extensions/<バンドル群>/<バンドル名>` へ解決する。
+
+    指定は末尾から照合する。`<バンドル名>` だけなら全用途グループの全バンドル群から探し、
+    一意に定まらなければ `<バンドル群>/<バンドル名>`・`<用途グループ>/<バンドル群>/<バンドル名>`
+    と前の階層を足して絞る。用途グループの判定は core と同じ(`skills/` を持つルート直下の
+    ディレクトリ)ため、拡張バンドルの置き場所も用途グループ配下に限られる。
+    """
+    parts = [p for p in name.split("/") if p]
+    if not parts or len(parts) > 3:
         die(
-            f"バンドル名 {name} が複数グループに存在する({groups})。"
-            f"<グループ名>/{name} で指定する"
+            f"バンドルの指定は <バンドル名>・<バンドル群>/<バンドル名>・"
+            f"<用途グループ>/<バンドル群>/<バンドル名> のいずれかにする: {name}"
+        )
+    group = parts[-3] if len(parts) == 3 else None
+    bundle_group = parts[-2] if len(parts) >= 2 else None
+    pattern = f"{bundle_group or '*'}/{parts[-1]}"
+    matches: list[Path] = []
+    for g in core_groups(root):
+        if group is not None and g.name != group:
+            continue
+        matches.extend(
+            p
+            for p in sorted((g / EXTENSIONS_SUBDIR).glob(pattern))
+            if (p / "SKILL.md").is_file()
+        )
+    spec = f"{group or '*'}/{EXTENSIONS_SUBDIR}/{pattern}"
+    if not matches:
+        die(f"拡張バンドルが見つからない(SKILL.md 必須): {root}/{spec}")
+    if len(matches) > 1:
+        found = ", ".join(str(p.relative_to(root)) for p in matches)
+        die(
+            f"指定 {name} に複数のバンドルが一致する({found})。"
+            "前の階層を足して一意にする"
         )
     return matches[0]
 
@@ -501,7 +519,10 @@ def main() -> None:
     p_ext = sub.add_parser("ext", help="拡張バンドルを導入する")
     p_ext.add_argument(
         "name",
-        help="バンドル名(extensions/<グループ名>/ 配下。複数グループに同名がある場合は <グループ名>/<バンドル名>)",
+        help=(
+            "バンドル名(<用途グループ>/extensions/<バンドル群>/ 配下)。"
+            "複数一致する場合は <バンドル群>/<バンドル名>・<用途グループ>/<バンドル群>/<バンドル名> で絞る"
+        ),
     )
     p_remove = sub.add_parser("remove", help="導入済み拡張を削除する")
     p_remove.add_argument("name", help="削除する拡張名")

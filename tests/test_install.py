@@ -1,9 +1,11 @@
-"""install.py の core コマンドの単体テスト。
+"""install.py の単体テスト。
 
 配布元の用途グループ(`<グループ>/skills`・`<グループ>/agents`)から、利用側の
 `.claude/skills`・`.claude/agents` への展開を対象にする。配布対象の決め方を誤ると、
 保守用の `meta-*` を利用側へ配ったり、逆に部品を配り漏らしたりする(D-006・D-011)。
 グループを絞った導入では、触らないグループの導入物を消さないことが要件になる(D-012)。
+拡張バンドル(`<グループ>/extensions/<バンドル群>/<バンドル名>`)は、指定を末尾から
+照合して一意に解決できることが要件になる(D-014)。
 """
 
 from __future__ import annotations
@@ -17,6 +19,7 @@ from helpers import REPO_ROOT, run_script
 
 INSTALL_PY = REPO_ROOT / "install.py"
 CORE_LOCK = ".claude/dev-core.lock.json"
+EXT_LOCK = ".claude/dev-extensions.lock.json"
 
 
 class CoreTestCase(helpers.TempDirTestCase):
@@ -220,6 +223,132 @@ class LegacyLockTest(CoreTestCase):
         self.run_core("writing")
         self.assertIn("dev-old", self.installed_skills())
         self.assertIn("", self.lock()["groups"])
+
+
+class ExtTest(helpers.TempDirTestCase):
+    """拡張バンドルの解決・導入・削除(用途グループ配下の `extensions/`。D-014)。"""
+
+    def setUp(self) -> None:
+        super().setUp()
+        self.src = self.tmp / "src"
+        self.target = self.tmp / "target"
+        self.target.mkdir(parents=True)
+        (self.src / "dev" / "skills" / "dev-core").mkdir(parents=True)
+
+    def add_bundle(self, group: str, bundle_group: str, name: str):
+        d = self.src / group / "extensions" / bundle_group / name
+        d.mkdir(parents=True)
+        (d / "SKILL.md").write_text(
+            f"---\nname: {name}\ndescription: 説明\n---\n", encoding="utf-8"
+        )
+        return d
+
+    def run_ext(self, name: str, *args: object):
+        return run_script(
+            INSTALL_PY, "--root", self.src, "ext", name, "--target", self.target, *args
+        )
+
+    def lock(self) -> dict:
+        return json.loads((self.target / EXT_LOCK).read_text(encoding="utf-8"))
+
+    def test_バンドル名だけで解決する(self) -> None:
+        self.add_bundle("dev", "delivery", "ext-x")
+        proc = self.run_ext("ext-x")
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        self.assertTrue(
+            (self.target / ".claude" / "skills" / "ext-x" / "SKILL.md").is_file()
+        )
+        self.assertEqual(self.lock()["ext-x"]["skill_dir"], ".claude/skills/ext-x")
+
+    def test_バンドル群を足して同名を絞り込む(self) -> None:
+        self.add_bundle("dev", "delivery", "ext-x")
+        self.add_bundle("dev", "research", "ext-x")
+        proc = self.run_ext("ext-x")
+        self.assertEqual(proc.returncode, 1)
+        self.assertIn("複数のバンドルが一致する", proc.stderr)
+        self.assertEqual(self.run_ext("research/ext-x").returncode, 0)
+
+    def test_用途グループを足して同名を絞り込む(self) -> None:
+        self.add_bundle("dev", "delivery", "ext-x")
+        (self.src / "writing" / "skills" / "japanese-writing").mkdir(parents=True)
+        self.add_bundle("writing", "delivery", "ext-x")
+        proc = self.run_ext("delivery/ext-x")
+        self.assertEqual(proc.returncode, 1)
+        self.assertIn("複数のバンドルが一致する", proc.stderr)
+        proc = self.run_ext("writing/delivery/ext-x")
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+
+    def test_リポジトリ直下の_extensions_から解決しない(self) -> None:
+        """拡張バンドルはグループの機構であり、直下の同名ディレクトリを探さない。"""
+        d = self.src / "extensions" / "delivery" / "ext-x"
+        d.mkdir(parents=True)
+        (d / "SKILL.md").write_text(
+            "---\nname: ext-x\ndescription: 説明\n---\n", encoding="utf-8"
+        )
+        proc = self.run_ext("ext-x")
+        self.assertEqual(proc.returncode, 1)
+        self.assertIn("見つからない", proc.stderr)
+
+    def test_指定の階層が多ければ停止する(self) -> None:
+        self.add_bundle("dev", "delivery", "ext-x")
+        proc = self.run_ext("extra/dev/delivery/ext-x")
+        self.assertEqual(proc.returncode, 1)
+        self.assertIn("バンドルの指定は", proc.stderr)
+
+    def test_同梱物を導入して記録する(self) -> None:
+        d = self.add_bundle("dev", "delivery", "ext-x")
+        (d / "agents").mkdir()
+        (d / "agents" / "ext-x-runner.md").write_text(
+            "---\nname: ext-x-runner\n---\n", encoding="utf-8"
+        )
+        (d / "ports").mkdir()
+        (d / "ports" / "p.md").write_text("---\nname: p\n---\n", encoding="utf-8")
+        (d / "settings.snippet.json").write_text(
+            json.dumps({"permissions": {"deny": ["Bash(rm:*)"]}}), encoding="utf-8"
+        )
+        proc = self.run_ext("ext-x")
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        self.assertTrue(
+            (self.target / ".claude" / "agents" / "ext-x-runner.md").is_file()
+        )
+        self.assertTrue(
+            (self.target / "docs" / "dev" / "ports" / "ext-x" / "p.md").is_file()
+        )
+        self.assertFalse((self.target / ".claude" / "skills" / "ext-x" / "ports").exists())
+        record = self.lock()["ext-x"]
+        self.assertEqual(record["settings_deny"], ["Bash(rm:*)"])
+        self.assertEqual(record["ports"], ["docs/dev/ports/ext-x/p.md"])
+
+    def test_remove_が導入を取り消し_port_を残す(self) -> None:
+        d = self.add_bundle("dev", "delivery", "ext-x")
+        (d / "ports").mkdir()
+        (d / "ports" / "p.md").write_text("---\nname: p\n---\n", encoding="utf-8")
+        self.run_ext("ext-x")
+        proc = run_script(
+            INSTALL_PY, "--root", self.src, "remove", "ext-x", "--target", self.target
+        )
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        self.assertFalse((self.target / ".claude" / "skills" / "ext-x").exists())
+        self.assertTrue(
+            (self.target / "docs" / "dev" / "ports" / "ext-x" / "p.md").is_file()
+        )
+        self.assertFalse((self.target / EXT_LOCK).exists())
+
+    def test_status_が導入状態を表示する(self) -> None:
+        self.add_bundle("dev", "delivery", "ext-x")
+        self.run_ext("ext-x")
+        proc = run_script(
+            INSTALL_PY, "--root", self.src, "status", "--target", self.target
+        )
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        self.assertIn("拡張 ext-x", proc.stdout)
+
+    def test_dry_run_は書き込まない(self) -> None:
+        self.add_bundle("dev", "delivery", "ext-x")
+        proc = self.run_ext("ext-x", "--dry-run")
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        self.assertFalse((self.target / ".claude" / "skills" / "ext-x").exists())
+        self.assertFalse((self.target / EXT_LOCK).exists())
 
 
 class RealRepositoryTest(CoreTestCase):

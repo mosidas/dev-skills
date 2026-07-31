@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 """スキル群のコード行数の集計(read-only)。
 
-dev-skills を構成するファイル(用途グループ・`.claude`・`.meta`・`ports`・`extensions`・
-ルート直下)の行数を、領域(スキルごと・エージェント・`.meta` 等)と種別(拡張子)ごとに
-集計する。ファイルを書き換えない。標準ライブラリのみ(追加インストール不要の担保)。
+dev-skills を構成するファイル(用途グループ・`.claude`・`.meta`・ルート直下)の行数を、
+領域(スキルごと・`<グループ>/agents`・`<グループ>/ports`・`<グループ>/extensions`・`.meta` 等)と
+種別(拡張子)ごとに集計する。ファイルを書き換えない。標準ライブラリのみ(追加インストール
+不要の担保)。
 
 行数の定義:
   総行数   物理行(改行で区切った行の数)
@@ -29,8 +30,14 @@ import meta_lib  # noqa: E402
 
 EXCLUDE_DIRS = {".git", "__pycache__"}
 EXCLUDE_SUFFIXES = {".pyc"}
-# 領域をそのディレクトリ名で表すもの(スキル群の外側)。
-NON_GROUP_TOPS = (".meta", "ports", "extensions")
+# 領域をそのディレクトリ名で表すもの(リポジトリ直下に置く、グループの機構でない資産)。
+ROOT_AREAS = (".meta",)
+# グループ直下にあり、`<グループ>/<名前>` を領域にするディレクトリ。
+GROUP_AREAS = (
+    meta_lib.AGENTS_SUBDIR,
+    meta_lib.PORTS_SUBDIR,
+    meta_lib.EXTENSIONS_SUBDIR,
+)
 
 
 def die(msg: str) -> None:
@@ -55,15 +62,16 @@ def area_of(rel: Path) -> str:
     """相対パスから領域(集計の単位)を決める。
 
     スキルは名前そのものを領域にする(グループが変わっても同じ領域名で追える)。
-    エージェントはグループ込みの `<グループ>/agents` を領域にする。
+    グループの機構(エージェント・port・拡張バンドル)はグループ込みの `<グループ>/<名前>`
+    を領域にし、どのグループの分量かを区別できるようにする。
     """
     parts = rel.parts
-    if parts[0] in NON_GROUP_TOPS:
+    if parts[0] in ROOT_AREAS:
         return parts[0]
     if len(parts) >= 3 and parts[1] == meta_lib.SKILLS_SUBDIR:
         return parts[2]
-    if len(parts) >= 3 and parts[1] == meta_lib.AGENTS_SUBDIR:
-        return f"{parts[0]}/{meta_lib.AGENTS_SUBDIR}"
+    if len(parts) >= 3 and parts[1] in GROUP_AREAS:
+        return f"{parts[0]}/{parts[1]}"
     return "(ルート直下)"
 
 

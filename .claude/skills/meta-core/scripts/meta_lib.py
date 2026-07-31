@@ -19,6 +19,10 @@ meta_check.py・meta_extract.py・meta_loc.py・trigger_check.py が共有し、
   `meta-*` は配布せず自リポジトリで使うため `.claude/skills/` に置く。両者を同じ関数で
   列挙し、検査・抽出・集計が配置の違いを個別に持たないようにする。
 
+グループの機構(D-014):
+  port のサンプル(`ports/`)と拡張バンドル(`extensions/`)はグループ配下に置く。
+  走査側がグループの数・名前を前提にしないよう、列挙は `group_subdirs()` に集約する。
+
 グループ固有の規約(D-013):
   グループごとに異なる規約(部品名のプレフィックス・状態名の語尾・レイヤーの割り当て)は
   グループ直下の `group.json` が宣言する。宣言を持たないグループは既定(部品名の照合を
@@ -39,6 +43,9 @@ BLOCK_SCALAR_RE = re.compile(r"^([|>])([+-]?)(\d*)\s*$")
 
 SKILLS_SUBDIR = "skills"
 AGENTS_SUBDIR = "agents"
+# グループの機構(port のサンプル・拡張バンドル)を収めるディレクトリ名。
+PORTS_SUBDIR = "ports"
+EXTENSIONS_SUBDIR = "extensions"
 # 自リポジトリ保守用(meta-*)の置き場所。Claude Code がこのリポジトリで読み込む場所でもある。
 LOCAL_GROUP = ".claude"
 # グループ固有の規約の宣言(グループ直下。skills/・agents/ の外にあるため配布されない)。
@@ -189,6 +196,14 @@ def distributed_skill_dirs(root: Path) -> list[Path]:
         ),
         key=lambda p: p.name,
     )
+
+
+def group_subdirs(root: Path, subdir: str) -> list[Path]:
+    """各グループ直下の `<subdir>/` のうち実在するものを列挙する(全グループ横断)。
+
+    `ports/`・`extensions/` はグループの機構であり、グループ配下に置く(D-014)。
+    """
+    return [group / subdir for group in groups(root) if (group / subdir).is_dir()]
 
 
 def agent_files(root: Path) -> list[Path]:

@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """スキル群自体の機械的整合検査(read-only)。
 
-スキル群自体を構成するドキュメント(用途グループの `skills/`・`agents/`・`.claude/` 群・
-`.meta/`・`ports/`・README 等)を規約に照らして決定論的に検査する。ファイルを一切書き換え
-ない。意味的な判断(内容の妥当性・観点レビュー)は meta-review に委ねる。設計原則の正本は
+スキル群自体を構成するドキュメント(用途グループの `skills/`・`agents/`・`ports/`・
+`extensions/`、`.claude/` 群、`.meta/`・README 等)を規約に照らして決定論的に検査する。
+ファイルを一切書き換えない。意味的な判断(内容の妥当性・観点レビュー)は meta-review に委ねる。設計原則の正本は
 `../references/principles.md`、観点カタログは `../references/doc-perspectives.md`。
 
 検査項目(doc-perspectives.md §3 横断観点のうち機械化できるもの + principles.md §4 依存規律):
@@ -48,6 +48,8 @@ REF_RE = re.compile(r"(?<![\w<.])(\.\.?/[\w./-]+\.(?:md|py|json))")
 BACKTICK_TOKEN_RE = re.compile(r"`([a-z][a-z0-9-]*)`")
 # 部品名検査の除外(リポジトリ名)。
 PART_EXCLUDE = {"dev-skills"}
+# 参照実在検査の対象のうち、リポジトリ直下に置くもの(グループの機構ではない全体の資産)。
+ROOT_DOC_DIRS = (".meta", "tests")
 META_REF_RE = re.compile(r"\bmeta-(?:core|check|doc|review)\b")
 # 未記入マーカー。前後が ASCII 英数のときは別語(TODOS 等)として除外し、
 # 日本語に隣接する場合(「未記入TODOです」)は検出する。
@@ -128,10 +130,16 @@ def agent_names(root: Path) -> set[str]:
 
 
 def all_docs(root: Path) -> list[Path]:
-    """参照実在検査の対象(スキル群・`.meta`・`ports`・`extensions`・`tests`・ルート直下の md)。"""
+    """参照実在検査の対象。
+
+    スキル群と、グループの機構(`<グループ>/ports`・`<グループ>/extensions`)、リポジトリ
+    全体の資産(`.meta`・`tests`)、ルート直下の md を対象にする。
+    """
     docs: list[Path] = list(meta_lib.group_docs(root))
-    for sub in (".meta", "ports", "extensions", "tests"):
-        d = root / sub
+    dirs = [root / sub for sub in ROOT_DOC_DIRS]
+    for sub in (meta_lib.PORTS_SUBDIR, meta_lib.EXTENSIONS_SUBDIR):
+        dirs.extend(meta_lib.group_subdirs(root, sub))
+    for d in dirs:
         if d.is_dir():
             docs.extend(p for p in d.rglob("*.md") if p.is_file())
     docs.extend(p for p in root.glob("*.md") if p.is_file())
@@ -182,22 +190,21 @@ def _parse_inject(text: str) -> list[str]:
 def check_inject_targets(root: Path, skills: set[str], report: Report) -> None:
     """port frontmatter の inject 先スキルが実在するか。
 
-    `ports/templates/` は新規 port の雛形でプレースホルダを持つため対象外にする。
+    port はグループの機構のため、走査対象は各グループ直下の `ports/` とする(D-014)。
+    その配下の `templates/` は新規 port の雛形でプレースホルダを持つため対象外にする。
     """
-    ports_dir = root / "ports"
-    if not ports_dir.is_dir():
-        return
-    for path in sorted(ports_dir.rglob("*.md")):
-        if "templates" in path.relative_to(ports_dir).parts:
-            continue
-        text = read_text(path)
-        if text is None:
-            continue
-        for name in _parse_inject(text):
-            if name not in skills:
-                report.error(
-                    f"{rel(root, path)} の inject 先スキルが存在しない: {name}"
-                )
+    for ports_dir in meta_lib.group_subdirs(root, meta_lib.PORTS_SUBDIR):
+        for path in sorted(ports_dir.rglob("*.md")):
+            if "templates" in path.relative_to(ports_dir).parts:
+                continue
+            text = read_text(path)
+            if text is None:
+                continue
+            for name in _parse_inject(text):
+                if name not in skills:
+                    report.error(
+                        f"{rel(root, path)} の inject 先スキルが存在しない: {name}"
+                    )
 
 
 def check_dependency_discipline(root: Path, report: Report) -> None:

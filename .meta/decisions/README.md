@@ -28,3 +28,4 @@
 - [D-011](D-011-skill-groups-outside-dotclaude.md): 配布するスキルを `.claude` の外の用途グループへ置く
 - [D-012](D-012-generic-skill-groups.md): 汎用スキルを用途ごとのグループへ置き、グループ単位で導入する
 - [D-013](D-013-group-config-declaration.md): グループ固有の規約を宣言ファイルへ外出しする
+- [D-014](D-014-group-owned-mechanisms.md): port と拡張バンドルをグループ配下へ移す

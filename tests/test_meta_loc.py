@@ -28,15 +28,18 @@ class AreaTest(unittest.TestCase):
             meta_loc.area_of(Path(".claude/skills/meta-core/SKILL.md")), "meta-core"
         )
 
-    def test_エージェントをグループごとの領域にまとめる(self) -> None:
+    def test_グループの機構をグループごとの領域にまとめる(self) -> None:
+        """エージェント・port・拡張バンドルはグループ配下の機構(D-014)。"""
         self.assertEqual(
             meta_loc.area_of(Path("dev/agents/dev-reviewer.md")), "dev/agents"
         )
+        self.assertEqual(meta_loc.area_of(Path("dev/ports/README.md")), "dev/ports")
+        self.assertEqual(
+            meta_loc.area_of(Path("dev/extensions/README.md")), "dev/extensions"
+        )
 
-    def test_meta_と_ports_と_extensions_を領域にする(self) -> None:
+    def test_meta_を領域にする(self) -> None:
         self.assertEqual(meta_loc.area_of(Path(".meta/DESIGN.md")), ".meta")
-        self.assertEqual(meta_loc.area_of(Path("ports/README.md")), "ports")
-        self.assertEqual(meta_loc.area_of(Path("extensions/README.md")), "extensions")
 
     def test_それ以外をルート直下にする(self) -> None:
         self.assertEqual(meta_loc.area_of(Path("README.md")), "(ルート直下)")
