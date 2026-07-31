@@ -37,6 +37,12 @@ class MetaCheckTestCase(helpers.TempDirTestCase):
         d.mkdir(parents=True, exist_ok=True)
         (d / "SKILL.md").write_text(skill_md(name, **kwargs), encoding="utf-8")
 
+    def add_meta_skill(self, name: str, **kwargs) -> None:
+        """配布しないスキル(`meta-*`)を `.claude/skills` に置く。"""
+        d = self.root / ".claude" / "skills" / name
+        d.mkdir(parents=True, exist_ok=True)
+        (d / "SKILL.md").write_text(skill_md(name, **kwargs), encoding="utf-8")
+
     def add_agent(self, name: str, text: str | None = None) -> None:
         path = self.root / "dev" / "agents" / f"{name}.md"
         path.write_text(text or skill_md(name), encoding="utf-8")
@@ -158,9 +164,16 @@ class DependencyDisciplineTest(MetaCheckTestCase):
         )
 
     def test_meta_同士の参照は指摘しない(self) -> None:
-        self.add_skill("meta-check", body="meta-core を参照する")
+        self.add_meta_skill("meta-check", body="meta-core を参照する")
         self.assertEqual(
             self.report(meta_check.check_dependency_discipline).findings, []
+        )
+
+    def test_プレフィックスを持たないスキルも検査の対象にする(self) -> None:
+        """配布するスキルは名前の付け方によらず一方向依存を守る(D-012)。"""
+        self.add_skill("japanese-writing", body="meta-review を参照する")
+        self.assertEqual(
+            self.report(meta_check.check_dependency_discipline).count("error"), 1
         )
 
 

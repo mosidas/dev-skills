@@ -166,6 +166,19 @@ def skill_dirs(root: Path) -> list[Path]:
     )
 
 
+def distributed_skill_dirs(root: Path) -> list[Path]:
+    """配布対象のグループに属するスキルを列挙する(`.claude` の `meta-*` を除く)。"""
+    return sorted(
+        (
+            skill
+            for group in distributed_groups(root)
+            for skill in (group / SKILLS_SUBDIR).iterdir()
+            if skill.is_dir()
+        ),
+        key=lambda p: p.name,
+    )
+
+
 def agent_files(root: Path) -> list[Path]:
     """エージェント定義の Markdown を列挙する(全グループ横断)。"""
     return sorted(

@@ -26,3 +26,4 @@
 - [D-009](D-009-glossary-as-durable-info.md): 恒久情報の配置に用語集を追加する
 - [D-010](D-010-script-unit-tests.md): スクリプトの単体テストを tests/ に置き、配布しない
 - [D-011](D-011-skill-groups-outside-dotclaude.md): 配布するスキルを `.claude` の外の用途グループへ置く
+- [D-012](D-012-generic-skill-groups.md): 汎用スキルを用途ごとのグループへ置き、グループ単位で導入する

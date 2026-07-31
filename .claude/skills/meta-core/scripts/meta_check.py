@@ -11,7 +11,7 @@
   frontmatter  スキル・エージェントの name が配置(ディレクトリ名・ファイル名)と一致し、description がある
                (解析は meta_lib の YAML サブセット。サブセット外の記法は warning で区別して報告する)
   inject 実在  port frontmatter の inject 先スキル名が実在する
-  依存規律     dev-* / flow-* / ext-* の本文が meta-* を参照していない(一方向依存)
+  依存規律     配布するスキル・エージェントの本文が meta-* を参照していない(一方向依存)
   状態整合     workflow.json の状態名が、同じ部品の SKILL.md に記述されている(取り違え・陳腐化の検出)
   部品名実在   スキル群の本文が参照する dev-*/flow-*/meta-* の部品・エージェント名が実在する
   未記入       未記入マーカーが残っていない(インラインコード・コードブロック・URL は除く)
@@ -203,12 +203,15 @@ def check_inject_targets(root: Path, skills: set[str], report: Report) -> None:
 
 
 def check_dependency_discipline(root: Path, report: Report) -> None:
-    """dev-* / flow-* / ext-* の本文が meta-* を参照していないか(principles.md §4)。"""
+    """配布するスキルの本文が meta-* を参照していないか(principles.md §4)。
+
+    対象は配布グループのスキルとエージェントすべてとする(名前のプレフィックスで
+    選ばない。プレフィックスを持たないスキルも配布する以上、同じ一方向依存を要求する)。
+    """
     targets: list[Path] = []
-    for skill in meta_lib.skill_dirs(root):
+    for skill in meta_lib.distributed_skill_dirs(root):
         # dev-core も含む(Layer 0 の汎用正本にも同じ一方向依存を要求する)。
-        if skill.name.split("-")[0] in ("dev", "flow", "ext"):
-            targets.extend(p for p in skill.rglob("*.md") if p.is_file())
+        targets.extend(p for p in skill.rglob("*.md") if p.is_file())
     targets.extend(meta_lib.agent_files(root))
     for path in sorted(set(targets)):
         text = read_text(path)
@@ -218,7 +221,7 @@ def check_dependency_discipline(root: Path, report: Report) -> None:
             if META_REF_RE.search(line):
                 report.error(
                     f"{rel(root, path)}:{line_no} が meta-* を参照している"
-                    "(依存規律違反: dev-*/flow-*/ext-* は meta-* を参照しない)"
+                    "(依存規律違反: 配布するスキルは meta-* を参照しない)"
                 )
 
 

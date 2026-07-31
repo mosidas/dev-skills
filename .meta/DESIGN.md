@@ -6,9 +6,9 @@
 
 `dev-skills` は汎用の開発スキル群である。SSoT をソースコードに置き(コードが SSoT、仕様は実装までの中間生成物)、単機能の部品スキルと、それを状態機械で束ねる composition で構成する。依存はオニオン型に外側から内側への一方向に限る(Layer 0: foundation 〜 Layer 3: extension)。SDD はこの部品群から組み立てる composition の一つ(flow-sdd)である。
 
-これと直交する軸として、スキル群**自体**を構成するドキュメント(SKILL・references・templates・agents・scripts・`.meta`)の品質を担保する meta 分類(`meta-*`)を持つ。配布するスキルは用途グループ(`dev/skills`・`dev/agents`)に置き、配布しない `meta-*` は `.claude/skills` に置く(D-011)。meta 分類も同じくレイヤー構造をとる(レイヤー 0: meta-core / レイヤー 1: meta-check・meta-review・meta-doc)。
+これと直交する軸として、スキル群**自体**を構成するドキュメント(SKILL・references・templates・agents・scripts・`.meta`)の品質を担保する meta 分類(`meta-*`)を持つ。配布するスキルは用途グループ(`dev`・`writing`・`authoring`)に置き、配布しない `meta-*` は `.claude/skills` に置く(D-011)。利用側はグループを選んで導入できる(D-012)。meta 分類も同じくレイヤー構造をとる(レイヤー 0: meta-core / レイヤー 1: meta-check・meta-review・meta-doc)。
 
-導入・削除は展開スクリプト `install.py` が用途グループの `skills/*`・`agents/*` を利用側の `.claude/` へハードコピーして行う(グループ外の `meta-*` は配布しない。利用側の明示操作)。設計判断の根拠は D-000(初版設計の全体像)・D-001(スキル群自体の品質と DESIGN 2 層分離)・D-004(本書のテンプレート化と全上書き方針)・D-005(品質の対象の呼称)・D-006(導入をハードコピーにし meta-* を配布しない)・D-007(多段オーケストレーションの禁止対象をエージェント主導に限定)・D-008(配布する部品をモデル自動起動の対象に置いたままにする)・D-009(恒久情報の配置に用語集を追加)・D-010(スクリプトの単体テストを tests/ に置き配布しない)・D-011(配布するスキルを `.claude` の外の用途グループへ置く)を参照。
+導入・削除は展開スクリプト `install.py` が用途グループの `skills/*`・`agents/*` を利用側の `.claude/` へハードコピーして行う(グループ外の `meta-*` は配布しない。グループ名を指定すればその群だけを導入する。利用側の明示操作)。設計判断の根拠は D-000(初版設計の全体像)・D-001(スキル群自体の品質と DESIGN 2 層分離)・D-004(本書のテンプレート化と全上書き方針)・D-005(品質の対象の呼称)・D-006(導入をハードコピーにし meta-* を配布しない)・D-007(多段オーケストレーションの禁止対象をエージェント主導に限定)・D-008(配布する部品をモデル自動起動の対象に置いたままにする)・D-009(恒久情報の配置に用語集を追加)・D-010(スクリプトの単体テストを tests/ に置き配布しない)・D-011(配布するスキルを `.claude` の外の用途グループへ置く)・D-012(汎用スキルを用途ごとのグループへ置き、グループ単位で導入する)を参照。
 
 ## 原則
 
@@ -42,10 +42,12 @@
 | dev | 0 | スクリプト | dev-core/scripts/check.py | 成果物の静的チェッカ(状態・spec.md・tasks.md の規約検査) |
 | dev | 0 | スクリプト | dev-core/scripts/lib.py | state.py・check.py 共通ロジック(定義検証・パース・凍結) |
 | dev | 0 | スクリプト | dev-core/scripts/ports.py | 知識 port の frontmatter 走査(inject 判定) |
+| writing | 1 | スキル | japanese-writing | 日本語の開発ドキュメント・技術文書の作成規範(層別の references + 検査スクリプト) |
+| authoring | 1 | スキル | skill-authoring | スキル(SKILL.md と参照ファイル)を新規作成・編集・リファクタするときの設計規範 |
 | meta | 0 | スキル | meta-core | 基盤(メタ)。スキル群自体の品質担保の設計原則(principles.md)・観点カタログ(doc-perspectives.md)+ スクリプト(参照専用) |
 | meta | 1 | スキル | meta-check | スキル群の機械的整合検査(read-only) |
 | meta | 1 | スキル | meta-review | 観点カタログによる意味レビュー(read-only) |
-| meta | 1 | スキル | meta-doc | 本書(DESIGN.md)を .claude から生成 |
+| meta | 1 | スキル | meta-doc | 本書(DESIGN.md)をスキルの定義から生成 |
 | meta | 0 | スクリプト | meta-core/scripts/meta_check.py | スキル群自体の機械的整合検査(参照実在・依存規律・状態整合等) |
 | meta | 0 | スクリプト | meta-core/scripts/meta_lib.py | meta-* スクリプトの共通ロジック(frontmatter の YAML サブセット解析・スキル群の配置の走査) |
 | meta | 0 | スクリプト | meta-core/scripts/meta_extract.py | DESIGN.md 生成用の構造抽出(部品・状態機械・inject・エージェント) |
@@ -56,7 +58,7 @@
 
 ### レイヤー構造
 
-dev 分類・meta 分類はともにオニオン型のレイヤー構造をとり、依存は外側から内側への一方向(ネストした subgraph が内包 = 外側が内側を知り、内側は外側を知らないことを表す)。meta 分類は dev 分類と直交し、対象を一方向に走査・生成する(破線)。
+dev 分類・meta 分類はともにオニオン型のレイヤー構造をとり、依存は外側から内側への一方向(ネストした subgraph が内包 = 外側が内側を知り、内側は外側を知らないことを表す)。writing 分類・authoring 分類は単独のスキルで、レイヤー構造も相互の依存も持たない。meta 分類は配布する分類と直交し、対象を一方向に走査・生成する(破線)。
 
 ```mermaid
 flowchart TD
@@ -67,10 +69,14 @@ flowchart TD
             end
         end
     end
+    W1["writing・レイヤー 1 — parts(japanese-writing)"]
+    A1["authoring・レイヤー 1 — parts(skill-authoring)"]
     subgraph M1["meta・レイヤー 1 — parts(meta-check / meta-review / meta-doc)"]
         M0["meta・レイヤー 0 — foundation(meta-core)"]
     end
     M1 -. 走査・生成(一方向) .-> D3
+    M1 -. 走査・生成(一方向) .-> W1
+    M1 -. 走査・生成(一方向) .-> A1
 ```
 
 ### DFD
