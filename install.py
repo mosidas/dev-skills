@@ -7,9 +7,11 @@
 
 - core:   用途グループ(配布ルート直下で `skills/` を持つディレクトリ。例: `dev/`)の
           `skills/*`・`agents/*.md` を `.claude/skills/`・`.claude/agents/` へコピーする。
+          グループ名を並べると、そのグループだけを配布する(省略時は全グループ)。
           `meta-*` は dev-skills 自身の保守用で `.claude/skills/` に置き、グループ外のため
           配布されない(D-006・D-011)。更新(再実行)では、前回コピーして今回の配布元に
-          無くなったスキル・エージェント(廃止分)を削除する。記録は core lock。
+          無くなったスキル・エージェント(廃止分)を削除する。グループを絞った実行では、
+          触らないグループの導入物を削除しない。記録は core lock(グループごと。D-012)。
 - ext:    拡張バンドル(`extensions/<グループ名>/<name>/`)のスキル本体を `.claude/skills/<name>/` へ
           コピーし、同梱 `agents/` のコピー・`settings.snippet.json` のマージ(hooks・permissions.deny)・
           同梱 `ports/` のコピー(既存は上書きしない)を行い、ext lock に記録する。
@@ -167,51 +169,119 @@ def core_groups(root: Path) -> list[Path]:
     )
 
 
-def cmd_core(root: Path, target: Path, dry: bool) -> None:
-    groups = core_groups(root)
-    if not groups:
+def load_core_lock(path: Path) -> dict[str, dict]:
+    """core lock を「グループ名 -> {skills, agents}」で読む。
+
+    グループ名を持たない旧形式(トップレベルの `skills`・`agents`)は、どのグループの
+    導入物か判別できないため空文字のキーに入れる。全グループを配布する実行でだけ
+    廃止判定の対象にし、グループを絞った実行では触らない。
+    """
+    data = load_json(path, {})
+    groups = data.get("groups")
+    if isinstance(groups, dict):
+        return {
+            name: {
+                "skills": list(rec.get("skills", [])),
+                "agents": list(rec.get("agents", [])),
+            }
+            for name, rec in groups.items()
+        }
+    if data.get("skills") or data.get("agents"):
+        return {
+            "": {"skills": list(data.get("skills", [])), "agents": list(data.get("agents", []))}
+        }
+    return {}
+
+
+def select_groups(root: Path, names: list[str]) -> list[Path]:
+    """配布するグループを決める(名前の指定が無ければ全グループ)。"""
+    available = core_groups(root)
+    if not available:
         die(f"配布ルートに用途グループ(<グループ>/{SKILLS_SUBDIR})が無い: {root}")
+    if not names:
+        return available
+    by_name = {g.name: g for g in available}
+    unknown = [n for n in names if n not in by_name]
+    if unknown:
+        die(
+            f"配布ルートに無いグループ: {', '.join(unknown)}"
+            f"(利用できる: {', '.join(by_name)})"
+        )
+    return [by_name[n] for n in dict.fromkeys(names)]
 
-    core_lock_path = target / CORE_LOCK_REL
-    old = load_json(core_lock_path, {})
-    old_skills = old.get("skills", [])
-    old_agents = old.get("agents", [])
 
-    new_skills: list[str] = []
-    new_agents: list[str] = []
+def cmd_core(root: Path, target: Path, names: list[str], dry: bool) -> None:
+    groups = select_groups(root, names)
+    lock = load_core_lock(target / CORE_LOCK_REL)
+    selected = {g.name for g in groups}
+    # 廃止判定の範囲。全グループを配布する実行では、前回の記録すべて(グループ名を
+    # 持たない旧形式を含む)を対象にする。絞った実行では選んだグループだけを対象にし、
+    # 触らないグループの導入物を消さない。
+    scope = selected if names else selected | set(lock)
+    # 廃止判定の範囲外(今回触らない)グループが導入済みの名前。導入先は平坦なため、
+    # 上書きの検出に使うとともに、廃止判定でこれらを削除対象から外す。
+    kept_skills = {
+        s: name for name, rec in lock.items() if name not in scope for s in rec["skills"]
+    }
+    kept_agents = {
+        a: name for name, rec in lock.items() if name not in scope for a in rec["agents"]
+    }
+
+    new: dict[str, dict] = {}
+    owner_skill: dict[str, str] = {}
+    owner_agent: dict[str, str] = {}
     for group in groups:
+        record: dict[str, list[str]] = {"skills": [], "agents": []}
         for d in sorted(p for p in (group / SKILLS_SUBDIR).iterdir() if p.is_dir()):
-            if d.name in new_skills:
-                die(f"スキル名 {d.name} が複数のグループに存在する(導入先で衝突する)")
+            owner = owner_skill.get(d.name) or kept_skills.get(d.name)
+            if owner:
+                die(
+                    f"スキル名 {d.name} が {owner} と {group.name} で重複する"
+                    "(導入先で衝突する)"
+                )
+            owner_skill[d.name] = group.name
             copy_tree(d, target / ".claude" / "skills" / d.name, dry)
-            new_skills.append(d.name)
+            record["skills"].append(d.name)
         agents_src = group / AGENTS_SUBDIR
-        if not agents_src.is_dir():
+        if agents_src.is_dir():
+            for f in sorted(agents_src.glob("*.md")):
+                rel_agent = f".claude/agents/{f.name}"
+                owner = owner_agent.get(rel_agent) or kept_agents.get(rel_agent)
+                if owner:
+                    die(
+                        f"エージェント名 {f.name} が {owner} と {group.name} で重複する"
+                        "(導入先で衝突する)"
+                    )
+                owner_agent[rel_agent] = group.name
+                copy_file(f, target / ".claude" / "agents" / f.name, dry)
+                record["agents"].append(rel_agent)
+        new[group.name] = record
+
+    # 更新: 廃止判定の範囲の前回記録のうち、今回どのグループからもコピーしなかったもの
+    # (グループ間の移動でコピー済みのものは残す)を削除する。
+    copied_skills = set(owner_skill)
+    copied_agents = set(owner_agent)
+    stale = 0
+    for name in scope:
+        prev = lock.get(name)
+        if not prev:
             continue
-        for f in sorted(agents_src.glob("*.md")):
-            rel_agent = f".claude/agents/{f.name}"
-            if rel_agent in new_agents:
-                die(f"エージェント名 {f.name} が複数のグループに存在する(導入先で衝突する)")
-            copy_file(f, target / ".claude" / "agents" / f.name, dry)
-            new_agents.append(rel_agent)
-    new_skills.sort()
-    new_agents.sort()
+        for s in prev["skills"]:
+            if s not in copied_skills and s not in kept_skills:
+                remove_path(target / ".claude" / "skills" / s, dry)
+                stale += 1
+        for rel in prev["agents"]:
+            if rel not in copied_agents and rel not in kept_agents:
+                remove_path(target / rel, dry)
+                stale += 1
 
-    # 更新: 前回コピーして今回の配布元に無いスキル・エージェント(廃止分)を削除する。
-    for name in old_skills:
-        if name not in new_skills:
-            remove_path(target / ".claude" / "skills" / name, dry)
-    for rel in old_agents:
-        if rel not in new_agents:
-            remove_path(target / rel, dry)
-
-    save_json(core_lock_path, {"skills": new_skills, "agents": new_agents}, dry)
-    stale = len([s for s in old_skills if s not in new_skills]) + len(
-        [a for a in old_agents if a not in new_agents]
-    )
+    for name in scope:
+        lock.pop(name, None)
+    lock.update(new)
+    save_json(target / CORE_LOCK_REL, {"groups": lock}, dry)
     print(
         f"core: グループ {', '.join(g.name for g in groups)} から"
-        f"スキル {len(new_skills)} 件・エージェント {len(new_agents)} 件をコピー"
+        f"スキル {len(copied_skills)} 件・エージェント {len(copied_agents)} 件をコピー"
         f"(廃止削除 {stale} 件。記録: {CORE_LOCK_REL})"
     )
 
@@ -386,11 +456,13 @@ def cmd_remove(root: Path, target: Path, name: str, dry: bool) -> None:
 
 
 def cmd_status(root: Path, target: Path) -> None:
-    core = load_json(target / CORE_LOCK_REL, {})
-    skills = core.get("skills", [])
-    agents = core.get("agents", [])
-    print(f"core スキル(コピー): {', '.join(skills) or 'なし'}")
-    print(f"core エージェント: {len(agents)} 件")
+    core = load_core_lock(target / CORE_LOCK_REL)
+    if not core:
+        print("core: 導入なし")
+    for name, record in sorted(core.items()):
+        label = name or "(グループ名の記録なし)"
+        skills = ", ".join(record["skills"]) or "なし"
+        print(f"core {label}: スキル {skills} / エージェント {len(record['agents'])} 件")
     lock = load_json(target / LOCK_REL, {})
     if not lock:
         print("拡張: なし")
@@ -421,6 +493,11 @@ def main() -> None:
     sub = parser.add_subparsers(dest="command", required=True)
 
     p_core = sub.add_parser("core", help="コア(skills・agents)をコピーする")
+    p_core.add_argument(
+        "groups",
+        nargs="*",
+        help="配布する用途グループ名(省略時は全グループ)。複数指定できる",
+    )
     p_ext = sub.add_parser("ext", help="拡張バンドルを導入する")
     p_ext.add_argument(
         "name",
@@ -446,7 +523,7 @@ def main() -> None:
     dry = getattr(args, "dry_run", False)
 
     if args.command == "core":
-        cmd_core(root, target, dry)
+        cmd_core(root, target, args.groups, dry)
     elif args.command == "ext":
         cmd_ext(root, target, args.name, dry)
     elif args.command == "remove":

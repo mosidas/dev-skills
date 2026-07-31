@@ -144,6 +144,42 @@
       "skill": "meta-doc",
       "prompt": "スキル群の整合を検査してレポートして",
       "should_trigger": false
+    },
+    {
+      "id": "writing-pos-1",
+      "skill": "japanese-writing",
+      "prompt": "この調査レポートの日本語を推敲して、一文が長い箇所と AI っぽい言い回しを直して",
+      "should_trigger": true
+    },
+    {
+      "id": "writing-pos-2",
+      "skill": "japanese-writing",
+      "prompt": "手順書のアウトラインを設計して、節の順序と見出しの言葉を点検したい",
+      "should_trigger": true
+    },
+    {
+      "id": "writing-neg-1",
+      "skill": "japanese-writing",
+      "prompt": "スキルの SKILL.md が長すぎるので参照ファイルへ分割する方針を決めたい",
+      "should_trigger": false
+    },
+    {
+      "id": "authoring-pos-1",
+      "skill": "skill-authoring",
+      "prompt": "新しいスキルの SKILL.md と description を設計したい。呼ばれるべきときに呼ばれる書き方にしたい",
+      "should_trigger": true
+    },
+    {
+      "id": "authoring-pos-2",
+      "skill": "skill-authoring",
+      "prompt": "このスキルは毎回挙動が違うので、手順を予測できる形にリファクタしたい",
+      "should_trigger": true
+    },
+    {
+      "id": "authoring-neg-1",
+      "skill": "skill-authoring",
+      "prompt": "仕様書の日本語が読みにくいので文を短くして書き直して",
+      "should_trigger": false
     }
   ]
 }
