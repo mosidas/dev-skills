@@ -20,15 +20,23 @@ description: 出荷(リリース)部品(コア)。実装完了した作業単位
 
 ## 2. 参照
 
-参照(必読):
+分け方は `../dev-core/references/principles.md` 3.1 に従う。
+
+**常時参照**(どの実行経路でも読む):
 
 - 共通原則: `../dev-core/references/principles.md`
 - 観点カタログ: `../dev-core/references/review-perspectives.md`(出荷可否パネルの観点)
-- 実行時検証(常設 DoD): `../dev-core/references/runtime-verification.md`(runtime-smoke 観点の正本)
 - Git 運用規約: `../dev-core/references/git-convention.md`
-- 恒久情報の配置規約: `../dev-core/references/durable-info.md`(Runbook 相当の運用情報の反映先)
-- 状態管理と静的チェック: `../dev-core/references/static-check.md`(完了状態・凍結の確認)
-- テンプレート: `./templates/release-review-prompt.md`(出荷可否パネル)/ `./templates/release-plan-template.md`(リリース計画)
+- テンプレート: `./templates/release-review-prompt.md`(出荷可否パネル)
+
+**条件付き参照**(条件に当たるときに読む):
+
+| 条件 | 参照 |
+| ---- | ---- |
+| 実行時挙動に影響する変更を含む出荷で runtime-smoke 観点を追加するとき(3.2。対象は製品コードと実行時に読まれる設定。ドキュメント・実行時に読まれない設定のみの出荷は対象外) | `../dev-core/references/runtime-verification.md` |
+| 完了状態・凍結の判定に迷うとき(3.1) | `../dev-core/references/static-check.md` |
+| GO 見込みでリリース計画を作るとき(3.3) | `./templates/release-plan-template.md` |
+| 運用情報(Runbook 相当)の反映先を決めるとき(3.3) | `../dev-core/references/durable-info.md` |
 
 ## 3. 手順
 
@@ -36,7 +44,7 @@ description: 出荷(リリース)部品(コア)。実装完了した作業単位
 
 パネル起動の前に、機械的に確認できる前提を確認する。**いずれかを満たさなければ即 NO-GO** とし、理由を `<workdir>/release-report.md` に記録して停止する(検証を省略しない。「急ぐから飛ばす」を許さない)。
 
-- **完了確認**: 対象 unit ごとに `python3 <skills>/dev-core/scripts/state.py show --workdir docs/specs/<unit>`(`<skills>` は `../dev-core/scripts/` を絶対パスに解決)で state.json を確認し、完了状態(凍結済み。`frozen` の記録が目印)であること。state.json が無い unit(単独利用等)は、完了の根拠(実装・テストの所在)を AskUserQuestion で確認し、確認できなければ NO-GO とする。
+- **完了確認**: 対象 unit ごとに `python3 <skills>/dev-core/scripts/state.py show --workdir docs/specs/<unit>`(`<skills>` は `../dev-core/scripts/` を絶対パスに解決)で state.json を確認し、完了状態(凍結済み。`frozen` の記録が目印)であること。完了状態・凍結の判定に迷う場合は `../dev-core/references/static-check.md` 5. を参照する。state.json が無い unit(単独利用等)は、完了の根拠(実装・テストの所在)を AskUserQuestion で確認し、確認できなければ NO-GO とする。
 - **全体グリーン**: テスト・ビルド・リント一式を差分外も含めて実行し、すべてグリーンであること(回帰なし)。
 - **機械確認チェックリスト**(grep・設定確認で機械的に判定できる項目。出典: [addyosmani/agent-skills](https://github.com/addyosmani/agent-skills) shipping-and-launch):
   - 秘密情報(API キー・パスワード)がコードに残っていない
@@ -51,7 +59,7 @@ description: 出荷(リリース)部品(コア)。実装完了した作業単位
 観点別の dev-reviewer を並列起動し、返却を統合して GO/NO-GO を判定する。
 
 - **観点**: 観点カタログ(`../dev-core/references/review-perspectives.md`)のコード検証系から選ぶ。固定は **security・performance・test** の 3 観点。**実行時挙動に影響する変更を含む出荷では runtime-smoke を必須で追加する**(実行時検証の正本: `../dev-core/references/runtime-verification.md`)。出荷スコープの特性で追加する(運用要件 → observability、GUI → accessibility・visual-conformance、公開 API → contract)。知識 port に観点の追加・差し替えがあればそれに従う。
-- **並列起動**: 各観点に**新鮮な dev-reviewer** を 1 体、`./templates/release-review-prompt.md` で同時に投入する(担当観点の重点はカタログの該当エントリから転記する)。各レビュアーは自分の観点だけに集中し、read-only で検証する(実行時検証のための起動・観察は行ってよい)。返却契約は同プロンプトに定める(この SKILL では再定義しない)。
+- **並列起動**: 各観点に**新鮮な dev-reviewer** を 1 体、`./templates/release-review-prompt.md` で同時に投入する(重点は転記せず、観点カタログの該当節の位置を渡して読ませる)。各レビュアーは自分の観点だけに集中し、read-only で検証する(実行時検証のための起動・観察は行ってよい)。返却契約は同プロンプトに定める(この SKILL では再定義しない)。
 - **merge(保守的)**: 返却の `VERDICT` を集約する。**1 観点でも `REJECTED` なら全体 NO-GO**(多数決にしない)。`FINDINGS` は重複排除して観点別所見にまとめる。
 - **未検証と欠陥の区別**: 返却の `UNVERIFIED` フィールドが「なし」以外の観点が 1 つでもあれば(検証手段が無い・起動できない)、欠陥ではなく未検証として扱う。GO を出さず、未検証項目と人間が実施すべき確認手順を release-report.md に記録してエスカレーションする(`../dev-core/references/runtime-verification.md` §5)。
 - 判定と所見を `<workdir>/release-report.md` に記録する。NO-GO の場合は Critical の所見と次アクション(コードの修正・上流の見直し)を明記する。修正はこの部品では行わない。
