@@ -1,0 +1,63 @@
+---
+name: ext-dev-guardrails
+description: 拡張スキル(レイヤー 3)。dev スキル群が文章で課している安全制約のうち、例外を持たず機械判定が閉じる 3 件(破壊的な git 操作の禁止・一括ステージングの禁止・凍結済み中間生成物の変更禁止)を、PreToolUse hook で決定論的に強制する。hook は導入したプロジェクトの全セッションに効き、拒否の理由と代替手段を返す。文章の規律だけでは守られない場面を無くしたいとき、複数人・長時間の自走で作業ツリーを壊す操作を構造的に止めたいときに導入する。
+---
+
+# ext-dev-guardrails — 安全制約の決定論的強制
+
+`git-convention.md` 6.(安全制約)と `principles.md` 1.(凍結された中間生成物を変更しない)は、コアでは文章の規律として書かれている。本書が正本として挙げるファイルは、いずれも導入先の `.claude/skills/dev-core/references/` にある(相対パスで書かない。バンドルはリポジトリ内と導入先で位置が変わり、どちらか一方でしか解決しないパスになるため)。文章の指示は助言であり、毎回の遵守を保証しない。本バンドルは、そのうち**例外を持たず、コマンド文字列とパスの照合だけで判定が閉じる 3 件**を hook で拒否する。
+
+コア側の規律文は残る。本バンドルは規律を置き換えるものではなく、上乗せの強制手段である(未導入のプロジェクトでは 3 件とも文章の規律のまま成立する)。
+
+## 1. 強制する規律
+
+| 規律 | 拒否する操作 | 正本 |
+| ---- | ------------ | ---- |
+| 破壊的な git 操作の禁止 | `git reset --hard` / `git checkout` によるパス復元(`.`・`./<path>`・`--`)/ `git restore`(`--staged` のみの用法を除く)/ `git clean -f`(`-n` を伴わないもの)/ `git branch` の強制削除(`-D`・`-d --force`・`-df`)/ 強制 push(`--force`・`-f`・`+` を前置した refspec)/ `rm -rf` | dev-core/references/git-convention.md 6. |
+| 選択的ステージング | `git add -A` / `git add --all` / `git add .` | 同上 |
+| 凍結後の中間生成物を変更しない | 書き込み先と同じディレクトリの `state.json` の `frozen` に記録されたファイルへの Write / Edit / MultiEdit / NotebookEdit | dev-core/references/principles.md 1. |
+
+拒否のたびに、代替手段(コミット済みは `git revert`、未コミットは `git stash push`、ステージングは `git add <file>`、凍結後の差異はコードと恒久情報へ反映)を理由とともに返す。
+
+## 2. 強制しない規律
+
+判定が文脈に依存するものは hook にしない。誤って拒否すると正当な作業を止めるためである。
+
+- **コードに中間生成物の ID を残さない**: 要件 ID の書式がコード中の通常の数値・バージョン表記と区別できない。
+- **テストの削除・スキップで緑にしない**: 仕様変更に伴う正当な削除と区別できない。
+
+この 2 件は、実装者へ渡すプロンプトの制約と dev-reviewer の判定が担う。
+
+## 3. 契約と収録物
+
+```
+ext-dev-guardrails/
+├── SKILL.md
+├── hooks/
+│   ├── guard_bash.py    # PreToolUse(Bash): 破壊的な git 操作・一括ステージングを拒否
+│   └── guard_write.py   # PreToolUse(Write/Edit/MultiEdit/NotebookEdit): 凍結済み中間生成物への書き込みを拒否
+└── settings.snippet.json
+```
+
+- **入力**: PreToolUse の JSON(標準入力)。`guard_bash.py` は `tool_name` と `tool_input.command`、`guard_write.py` は `tool_name`・`tool_input` のファイルパス・`cwd` を読む。
+- **出力**: 許可は exit 0(何も出力しない)、拒否は exit 2 と標準エラーへの理由。入力を解釈できない場合は許可側に倒す(hook 自身の不具合で作業を止めない)。
+- **workdir・port**: 持たない(このバンドルは成果物を生成しない)。
+- どちらの hook も Python 3 標準ライブラリのみで動作する(追加インストール不要)。
+
+## 4. 導入と削除
+
+```console
+$ python3 <dev-skills のパス>/install.py ext ext-dev-guardrails --target <利用側プロジェクト>
+$ python3 <dev-skills のパス>/install.py remove ext-dev-guardrails --target <利用側プロジェクト>
+```
+
+- 導入は `.claude/skills/ext-dev-guardrails/` へのコピーと、`settings.snippet.json` の `.claude/settings.json` への冪等マージで行う。マージした内容は `.claude/dev-extensions.lock.json` に記録し、`remove` はその記録分だけを取り消す(利用側の既存設定に触れない)。
+- **効く範囲は導入したプロジェクトの全セッション**である。dev スキル群を使わない操作にも hook が働く。禁止する 3 件はいずれもプロジェクト全体で守る規律(未コミット変更の喪失・無関係な変更の巻き込み・凍結済み成果物の変更)のため、範囲を dev スキル群の実行中に限定していない。
+
+## 5. 判定の限界
+
+- **判定はコマンド文字列の照合による**。クォートを解釈して語に分け、シェルの区切り(`;` `&&` `||` `|` `&` `(` `)`)でセグメントへ分けたうえで、各セグメントの先頭コマンド(環境変数の代入・`sudo` 等の前置・git のグローバルオプションを読み飛ばした後)とその引数を見る。クォートが閉じていない入力では素朴な分割へ縮退する。変数展開・エイリアス・スクリプト経由の実行(`bash script.sh` の中身)は判定できない。
+- **強制 push の判定は正本より広い**。正本の禁止は「デフォルトブランチや共有ブランチへの強制 push」だが、hook はブランチの共有性を判定できないため `--force`・`-f`・`+` を前置した refspec を一律に拒否する。作業ブランチで履歴を更新する必要がある場合は `--force-with-lease` を使う(上流の更新を検出して中断するため許可する)。
+- **禁止の対象は正本が列挙する操作に限る**。`git stash drop` / `git stash clear` / `git worktree remove --force` のように未コミットの変更を失いうる操作でも、正本(git-convention.md 6.)が列挙していないものは拒否しない。判定を正本と一致させ、hook が独自の禁止を持たない形にする。
+- **凍結の判定は `state.json` の位置に依存する**。書き込み先と同じディレクトリに `state.json` が無い場合(単独利用で状態機械を使わない場合)は判定できず、許可になる。書き込み先はシンボリックリンクを解決したうえで照合する(別名経由の変更を通さない)。相対パスは PreToolUse の入力が持つ `cwd` を基点に絶対化する。
+- 拒否が正当な作業を止めた場合は、その事例を記録してバンドルの判定を見直す(該当の再検討条件は D-018)。

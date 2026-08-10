@@ -7,6 +7,13 @@ dev-reviewer(敵対的判定器)に注入する観点(ペルソナ)の正本。�
 
 出典: 観点の体系は [addyosmani/agent-skills](https://github.com/addyosmani/agent-skills) のペルソナ(code-reviewer / test-engineer / security-auditor / web-performance-auditor)の専門手順を取り込んで構成した。
 
+## 目次
+
+- 1. 返却契約(全観点共通の既定)
+- 2. コード検証系の観点(requirements-conformance / structure / security / performance / test / runtime-smoke)
+- 3. 条件付き観点(作業の特性で追加)
+- 4. 文書ゲート系の観点(correctness / testability / completeness)
+
 ## 1. 返却契約(全観点共通の既定)
 
 起動時プロンプトで上書きされない限り、次の構造化フィールドで返す。

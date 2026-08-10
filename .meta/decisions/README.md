@@ -8,7 +8,9 @@
 | 決定             | 何を決めたか                                                     |
 | 却下した選択肢   | 採らなかった案と、採らなかった理由                               |
 | 帰結             | この判断で変えたもの(該当が無い場合は「無し」と理由を書く)     |
-| 再検討条件       | どの事象が観測されたら判断をやり直すか                           |`DESIGN.md` の構造層(`meta-doc` が `.claude` から生成)は、この記録に `D-###` で参照を張る。層分離の原則は `../../.claude/skills/meta-core/references/principles.md` §3。
+| 再検討条件       | どの事象が観測されたら判断をやり直すか                           |
+
+`DESIGN.md` の構造層(`meta-doc` がスキルの定義から生成する)は、この記録に `D-###` で参照を張る。層分離の原則は `../../.claude/skills/meta-core/references/principles.md` §3。
 
 - ファイルは `D-<番号>-<スラグ>.md` で命名する。番号は採番したら再利用しない(索引に欠番が生じることがある)。
 - 追記のみとする。判断を覆す場合は既存エントリを消さず、新エントリで supersede する(旧エントリに「→ D-### で更新」を追記)。
@@ -29,3 +31,12 @@
 - [D-012](D-012-generic-skill-groups.md): 汎用スキルを用途ごとのグループへ置き、グループ単位で導入する
 - [D-013](D-013-group-config-declaration.md): グループ固有の規約を宣言ファイルへ外出しする
 - [D-014](D-014-group-owned-mechanisms.md): port と拡張バンドルをグループ配下へ移す
+- [D-015](D-015-reference-load-control.md): 参照を常時と条件付きに分け、100 行超の参照に目次を付ける
+- [D-016](D-016-prompt-data-boundary.md): サブエージェント・プロンプトで指示とデータを構造で区別する
+- [D-017](D-017-compaction-recovery.md): 圧縮後の再開をファイルからの再導出で担保する
+- [D-018](D-018-hook-guardrail-bundle.md): 決定論的強制を hook 拡張バンドルとして配る
+- [D-019](D-019-verification-modes.md): 検証手段の 3 方式を principles.md で対応づける
+- [D-020](D-020-resume-and-rollback.md): 中断からの再開手順を固定し、巻き戻し手段を定める
+- [D-021](D-021-completion-false-positive.md): 完了判定の偽陽性への対策を実装者と判定器に置く
+- [D-022](D-022-autonomy-boundary.md): 自走と headless をレイヤー 3 に閉じ、dev-author をコアから外す
+- [D-023](D-023-structure-inventory-keep.md): 4 観点の棚卸しで維持と決めた構成要素

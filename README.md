@@ -22,6 +22,7 @@ dev-skills/
 │   │   └── flow-<ワークフロー名>/ # Layer 2: composition(SKILL.md + 状態機械定義)
 │   ├── ports/                   # 知識 port のサンプル(配布しない)
 │   └── extensions/              # Layer 3: 拡張バンドル(<バンドル群>/ 配下に ext-*・flow-*)
+│       └── guardrails/          #   安全制約を hook で強制するバンドル群(ext-dev-guardrails)
 ├── writing/                     # 用途グループ: 文書作成(配布する)
 │   └── skills/japanese-writing/ # 日本語の開発ドキュメント・技術文書の作成規範
 ├── authoring/                   # 用途グループ: スキル作成(配布する)
@@ -60,5 +61,7 @@ python3 install.py status --target /path/to/project
 ```
 
 各コマンドは `--dry-run` で変更せずに実行内容を確認できる(status を除く)。
+
+拡張バンドルは hooks を持つことがあり、その場合は `settings.snippet.json` の内容を利用側の `.claude/settings.json` へ冪等マージする(`remove` でマージ分だけを取り消す)。現在収録しているのは `ext-dev-guardrails`(安全制約の決定論的強制。D-018)である。
 
 導入はハードコピー方式である(シンボリックリンクを使わない。devcontainer 等でホスト側パスが解決できない環境でも動き、利用側は導入物を自リポジトリに Git 管理できる。D-006)。更新は `install.py core` の再実行で行い、廃止されたスキル・エージェント(前回コピーして今回の配布元に無いもの)は自動で削除される。配布対象は用途グループ配下に限るため、`.claude/skills/` に置く `meta-*` は配布されない。グループ名を指定した実行は、そのグループの廃止分だけを削除し、指定しなかったグループの導入物には触らない。

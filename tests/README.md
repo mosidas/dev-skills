@@ -38,6 +38,7 @@ python3 -m unittest discover -s tests -t tests -p test_state.py
 | `test_trigger_check.py` | `meta-core/trigger_check.py` | 肯定例・否定例・近接衝突・ケース網羅・仕様ファイルの異常系            |
 | `test_meta_extract.py`  | `meta-core/meta_extract.py` | 部品・スクリプト・エージェント・状態機械・inject グラフの抽出         |
 | `test_meta_loc.py`      | `meta-core/meta_loc.py`    | 領域の割り当て・行数の数え方・除外条件                                 |
+| `test_guard_hooks.py`   | `ext-dev-guardrails/hooks/` | 破壊的な git 操作・一括ステージング・凍結済み成果物への書き込みの拒否、誤検出しないこと、exit code |
 
 ## 4. 書き方の規律
 
