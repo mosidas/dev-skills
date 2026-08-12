@@ -74,9 +74,10 @@ class StateMachineTest(helpers.TempDirTestCase):
 
     # --- init の採番(--root) ---
 
-    def init_root(self, root, unit: str):
+    def init_root(self, root, unit: str, unique_root=None):
+        extra = ["--unique-root", unique_root] if unique_root is not None else []
         return run_script(
-            STATE_PY, "init", "--def", self.defn, "--root", root, "--unit", unit
+            STATE_PY, "init", "--def", self.defn, "--root", root, "--unit", unit, *extra
         )
 
     def test_root_指定で連番付きの_workdir_を作る(self) -> None:
@@ -132,6 +133,40 @@ class StateMachineTest(helpers.TempDirTestCase):
         proc = self.init_root(root, "user-auth-2")
         self.assertEqual(proc.returncode, 0, proc.stderr)
         self.assertTrue((root / "002-user-auth-2").is_dir())
+
+    # --- 階層を分けたルート(roadmap ごとに採番を閉じる構成) ---
+
+    def test_採番はルート直下で閉じるため階層ごとに独立する(self) -> None:
+        specs = self.tmp / "specs"
+        self.init_root(specs / "001-mvp", "test-harness")
+        self.init_root(specs / "001-mvp", "foot-player")
+        proc = self.init_root(specs / "002-v2", "netspace-run")
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        self.assertTrue((specs / "001-mvp" / "001-test-harness").is_dir())
+        self.assertTrue((specs / "001-mvp" / "002-foot-player").is_dir())
+        self.assertTrue((specs / "002-v2" / "001-netspace-run").is_dir())
+
+    def test_unique_root_が上位の階層の同名_unit_を拒否する(self) -> None:
+        specs = self.tmp / "specs"
+        self.init_root(specs / "001-mvp", "foot-player")
+        proc = self.init_root(specs / "002-v2", "foot-player", unique_root=specs)
+        self.assertEqual(proc.returncode, 1)
+        self.assertIn("同じ作業単位の workdir が既にあります", proc.stderr)
+        self.assertFalse((specs / "002-v2" / "001-foot-player").exists())
+
+    def test_unique_root_なしならルート直下だけを見る(self) -> None:
+        specs = self.tmp / "specs"
+        self.init_root(specs / "001-mvp", "foot-player")
+        proc = self.init_root(specs / "002-v2", "foot-player")
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        self.assertTrue((specs / "002-v2" / "001-foot-player").is_dir())
+
+    def test_unique_root_でも別の_unit_なら通す(self) -> None:
+        specs = self.tmp / "specs"
+        self.init_root(specs / "001-mvp", "foot-player")
+        proc = self.init_root(specs / "002-v2", "netspace-run", unique_root=specs)
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        self.assertTrue((specs / "002-v2" / "001-netspace-run").is_dir())
 
     def test_root_指定で_unit_を省略すると拒否する(self) -> None:
         proc = run_script(
@@ -318,6 +353,59 @@ class StateMachineTest(helpers.TempDirTestCase):
             [u["unit"] for u in result["units"]], ["user-auth", "legacy-unit"]
         )
 
+    def test_scan_の各行がどの定義に属するかを持つ(self) -> None:
+        self.init()
+        result = run_json(
+            STATE_PY, "scan", "--def", self.defn, "--root", self.tmp, "--json"
+        )
+        self.assertEqual(result["workflows"], ["testflow"])
+        self.assertEqual(result["units"][0]["workflow"], "testflow")
+
+    def test_scan_は複数の定義を指定すると両方を集約する(self) -> None:
+        other_def = self.tmp / "other.json"
+        other_def.write_text(
+            json.dumps(
+                {
+                    "name": "otherflow",
+                    "states": ["initialized", "frozen"],
+                    "initial": "initialized",
+                    "final": ["frozen"],
+                    "transitions": [{"from": "initialized", "to": "frozen"}],
+                    "artifacts": {"frozen": ["note.md"]},
+                },
+                ensure_ascii=False,
+            ),
+            encoding="utf-8",
+        )
+        root = self.tmp / "specs"
+        run_script(
+            STATE_PY, "init", "--def", other_def, "--root", root, "--unit", "mvp"
+        )
+        self.init_root(root / "001-mvp", "user-auth")
+
+        only_one = run_json(
+            STATE_PY, "scan", "--def", self.defn, "--root", root, "--json"
+        )
+        self.assertEqual(only_one["total"], 1)
+        self.assertEqual(len(only_one["others"]), 1)
+        self.assertIn("別ワークフロー: otherflow", only_one["others"][0]["note"])
+
+        both = run_json(
+            STATE_PY,
+            "scan",
+            "--def", self.defn,
+            "--def", other_def,
+            "--root", root,
+            "--json",
+        )
+        self.assertEqual(both["workflows"], ["testflow", "otherflow"])
+        self.assertEqual(both["total"], 2)
+        self.assertEqual(both["others"], [])
+        self.assertEqual(
+            {(u["workflow"], u["unit"]) for u in both["units"]},
+            {("otherflow", "mvp"), ("testflow", "user-auth")},
+        )
+
     def test_scan_は不正な_JSON_を対象外として報告する(self) -> None:
         broken = self.tmp / "unit-c"
         broken.mkdir()
@@ -338,6 +426,136 @@ class StateMachineTest(helpers.TempDirTestCase):
         proc = self.set_state("drafted")
         self.assertEqual(proc.returncode, 1)
         self.assertIn("ワークフロー不一致", proc.stderr)
+
+
+class FlowSddDefinitionTest(helpers.TempDirTestCase):
+    """flow-sdd が配る 2 つの定義データを、実物のまま駆動して確かめる。
+
+    roadmap と unit を階層で分ける構成(flow-sdd/SKILL.md 1.)が成立するかは、
+    定義データの妥当性と 2 つの状態機械の独立性に依存する。定義を書き写さず
+    配布物そのものを読むことで、定義の変更が検査を素通りしない形にする。
+    """
+
+    FLOW_SDD = helpers.REPO_ROOT / "dev" / "skills" / "flow-sdd"
+    UNIT_DEF = FLOW_SDD / "workflow.json"
+    ROADMAP_DEF = FLOW_SDD / "roadmap.json"
+
+    def roadmap_state(self, workdir) -> dict:
+        return json.loads((workdir / "state.json").read_text(encoding="utf-8"))
+
+    def test_roadmap_は生成から承認を経て凍結へ進む(self) -> None:
+        specs = self.tmp / "docs" / "specs"
+        proc = run_script(
+            STATE_PY, "init", "--def", self.ROADMAP_DEF,
+            "--root", specs, "--unit", "mvp",
+        )
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        workdir = specs / "001-mvp"
+        (workdir / "roadmap.md").write_text("# roadmap", encoding="utf-8")
+
+        for args in (
+            ("set-state", "roadmap-generated"),
+            ("approve", "roadmap"),
+            ("set-state", "frozen"),
+        ):
+            proc = run_script(
+                STATE_PY, args[0], "--def", self.ROADMAP_DEF,
+                "--workdir", workdir, args[1],
+            )
+            self.assertEqual(proc.returncode, 0, proc.stderr)
+
+        state = self.roadmap_state(workdir)
+        self.assertEqual(state["state"], "frozen")
+        self.assertTrue(state["approvals"]["roadmap"])
+        self.assertEqual(len(state["frozen"]["roadmap.md"]), 64)
+
+    def test_roadmap_の承認ゲートは_set_state_で通過できない(self) -> None:
+        specs = self.tmp / "docs" / "specs"
+        run_script(
+            STATE_PY, "init", "--def", self.ROADMAP_DEF,
+            "--root", specs, "--unit", "mvp",
+        )
+        workdir = specs / "001-mvp"
+        run_script(
+            STATE_PY, "set-state", "--def", self.ROADMAP_DEF,
+            "--workdir", workdir, "roadmap-generated",
+        )
+        proc = run_script(
+            STATE_PY, "set-state", "--def", self.ROADMAP_DEF,
+            "--workdir", workdir, "roadmap-approved",
+        )
+        self.assertEqual(proc.returncode, 1)
+
+    def test_roadmap_は差し戻して再承認できる(self) -> None:
+        specs = self.tmp / "docs" / "specs"
+        run_script(
+            STATE_PY, "init", "--def", self.ROADMAP_DEF,
+            "--root", specs, "--unit", "mvp",
+        )
+        workdir = specs / "001-mvp"
+        (workdir / "roadmap.md").write_text("# roadmap", encoding="utf-8")
+        run_script(
+            STATE_PY, "set-state", "--def", self.ROADMAP_DEF,
+            "--workdir", workdir, "roadmap-generated",
+        )
+        run_script(
+            STATE_PY, "approve", "--def", self.ROADMAP_DEF,
+            "--workdir", workdir, "roadmap",
+        )
+        proc = run_script(
+            STATE_PY, "set-state", "--def", self.ROADMAP_DEF,
+            "--workdir", workdir, "roadmap-generated",
+        )
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        self.assertNotIn("frozen", self.roadmap_state(workdir))
+
+    def test_unit_の連番は_roadmap_ごとに閉じ名前は跨いで一意になる(self) -> None:
+        specs = self.tmp / "docs" / "specs"
+        for name in ("mvp", "v2"):
+            run_script(
+                STATE_PY, "init", "--def", self.ROADMAP_DEF,
+                "--root", specs, "--unit", name,
+            )
+
+        def init_unit(roadmap: str, unit: str):
+            return run_script(
+                STATE_PY, "init", "--def", self.UNIT_DEF,
+                "--root", specs / roadmap, "--unit", unit,
+                "--unique-root", specs,
+            )
+
+        self.assertEqual(init_unit("001-mvp", "test-harness").returncode, 0)
+        self.assertEqual(init_unit("001-mvp", "foot-player").returncode, 0)
+        self.assertEqual(init_unit("002-v2", "netspace-run").returncode, 0)
+        self.assertTrue((specs / "001-mvp" / "002-foot-player").is_dir())
+        self.assertTrue((specs / "002-v2" / "001-netspace-run").is_dir())
+
+        collide = init_unit("002-v2", "foot-player")
+        self.assertEqual(collide.returncode, 1)
+        self.assertIn("同じ作業単位の workdir が既にあります", collide.stderr)
+
+    def test_scan_が_roadmap_と_unit_を同時に一覧する(self) -> None:
+        specs = self.tmp / "docs" / "specs"
+        run_script(
+            STATE_PY, "init", "--def", self.ROADMAP_DEF,
+            "--root", specs, "--unit", "mvp",
+        )
+        run_script(
+            STATE_PY, "init", "--def", self.UNIT_DEF,
+            "--root", specs / "001-mvp", "--unit", "test-harness",
+            "--unique-root", specs,
+        )
+        result = run_json(
+            STATE_PY, "scan",
+            "--def", self.UNIT_DEF,
+            "--def", self.ROADMAP_DEF,
+            "--root", specs, "--json",
+        )
+        self.assertEqual(result["others"], [])
+        self.assertEqual(
+            {(u["workflow"], u["unit"]) for u in result["units"]},
+            {("roadmap", "mvp"), ("sdd", "test-harness")},
+        )
 
 
 if __name__ == "__main__":

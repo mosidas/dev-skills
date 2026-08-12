@@ -157,6 +157,43 @@ class ExtractTest(helpers.TempDirTestCase):
         (d / "workflow.json").write_text("{壊れた", encoding="utf-8")
         self.assertIn("error", meta_extract.extract_state_machines(self.root)[0])
 
+    def test_1_つのスキルが持つ複数の定義データを抽出する(self) -> None:
+        d = self.root / "dev" / "skills" / "flow-x"
+        d.mkdir(parents=True)
+        (d / "workflow.json").write_text(
+            json.dumps(helpers.WORKFLOW_DEF, ensure_ascii=False), encoding="utf-8"
+        )
+        (d / "roadmap.json").write_text(
+            json.dumps(
+                {
+                    "name": "roadmap",
+                    "states": ["initialized", "frozen"],
+                    "initial": "initialized",
+                    "final": ["frozen"],
+                    "transitions": [{"from": "initialized", "to": "frozen"}],
+                },
+                ensure_ascii=False,
+            ),
+            encoding="utf-8",
+        )
+        machines = meta_extract.extract_state_machines(self.root)
+        self.assertEqual(
+            [(m["file"], m["name"]) for m in machines],
+            [("roadmap.json", "roadmap"), ("workflow.json", "testflow")],
+        )
+
+    def test_定義データの形をしない_JSON_を状態機械として数えない(self) -> None:
+        d = self.root / "dev" / "skills" / "flow-x"
+        d.mkdir(parents=True)
+        (d / "workflow.json").write_text(
+            json.dumps(helpers.WORKFLOW_DEF, ensure_ascii=False), encoding="utf-8"
+        )
+        (d / "trigger-cases.json").write_text(
+            json.dumps([{"prompt": "x", "expect": "flow-x"}]), encoding="utf-8"
+        )
+        machines = meta_extract.extract_state_machines(self.root)
+        self.assertEqual([m["file"] for m in machines], ["workflow.json"])
+
     def test_inject_グラフを_name_で引けるようにする(self) -> None:
         """port はグループの機構のため、グループ配下の `ports/` から抽出する(D-014)。"""
         ports = self.root / "dev" / "ports"

@@ -10,12 +10,19 @@ description: SDD(仕様駆動開発)ワークフロー。依頼を経路判定(�
 ## 1. 契約
 
 - **作業単位(unit)**: 小文字ケバブケースのスラッグ(例: `user-auth`)。ルーティング(2.)で決める。
-- **workdir**: `docs/specs/NNN-<unit>/`(各部品の既定 workdir をこの値で上書きする)。`NNN` は `docs/specs/` 直下で採番する 3 桁の連番で、エンジンの `init --root` が付ける(採番規則の正本は `../dev-core/references/static-check.md` 3.1)。連番を持たない既存の workdir もそのまま扱う。unit 名だけではパスが決まらないため、既存 unit の workdir は `scan` で特定する(Step 0 の手順 2)。
-- **roadmap**(複数 unit のとき): `docs/specs/roadmap.md`。unit の一覧・順序・依存に加え、未確定項目とスコープ外を記す中間生成物(全 unit 完了で役目を終える)。構成は 2.1 に定める。
-- **状態機械定義**: `./workflow.json`。状態遷移はすべて dev-core のエンジン経由で行う(`../dev-core/references/static-check.md`)。
+- **roadmap**: 1 つ以上の unit をまとめる作業のかたまり。名前は小文字ケバブケースのスラッグ(例: `mvp`)とし、ルーティング(2.)で決める。**unit が 1 つでも roadmap を立てる**(構成に経路ごとの特例を作らないため)。
+- **roadmap のディレクトリ**: `docs/specs/NNN-<roadmap 名>/`。`NNN` は `docs/specs/` 直下で採番する 3 桁の連番。直下に `roadmap.md` と `state.json` を置く。
+- **workdir**: `docs/specs/NNN-<roadmap 名>/NNN-<unit>/`(各部品の既定 workdir をこの値で上書きする)。unit の `NNN` は roadmap のディレクトリ直下で採番するため、**unit の連番は roadmap ごとに閉じる**。どちらの連番もエンジンの `init --root` が付ける(採番規則の正本は `../dev-core/references/static-check.md` 3.1)。連番を持たない既存の workdir もそのまま扱う。unit 名だけではパスが決まらないため、既存 unit の workdir は `scan` で特定する(Step 0 の手順 2)。
+- **unit 名は roadmap を跨いで一意とする**。`init` に `--unique-root docs/specs` を渡し、エンジンに重複を拒否させる。連番と違って名前の一意性を閉じない理由は、unit 名が作業ブランチ名でもあり(3.)、roadmap ごとに閉じると `git branch` の一覧と PR の題名で区別できなくなるためである。
+- **roadmap.md**: `docs/specs/NNN-<roadmap 名>/roadmap.md`。unit の一覧・順序・依存に加え、未確定項目とスコープ外を記す。構成は 2.1 に定める。
+- **状態機械定義**: unit は `./workflow.json`、roadmap は `./roadmap.json`。roadmap と unit は独立した状態機械として進む。状態遷移はすべて dev-core のエンジン経由で行う(`../dev-core/references/static-check.md`。階層を分けた併用は同 3.1.1)。
 
 ```
-initialized → spec-generated →(gate: spec)→ spec-approved
+roadmap: initialized → roadmap-generated →(gate: roadmap)→ roadmap-approved
+→ frozen(凍結)
+差し戻し: roadmap-approved→roadmap-generated
+
+unit: initialized → spec-generated →(gate: spec)→ spec-approved
 → tasks-generated →(gate: tasks)→ tasks-approved
 → implementing → completed(凍結)
 差し戻し: tasks-generated→spec-generated / implementing→tasks-generated
@@ -29,16 +36,17 @@ initialized → spec-generated →(gate: spec)→ spec-approved
 | ---- | ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------- |
 | A    | 既存 unit の責務範囲内で拡張できる                     | `scan` で該当 unit の workdir を特定し、`status` で状態を確認して該当フェーズから再開する。凍結済み(completed)なら新しい unit(経路 C)に切り替える |
 | B    | 作業単位化が不要(バグ修正・設定変更・軽微で境界が明確) | dev-implement を直接使う(軽量タスク定義)。状態機械は使わない                                                              |
-| C    | 新規の作業 1 単位が妥当                                | unit 名を決めて Step 0 から開始する                                                                                       |
-| D    | 大きく、複数 unit へ分解すべき                         | `docs/specs/roadmap.md` に unit 一覧・順序・依存を生成し、ユーザー承認後に各 unit を順に Step 0 から駆動する              |
+| C    | 新規の作業 1 単位が妥当                                | roadmap 名と unit 名を決め、Step R で roadmap を立ててから Step 0 へ進む                                                   |
+| D    | 大きく、複数 unit へ分解すべき                         | roadmap 名を決め、Step R で unit 一覧・順序・依存を生成し、ユーザー承認後に各 unit を順に Step 0 から駆動する              |
 | E    | 混合(既存更新 + 新規 + 軽微が混在)                     | roadmap で全体を整理し、各項目を A〜C に割り当てる                                                                        |
 
 - 経路判定に既存コードベースの把握が要る場合は dev-explorer に隔離し、ダイジェストのみ受け取る。
 - 1 unit の規模は dev-decompose の目安(要件 10 以下・メインタスク 8 以下)に収まるよう分解する。
+- 経路 C も roadmap を立てる。unit が 1 つでも `roadmap.md` を生成し、unit 一覧に 1 行だけを書く。roadmap のディレクトリだけを作って `roadmap.md` を置かない形にすると、ディレクトリ名の出所が文書に無くなり、凍結の機構が `roadmap.md` の有無で分岐する。経路 C の承認は経路判定のゲートに含め、roadmap 単独の承認ゲートは置かない(2.1)。
 
-### 2.1. roadmap の構成(経路 D・E)
+### 2.1. roadmap.md の構成と凍結
 
-`docs/specs/roadmap.md` は次の 3 節を持つ。
+`docs/specs/NNN-<roadmap 名>/roadmap.md` は次の 3 節を持つ。
 
 | 節         | 内容                                                                     |
 | ---------- | ------------------------------------------------------------------------ |
@@ -47,13 +55,21 @@ initialized → spec-generated →(gate: spec)→ spec-approved
 | スコープ外 | 目的の外と判断した項目と、その判断理由                                   |
 
 - **未確定に置くかの判定基準**は「いま答えを出せるか」ではなく「**いま問いを正確に述べられるか**」とする。問いを述べられるものは unit にする(答えを出す作業が調査であれば、調査を目的とする unit にする)。問いを述べられないものを未確定に残す。
-- 未確定の項目は、問いを述べられるようになった時点で unit 一覧へ移す。移動はユーザーの承認を経て行い、移した項目は未確定の節から消す。
+- 未確定の項目は、問いを述べられるようになった時点で unit 一覧へ移す。移動はユーザーの承認を経て行い、移した項目は未確定の節から消す。この編集は `roadmap-approved → roadmap-generated` の差し戻しで行い、編集後に `approve roadmap` で再承認する(凍結前に限る)。
 - スコープ外の項目は理由とともに残す(削除すると同じ検討が再燃する)。
-- 全 unit の完了時に roadmap は役目を終える。未確定・スコープ外の項目のうち以後も参照する必要があるものは、恒久情報の配置規約(`../dev-core/references/durable-info.md`)に従って ADR・README へ移す。
+- 承認ゲートは `roadmap` の 1 つとし、経路 D・E では roadmap 提示後にユーザーの明示承認を取る。経路 C(unit 1 つ)では経路判定の承認をこのゲートの承認として扱い、追加の停止を挟まない。
+
+**凍結の順序**: 配下の全 unit が `completed` に達したら、次の順に行う。順序を入れ替えない。
+
+1. 未確定・スコープ外の項目のうち以後も参照する必要があるものを、恒久情報の配置規約(`../dev-core/references/durable-info.md`)に従って ADR・README へ移す。移す案をユーザーに提示し、承認を得てから移す。
+2. 移動に伴う `roadmap.md` の編集を終える。
+3. `<engine> set-state --def ./roadmap.json --workdir <roadmap のディレクトリ> frozen` で凍結する。エンジンが `roadmap.md` の sha256 を `state.json` の `frozen` に記録し、以後の変更を `check.py` が error として検出する。
+
+恒久情報への移動を凍結より先に置く理由は、移動が `roadmap.md` の編集を伴うためである。先に凍結すると、移動のたびに凍結違反になる。凍結は「移し終えて参照専用になった」という状態を記録する操作であり、移動を禁じる操作ではない。
 
 ## 3. ブランチ運用
 
-- 新規 unit の開始時(Step 0 の手順 4 で `init` を実行する直前)、git 管理下であれば現在のブランチから作業ブランチ `<unit>` を作成・切替する(`git switch -c <unit>`)。ブランチ名は unit 名とし、workdir の連番を含めない。既に同名ブランチがあれば切替のみ。git 管理下でなければスキップする。
+- 新規 unit の開始時(Step 0 の手順 4 で `init` を実行する直前)、git 管理下であれば現在のブランチから作業ブランチ `<unit>` を作成・切替する(`git switch -c <unit>`)。ブランチ名は unit 名とし、workdir の連番も roadmap 名も含めない。unit 名は roadmap を跨いで一意のため(1.)、この命名でブランチが衝突しない。既に同名ブランチがあれば切替のみ。git 管理下でなければスキップする。
 - unit の完了後、作業ブランチの PR 作成と CI 追従を Step 4 で行う。main 等への統合(マージ)は人間に委ねる。flow-sdd は自動マージしない。
 - 経路 B(unit 化しない軽微変更)は現在のブランチで作業する。
 
@@ -69,16 +85,26 @@ initialized → spec-generated →(gate: spec)→ spec-approved
 
 ## 5. 実行手順
 
-以下、`<engine>` = `../dev-core/scripts/state.py`(絶対パスに解決)、`--def` は `./workflow.json`、`--workdir` は `init` が作った `docs/specs/NNN-<unit>/`。
+以下、`<engine>` = `../dev-core/scripts/state.py`(絶対パスに解決)。`--def` は unit の操作では `./workflow.json`、roadmap の操作では `./roadmap.json` を指す。unit の `--workdir` は `init` が作った `docs/specs/NNN-<roadmap 名>/NNN-<unit>/`、roadmap の `--workdir` は `docs/specs/NNN-<roadmap 名>/`。
+
+### Step R: roadmap の作成(新規の作業のかたまりを始めるとき)
+
+経路 C・D・E で新しい作業のかたまりを始めるときに 1 度だけ実行する。既存の roadmap に unit を足す場合は実行せず、Step 0 へ進む。
+
+1. `<engine> init --def ./roadmap.json --root docs/specs --unit <roadmap 名>` で roadmap のディレクトリを作る。エンジンが連番を採番し、そのパスを `workdir:` 行に出力する。
+2. 2.1 の 3 節を持つ `roadmap.md` を、出力されたディレクトリの直下に生成する。
+3. `<engine> set-state --def ./roadmap.json --workdir <roadmap のディレクトリ> roadmap-generated`。
+4. 経路 D・E では roadmap を提示してユーザーの明示承認を待つ。経路 C では経路判定の承認をこのゲートの承認として扱い、停止しない(2.1)。
+5. `<engine> approve --def ./roadmap.json --workdir <roadmap のディレクトリ> roadmap`。`roadmap.md` と state.json をコミットする(例: `docs(<roadmap 名>): roadmap を作成`)。
 
 ### Step 0: セッション開始手順(再開判定と初期化)
 
 セッションは前回の記憶を持たずに始まる。現在地は記憶からではなく**ファイルから再導出**する。新規・再開のどちらでも次の順に実行し、順序を入れ替えない。
 
 1. **位置の確認**: リポジトリのルートを確認する(`git rev-parse --show-toplevel`)。git 管理下であれば現在のブランチも確認する(`git branch --show-current`)。git 管理下でなければその旨を記録し、以降で git・`gh` を使う部分(手順 2 の `git log`、手順 4 の `gh pr view`)を省く。手順 3 は git に依存しないため実行する。
-2. **workdir の特定と状態・履歴の読み込み**: `<engine> scan --root docs/specs` で既存の workdir を unit 名・状態とともに一覧し、対象 unit の workdir を特定する(workdir 名は連番を含むため、unit 名からパスを組み立てない)。特定できたら `<engine> status --workdir <特定した workdir>` で状態・承認・凍結を読む。あわせて `git log --oneline -10` で直近のコミットを読み、状態と履歴が食い違わないかを確認する。食い違いとは、状態が示すフェーズより後の成果物がコミットされている(例: `spec-generated` なのに tasks.md の生成コミットがある)、または状態が示す成果物のコミットが履歴に無いことをいう。食い違う場合は停止して報告する。一覧に対象の unit が無ければ新規の作業単位として扱う。
+2. **workdir の特定と状態・履歴の読み込み**: `<engine> scan --def ./workflow.json --def ./roadmap.json --root docs/specs` で既存の roadmap と workdir を名前・状態とともに一覧し、対象 unit の workdir を特定する(workdir 名は連番を含み、パスは roadmap のディレクトリを挟むため、unit 名からパスを組み立てない)。出力の各行は `workflow` を持ち、`roadmap` の行が roadmap のディレクトリ、`sdd` の行が unit の workdir を指す。特定できたら `<engine> status --def ./workflow.json --workdir <特定した workdir>` で状態・承認・凍結を読む。あわせて `git log --oneline -10` で直近のコミットを読み、状態と履歴が食い違わないかを確認する。食い違いとは、状態が示すフェーズより後の成果物がコミットされている(例: `spec-generated` なのに tasks.md の生成コミットがある)、または状態が示す成果物のコミットが履歴に無いことをいう。食い違う場合は停止して報告する。一覧に対象の unit が無ければ新規の作業単位として扱う。
 3. **開始時の検証**: workdir に `tasks.md` が実在すれば、そのタスク固有情報が挙げる検証コマンドを実行し、グリーンであることを確認する。前セッションが残した破損をここで検出する。失敗した場合は、その修復を最初の作業として扱い、新しいフェーズへ進まない。`tasks.md` が無ければ実行対象が無いため省く(通常は `initialized`・`spec-generated`・`spec-approved` が該当する)。状態が `tasks-generated` 以降なのに `tasks.md` が無い場合は、状態とファイルの食い違いとして停止し報告する。
-4. **次の作業の選択**: 状態に対応するフェーズから続行する。`completed` なら凍結済みであることを伝えたうえで、作業ブランチの PR と CI の状態を確認し(`gh pr view`)、PR 未作成または CI 未グリーンなら Step 4 を実行してから停止する。roadmap があれば未完了の次 unit を案内する。新規なら、ブランチ作成(3.)の後に `<engine> init --root docs/specs --unit <unit>` で初期化する。エンジンが連番を採番して workdir を作り、そのパスを `workdir:` 行に出力する。以降の `--workdir` にはこのパスを使う。
+4. **次の作業の選択**: 状態に対応するフェーズから続行する。`completed` なら凍結済みであることを伝えたうえで、作業ブランチの PR と CI の状態を確認し(`gh pr view`)、PR 未作成または CI 未グリーンなら Step 4 を実行してから停止する。同じ roadmap に未完了の unit があれば次の unit を案内する。新規なら、ブランチ作成(3.)の後に `<engine> init --def ./workflow.json --root <roadmap のディレクトリ> --unit <unit> --unique-root docs/specs` で初期化する。エンジンが roadmap のディレクトリ直下で連番を採番して workdir を作り、そのパスを `workdir:` 行に出力する。以降の `--workdir` にはこのパスを使う。`--unique-root` を付けるため、他の roadmap に同名の unit があれば `init` が拒否する(1.)。
 
 コンテキストの圧縮(compaction)が起きた後も、同じ 1〜4 を実行して現在地を再導出する。要約に残す情報は、workdir のパス・現在のフェーズ・直近の失敗の内容と原因とする(最後の 1 つはファイルに残らないため)。再開の成否をこの要約に依存させない。
 
@@ -105,10 +131,10 @@ initialized → spec-generated →(gate: spec)→ spec-approved
 ### Step 4: PR 作成と CI 追従
 
 1. 作業ブランチの PR を作成し、CI がグリーンになるまで追従する。適用条件・手順・有界リトライ(修正ラウンドは 1 PR あたり最大 3 回)・規律の正本は `../dev-core/references/git-convention.md` §9(適用条件を満たさない場合はスキップして 4. の報告へ進む)。
-2. CI 失敗の修正は `../dev-implement/SKILL.md` の軽量タスク定義(経路 B 相当)で行う。凍結済みの中間生成物(`docs/specs/NNN-<unit>/`)は変更せず、コードとテストだけを修正する。失敗の原因が仕様の欠陥に起因する場合は、修正で吸収せず停止してユーザーに報告する(凍結後の上流の手戻りは人間の判断に委ねる)。
+2. CI 失敗の修正は `../dev-implement/SKILL.md` の軽量タスク定義(経路 B 相当)で行う。凍結済みの中間生成物(`docs/specs/NNN-<roadmap 名>/NNN-<unit>/`)は変更せず、コードとテストだけを修正する。失敗の原因が仕様の欠陥に起因する場合は、修正で吸収せず停止してユーザーに報告する(凍結後の上流の手戻りは人間の判断に委ねる)。
 3. 修正ラウンドの上限超過等でグリーンにできない場合は、失敗しているチェックと試行した修正を報告して停止する。
-4. CI グリーンと PR の URL を報告する。**PR のマージは人間に委ねる**(この flow は行わない)。roadmap がある場合は次の unit へ進む(各 unit の承認ゲートで停止しながら進める)。経路 B(現在のブランチで作業する軽微変更)では本 Step を実行しない。
-5. roadmap の全 unit が完了したら、roadmap の未確定・スコープ外のうち以後も参照する項目を恒久情報の置き場(`../dev-core/references/durable-info.md`)へ移す案をユーザーに提示し、承認を得てから移す。移し終えた roadmap は役目を終える(2.1)。
+4. CI グリーンと PR の URL を報告する。**PR のマージは人間に委ねる**(この flow は行わない)。同じ roadmap に未完了の unit があれば次の unit へ進む(各 unit の承認ゲートで停止しながら進める)。経路 B(現在のブランチで作業する軽微変更)では本 Step を実行しない。
+5. roadmap の全 unit が `completed` に達したら、2.1 の「凍結の順序」に従って恒久情報への移動・`roadmap.md` の編集・`frozen` への遷移をこの順に行う。凍結後の roadmap は参照専用になる。
 
 ### 差し戻しの補足
 
@@ -117,8 +143,8 @@ initialized → spec-generated →(gate: spec)→ spec-approved
 ## 6. 規律(厳守)
 
 - **生成ロジックを置き換えない**: 各フェーズは対応する部品の SKILL.md の手順(内蔵ゲート含む)をそのまま実行する。この composition が部品の生成規則・テンプレートを再定義しない。
-- **状態遷移は composition だけが行う**: 部品は成果物を書いたら完了。`<engine>` の操作(init / set-state / approve)はこの SKILL の手順でのみ実行する。state.json を手書きしない。
-- **凍結後は変更しない**: `completed` 到達後の中間生成物は参照専用。実装後の差異はコードと恒久情報へ反映する(`../dev-core/references/durable-info.md`)。
+- **状態遷移は composition だけが行う**: 部品は成果物を書いたら完了。`<engine>` の操作(init / set-state / approve)はこの SKILL の手順でのみ実行する。state.json を手書きしない。roadmap の状態遷移も同じ扱いとする。
+- **凍結後は変更しない**: unit は `completed`、roadmap は `frozen` に到達した後の中間生成物が参照専用になる。実装後の差異はコードと恒久情報へ反映する(`../dev-core/references/durable-info.md`)。
 - 間接プロンプトインジェクション耐性・構造化受け渡し等の安全則は `../dev-core/references/orchestration-patterns.md` に従う。
 
 ## 7. 対応しないこと

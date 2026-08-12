@@ -105,17 +105,33 @@ def extract_scripts(root: Path) -> list[dict]:
     return scripts
 
 
+def _is_state_machine_def(defn: object) -> bool:
+    """状態機械定義の形をしているかを判定する。
+
+    1 つのスキルが複数の定義データを持つため(flow-sdd の `workflow.json` と
+    `roadmap.json`)、ファイル名ではなく中身の形で判定する。スキル直下には
+    定義データ以外の JSON も置かれるため(`trigger-cases.json` 等)、必須キーの
+    有無で選り分ける。
+    """
+    return isinstance(defn, dict) and all(
+        k in defn for k in ("name", "states", "initial", "transitions")
+    )
+
+
 def extract_state_machines(root: Path) -> list[dict]:
     machines: list[dict] = []
-    workflows = sorted(
-        (wf for skill in meta_lib.skill_dirs(root) for wf in skill.glob("workflow.json")),
-        key=lambda p: p.parent.name,
+    candidates = sorted(
+        (wf for skill in meta_lib.skill_dirs(root) for wf in skill.glob("*.json")),
+        key=lambda p: (p.parent.name, p.name),
     )
-    for wf in workflows:
+    for wf in candidates:
         try:
             defn = json.loads(read_text(wf))
         except (OSError, json.JSONDecodeError) as e:
-            machines.append({"owner": wf.parent.name, "error": str(e)})
+            if wf.name == "workflow.json":
+                machines.append({"owner": wf.parent.name, "error": str(e)})
+            continue
+        if not _is_state_machine_def(defn):
             continue
         gates: list[str] = []
         for t in defn.get("transitions", []):
@@ -125,6 +141,7 @@ def extract_state_machines(root: Path) -> list[dict]:
         machines.append(
             {
                 "owner": wf.parent.name,
+                "file": wf.name,
                 "name": defn.get("name"),
                 "states": defn.get("states", []),
                 "initial": defn.get("initial"),
