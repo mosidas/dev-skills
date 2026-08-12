@@ -38,6 +38,30 @@
       "should_trigger": false
     },
     {
+      "id": "roadmap-pos-1",
+      "skill": "dev-roadmap",
+      "prompt": "やりたいことが大きいので、いくつかの作業単位へ切り分けて着手する順番と依存を整理したい",
+      "should_trigger": true
+    },
+    {
+      "id": "roadmap-pos-2",
+      "skill": "dev-roadmap",
+      "prompt": "この企画のうち今回扱う範囲と扱わない範囲を仕分けて、作業のまとまりの一覧にしたい",
+      "should_trigger": true
+    },
+    {
+      "id": "roadmap-neg-1",
+      "skill": "dev-roadmap",
+      "prompt": "確定済みの仕様をもとに実装タスクの一覧へ分解してほしい",
+      "should_trigger": false
+    },
+    {
+      "id": "roadmap-neg-2",
+      "skill": "dev-roadmap",
+      "prompt": "作りたい API の入出力を壁打ちで決めて受け入れ基準を書きたい",
+      "should_trigger": false
+    },
+    {
       "id": "implement-pos-1",
       "skill": "dev-implement",
       "prompt": "tasks.md のタスクを 1 件ずつ TDD で実装して、レビューと検証まで回して",
