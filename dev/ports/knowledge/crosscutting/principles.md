@@ -4,6 +4,7 @@ description: プロジェクト原則(テスト方針・設計方針・コーデ
 inject:
   - dev-implement
   - dev-spec
+  - dev-roadmap
   - dev-decompose
   - dev-check
   - dev-release

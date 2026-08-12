@@ -32,12 +32,13 @@
 | 分類 | レイヤー | 種別 | 名前 | 役割 |
 | ---- | -------- | ---- | ---- | ---- |
 | dev | 0 | スキル | dev-core | 基盤。記法規約・恒久情報配置・オーケストレーション・検証手段の選択等の共有リファレンス群 + 決定論スクリプト(参照専用) |
+| dev | 1 | スキル | dev-roadmap | サブ部品。依頼を作業単位(unit)へ切り分け、範囲・完了条件・順序・依存・未確定・スコープ外を roadmap.md にまとめる |
 | dev | 1 | スキル | dev-spec | サブ部品。壁打ちで公開インターフェース・データ構造の契約と EARS 受け入れ基準を spec.md 1 本に確定 |
 | dev | 1 | スキル | dev-decompose | サブ部品。spec.md を実装タスク(tasks.md)へ分解し File Structure Plan を立てる |
 | dev | 1 | スキル | dev-implement | コア部品。tasks.md をもとに TDD 実装(implementer/reviewer/debugger 協調) |
 | dev | 1 | スキル | dev-release | コア部品。出荷可否判定(GO/NO-GO)とリリース計画 |
 | dev | 1 | スキル | dev-check | オプション部品。read-only の整合性検査 |
-| dev | 2 | スキル | flow-sdd | composition。SDD ワークフロー(spec→decompose→implement を承認ゲート付き状態機械で駆動。状態機械定義は unit が workflow.json、roadmap が roadmap.json) |
+| dev | 2 | スキル | flow-sdd | composition。SDD ワークフロー(roadmap→spec→decompose→implement を承認ゲート付き状態機械で駆動。状態機械定義は unit が workflow.json、roadmap が roadmap.json。自走する工程はサブエージェントへ委譲) |
 | dev | 3 | スキル | ext-dev-guardrails | 拡張。安全制約(破壊的な git 操作・一括ステージング・凍結済み中間生成物の変更)を hook で強制する。バンドル群 `guardrails`。出典: `../dev/extensions/guardrails/ext-dev-guardrails/SKILL.md` |
 | dev | 3 | フック | ext-dev-guardrails/hooks/guard_bash.py | PreToolUse(Bash)。破壊的な git 操作と一括ステージングを拒否する。出典: `../dev/extensions/guardrails/ext-dev-guardrails/hooks/guard_bash.py` |
 | dev | 3 | フック | ext-dev-guardrails/hooks/guard_write.py | PreToolUse(Write / Edit / MultiEdit / NotebookEdit)。凍結済み中間生成物への書き込みを拒否する。出典: `../dev/extensions/guardrails/ext-dev-guardrails/hooks/guard_write.py` |
@@ -45,6 +46,9 @@
 | dev | 0 | エージェント | dev-debugger | 役割エージェント。失敗タスクの根本原因の切り分けと最小修正 |
 | dev | 0 | エージェント | dev-reviewer | 役割エージェント。敵対的判定器(文書ゲート・コード検証。観点別に並列起動) |
 | dev | 0 | エージェント | dev-explorer | 役割エージェント。read-only 調査(ダイジェストのみ返す) |
+| dev | 0 | エージェント | dev-roadmap-planner | 工程エージェント。unit 分解の案を独立文脈で組み立てて返す |
+| dev | 0 | エージェント | dev-decompose-runner | 工程エージェント。タスク分解フェーズを独立文脈で通し構造化結果を返す |
+| dev | 0 | エージェント | dev-implement-runner | 工程エージェント。実装フェーズを独立文脈で通し構造化結果を返す |
 | dev | 0 | スクリプト | dev-core/scripts/state.py | 汎用状態機械エンジン(init/set-state/approve/show/status/scan・workdir の採番・凍結) |
 | dev | 0 | スクリプト | dev-core/scripts/check.py | 成果物の静的チェッカ(状態・spec.md・tasks.md の規約検査) |
 | dev | 0 | スクリプト | dev-core/scripts/lib.py | state.py・check.py 共通ロジック(定義検証・パース・凍結) |
@@ -76,8 +80,8 @@ dev 分類・meta 分類はともにオニオン型のレイヤー構造をと�
 flowchart TD
     subgraph D3["dev・レイヤー 3 — extension(ext-dev-guardrails / hooks 配線 / port)"]
         subgraph D2["dev・レイヤー 2 — composition(flow-sdd)"]
-            subgraph D1["dev・レイヤー 1 — parts(dev-spec / dev-decompose / dev-implement / dev-release / dev-check)"]
-                D0["dev・レイヤー 0 — foundation(dev-core + 役割エージェント)"]
+            subgraph D1["dev・レイヤー 1 — parts(dev-roadmap / dev-spec / dev-decompose / dev-implement / dev-release / dev-check)"]
+                D0["dev・レイヤー 0 — foundation(dev-core + 役割エージェント + 工程エージェント)"]
             end
         end
     end
@@ -107,7 +111,9 @@ flowchart LR
         lg1["起点"] -. 破線: 注入・駆動する .-> lg2["終点"]
     end
 
-    req(["依頼"]) -->|依頼内容を渡す| spec["dev-spec"]
+    req(["依頼"]) -->|依頼内容を渡す| road["dev-roadmap"]
+    road -->|作業単位へ切り分ける| roadmd[/"roadmap.md"/]
+    roadmd -->|担当する作業単位を読む| spec["dev-spec"]
     spec -->|契約と受け入れ基準を書く| specmd[/"spec.md"/]
     specmd -->|仕様を読む| dec["dev-decompose"]
     dec -->|タスクと File Structure Plan を書く| tasksmd[/"tasks.md"/]
@@ -117,19 +123,22 @@ flowchart LR
     rel -->|リリース手順を書く| plan[/"リリース計画"/]
     plan -->|人間の承認を経て出す| out(["出荷"])
 
-    port[("knowledge port<br/>docs/dev/ports")] -. 条件に合う知識を注入する .-> spec
+    port[("knowledge port<br/>docs/dev/ports")] -. 条件に合う知識を注入する .-> road
+    port -. 条件に合う知識を注入する .-> spec
     port -. 条件に合う知識を注入する .-> dec
     port -. 条件に合う知識を注入する .-> impl
     port -. 条件に合う知識を注入する .-> rel
     port -. 準拠検査の基準を与える .-> chk["dev-check"]
     code -->|コードを検査する| chk
     chk -->|重大度つきの指摘を返す| report[/"検査レポート"/]
-    flow["flow-sdd"] -. 承認ゲート付きで部品を駆動する .-> spec
+    flow["flow-sdd"] -. 承認ゲート付きで部品を駆動する .-> road
+    flow -. 承認ゲート付きで部品を駆動する .-> spec
     flow -. 承認ゲート付きで部品を駆動する .-> dec
     flow -. 承認ゲート付きで部品を駆動する .-> impl
     flow -. 状態を読み書きする .-> state[("state.json")]
     state -. 再開時に現在地を再導出する .-> flow
     guard["ext-dev-guardrails"] -. 凍結済みの中間生成物への書き込みを拒否する .-> specmd
+    guard -. 凍結済みの中間生成物への書き込みを拒否する .-> roadmd
     guard -. 破壊的な git 操作を拒否する .-> code
 ```
 
@@ -137,34 +146,38 @@ flowchart LR
 
 ### flow-sdd
 
-依頼を経路判定して作業単位に分け、各単位を仕様→分解→実装の順に承認ゲート付きで駆動する。承認はすべて人間。作業単位は roadmap ごとにまとめ、`docs/specs/NNN-<roadmap 名>/NNN-<unit>/` に置く(D-025)。roadmap と unit は独立した状態機械として進み、どちらも完了状態への到達で凍結される。セッションの開始時は、記憶ではなくファイル(state.json・tasks.md・git ログ)から現在地を再導出する(D-020)。
+依頼を経路判定して作業単位に分け、各単位を仕様→分解→実装の順に承認ゲート付きで駆動する。承認はすべて人間。自走する工程(unit 分解・タスク分解・実装)はサブエージェントへ委譲し、統括には構造化結果だけが返る。仕様フェーズは対話が本体のため委譲しない(D-026)。作業単位は roadmap ごとにまとめ、`docs/specs/NNN-<roadmap 名>/NNN-<unit>/` に置く(D-025)。roadmap と unit は独立した状態機械として進み、どちらも完了状態への到達で凍結される。セッションの開始時は、記憶ではなくファイル(state.json・tasks.md・git ログ)から現在地を再導出する(D-020)。
 
 ```mermaid
 sequenceDiagram
     actor U as ユーザー
-    participant F as flow-sdd
+    participant F as flow-sdd(統括)
+    participant R as dev-roadmap-planner
     participant S as dev-spec
-    participant D as dev-decompose
-    participant I as dev-implement
+    participant D as dev-decompose-runner
+    participant I as dev-implement-runner
     U->>F: SDD 開始・再開(依頼)
     F->>F: Step 0(位置の確認 → 状態と履歴 → 開始時の検証 → 次の作業の選択)
-    F->>F: 経路判定(作業単位へ分割)
+    F->>F: 経路判定(どの経路で駆動するか)
     opt 新規の作業のかたまり
-        F->>F: Step R(roadmap.md 生成 → roadmap-generated)
+        F->>R: Step R(unit 分解を委譲)
+        R-->>F: roadmap.md + 構造化結果
+        F->>F: roadmap-generated
         F-->>U: roadmap.md 提示
         U->>F: 承認(gate roadmap → roadmap-approved)
     end
     loop 各作業単位
-        F->>S: 仕様化
+        F->>S: 仕様化(対話のため委譲しない)
         S-->>F: spec.md(spec-generated)
         F-->>U: spec.md 提示
         U->>F: 承認(gate spec → spec-approved)
-        F->>D: タスク分解
-        D-->>F: tasks.md(tasks-generated)
+        F->>D: タスク分解を委譲
+        D-->>F: tasks.md + 構造化結果(tasks-generated)
         F-->>U: tasks.md 提示
         U->>F: 承認(gate tasks → tasks-approved)
-        F->>I: 実装(implementing)
-        I-->>F: コード + テスト(completed)
+        F->>F: implementing
+        F->>I: 実装を委譲
+        I-->>F: 構造化結果(GO なら completed へ)
     end
     F->>F: PR 作成・CI 追従(マージは人間)
     F-->>U: 恒久情報への移動案(全 unit 完了時)

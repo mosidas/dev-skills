@@ -1,11 +1,11 @@
 ---
 name: flow-sdd
-description: SDD(仕様駆動開発)ワークフロー。依頼を経路判定(ルーティング)して作業単位に分け、各単位を仕様(dev-spec: 壁打ちで契約と受け入れ基準を確定)→タスク分解(dev-decompose)→実装(dev-implement)の順に、承認ゲート付きの状態機械で駆動する composition。実装完了後は作業ブランチの PR を作成し、CI がグリーンになるまで失敗の修正を追従する(マージは人間に委ねる)。承認ゲートはすべて人間承認とする(自走・自己承認は、部品を直接束ねる拡張ワークフロー側で実現する)。「SDD で進めて」「仕様駆動で開発して」「仕様から実装まで通しで」と頼まれたとき、または中断した SDD 作業を再開するときに使う。
+description: SDD(仕様駆動開発)ワークフロー。依頼を経路判定(ルーティング)し、unit 分解(dev-roadmap)→仕様(dev-spec: 壁打ちで契約と受け入れ基準を確定)→タスク分解(dev-decompose)→実装(dev-implement)の順に、承認ゲート付きの状態機械で駆動する composition。実装完了後は作業ブランチの PR を作成し、CI がグリーンになるまで失敗の修正を追従する(マージは人間に委ねる)。承認ゲートはすべて人間承認とする(自走・自己承認は、部品を直接束ねる拡張ワークフロー側で実現する)。「SDD で進めて」「仕様駆動で開発して」「仕様から実装まで通しで」と頼まれたとき、または中断した SDD 作業を再開するときに使う。
 ---
 
 # flow-sdd — SDD ワークフロー
 
-部品を状態機械で束ね、依頼を作業単位(unit)へ振り分けて仕様 → タスク分解 → 実装まで駆動する composition。各フェーズの生成ロジックは部品の SKILL.md をそのまま実行し、この composition は**ルーティング・状態遷移・承認ゲート・フェーズ間の接続だけ**を担う。
+部品を状態機械で束ね、依頼を作業単位(unit)へ振り分けて unit 分解 → 仕様 → タスク分解 → 実装まで駆動する composition。各フェーズの生成ロジックは部品の SKILL.md をそのまま実行し、この composition は**ルーティング・状態遷移・承認ゲート・フェーズ間の接続だけ**を担う。自走する工程はサブエージェントへ委譲し、作業内容をこのセッションの文脈から外す(5.0)。
 
 ## 1. 契約
 
@@ -41,7 +41,7 @@ unit: initialized → spec-generated →(gate: spec)→ spec-approved
 | E    | 混合(既存更新 + 新規 + 軽微が混在)                     | roadmap で全体を整理し、各項目を A〜C に割り当てる                                                                        |
 
 - 経路判定に既存コードベースの把握が要る場合は dev-explorer に隔離し、ダイジェストのみ受け取る。
-- 1 unit の規模は dev-decompose の目安(要件 10 以下・メインタスク 8 以下)に収まるよう分解する。
+- **経路の判定はこの composition が行い、unit への分解は `../dev-roadmap/SKILL.md` が行う**。経路判定はワークフローの駆動の仕方を決める判断(composition の責務)、unit 分解は成果物 `roadmap.md` の生成(部品の責務)である。規模の目安・切り方・未確定の判定基準は dev-roadmap にあり、ここで再定義しない。
 - 経路 C も roadmap を立てる。unit が 1 つでも `roadmap.md` を生成し、unit 一覧に 1 行だけを書く。roadmap のディレクトリだけを作って `roadmap.md` を置かない形にすると、ディレクトリ名の出所が文書に無くなり、凍結の機構が `roadmap.md` の有無で分岐する。経路 C の承認は経路判定のゲートに含め、roadmap 単独の承認ゲートは置かない(2.1)。
 
 ### 2.1. roadmap.md の構成と凍結
@@ -87,15 +87,33 @@ unit: initialized → spec-generated →(gate: spec)→ spec-approved
 
 以下、`<engine>` = `../dev-core/scripts/state.py`(絶対パスに解決)。`--def` は unit の操作では `./workflow.json`、roadmap の操作では `./roadmap.json` を指す。unit の `--workdir` は `init` が作った `docs/specs/NNN-<roadmap 名>/NNN-<unit>/`、roadmap の `--workdir` は `docs/specs/NNN-<roadmap 名>/`。
 
+### 5.0. 工程の委譲
+
+**自走する工程はサブエージェントへ委譲し、ユーザーとの対話を伴う工程はこのセッションが自分で実行する**。委譲の目的は、工程の作業内容(調査の本文・タスクごとの実装レポート・検証の出力)をこのセッションの文脈から外し、判断に使う情報だけを残すことである。
+
+| 工程 | 実行 | 理由 |
+| ---- | ---- | ---- |
+| Step R: roadmap の作成 | `dev-roadmap-planner` へ委譲(提示と承認はこのセッション) | 分解の材料(企画書・既存コードベース)の読み込みを隔離する |
+| Step 1: 仕様フェーズ | このセッションが実行 | dev-spec の Step 2(質問駆動)と Step 3(契約の壁打ち)がユーザーとの往復で成り立つため、委譲できない |
+| Step 2: タスク分解フェーズ | `dev-decompose-runner` へ委譲 | 通常の経路では対話が発生しない |
+| Step 3: 実装フェーズ | `dev-implement-runner` へ委譲 | 自走する工程であり、文脈の消費が最も大きい |
+
+- **起動プロンプトは最小限にする**。渡すのは workdir・作業単位名・実行する SKILL.md のパスだけとする。工程の手順・生成規則・判定基準はファイルにあり、プロンプトへ転記しない(指示とデータの分離は `../dev-core/references/orchestration-patterns.md`)。仕様・タスクの内容も転記せず、委譲先が workdir から読む。
+- **委譲先はユーザーに質問できない**。`AskUserQuestion` はすべてのサブエージェントから除かれるため、部品の SKILL.md が質問を指示する箇所(内蔵ゲートの `QUESTIONS` 等)で委譲先は停止し、構造化結果の `OPEN_QUESTIONS` に論点を挙げて返す。このセッションがユーザーに諮り、回答を添えて再委譲する。
+- **状態遷移は委譲先が行わない**(6.)。委譲の前後でこのセッションが `set-state`・`approve` を実行する。
+- 委譲先は更にサブエージェントを起動する(`dev-implement-runner` → dev-implementer 等)。委譲先は部品の SKILL.md が指示する相手だけを起動し、自分の判断で委譲先を決めない。
+- 委譲先が返す構造化結果の項目は各エージェント定義が定める。このセッションはその項目だけを読んで次の分岐を決め、作業内容の本文を展開しない。
+
 ### Step R: roadmap の作成(新規の作業のかたまりを始めるとき)
 
 経路 C・D・E で新しい作業のかたまりを始めるときに 1 度だけ実行する。既存の roadmap に unit を足す場合は実行せず、Step 0 へ進む。
 
 1. `<engine> init --def ./roadmap.json --root docs/specs --unit <roadmap 名>` で roadmap のディレクトリを作る。エンジンが連番を採番し、そのパスを `workdir:` 行に出力する。
-2. 2.1 の 3 節を持つ `roadmap.md` を、出力されたディレクトリの直下に生成する。
-3. `<engine> set-state --def ./roadmap.json --workdir <roadmap のディレクトリ> roadmap-generated`。
-4. 経路 D・E では roadmap を提示してユーザーの明示承認を待つ。経路 C では経路判定の承認をこのゲートの承認として扱い、停止しない(2.1)。
-5. `<engine> approve --def ./roadmap.json --workdir <roadmap のディレクトリ> roadmap`。`roadmap.md` と state.json をコミットする(例: `docs(<roadmap 名>): roadmap を作成`)。
+2. `dev-roadmap-planner` を 1 体起動し、`../dev-roadmap/SKILL.md` の手順で `roadmap.md` を生成させる。渡すのは workdir・依頼内容・参照する要求文書のパス・実行する SKILL.md のパスだけとする(5.0)。
+3. 返却の `STATUS` で分岐する。`NEEDS_DECISION` なら `OPEN_QUESTIONS` をユーザーに諮り、回答を添えて再委譲する。`ROADMAP_READY` なら次へ進む。
+4. `<engine> set-state --def ./roadmap.json --workdir <roadmap のディレクトリ> roadmap-generated`。
+5. 経路 D・E では roadmap を提示してユーザーの明示承認を待つ。経路 C では経路判定の承認をこのゲートの承認として扱い、停止しない(2.1)。
+6. `<engine> approve --def ./roadmap.json --workdir <roadmap のディレクトリ> roadmap`。`roadmap.md` と state.json をコミットする(例: `docs(<roadmap 名>): roadmap を作成`)。
 
 ### Step 0: セッション開始手順(再開判定と初期化)
 
@@ -117,16 +135,21 @@ unit: initialized → spec-generated →(gate: spec)→ spec-approved
 
 ### Step 2: タスク分解フェーズ
 
-1. `../dev-decompose/SKILL.md` の手順を実行する。
-2. `<engine> set-state tasks-generated` → ユーザーの明示承認 → `<engine> approve tasks`。
-3. 仕様の不備が見つかったら `<engine> set-state spec-generated` で差し戻し、仕様フェーズからやり直す。
+1. `dev-decompose-runner` を 1 体起動し、`../dev-decompose/SKILL.md` の手順で `tasks.md` を生成させる。渡すのは workdir・作業単位名・実行する SKILL.md のパスだけとする(5.0)。
+2. 返却の `STATUS` で分岐する。
+   - `TASKS_READY`: `<engine> set-state tasks-generated` → tasks.md を提示してユーザーの明示承認 → `<engine> approve tasks`。
+   - `NEEDS_DECISION`: `OPEN_QUESTIONS` をユーザーに諮り、回答を添えて再委譲する。
+   - `SPEC_DEFECT`: `<engine> set-state spec-generated` で差し戻し、仕様フェーズからやり直す。
 
 ### Step 3: 実装フェーズ
 
 1. `<engine> set-state implementing`。
-2. `../dev-implement/SKILL.md` の手順を自律モードで実行する(タスクごとに implementer → reviewer → 検証 → コミット、最終検証パネルまで)。
-3. タスク定義の不備(NEEDS_CONTEXT が解消できない等)が見つかったら `<engine> set-state tasks-generated` で差し戻す。
-4. 最終検証が **GO** になったら `<engine> set-state completed`(エンジンが中間生成物を凍結する)。`check.py` で error が無いことを確認し、state.json 更新をコミットして unit の完了を報告し、Step 4 へ進む。
+2. `dev-implement-runner` を 1 体起動し、`../dev-implement/SKILL.md` の手順を自律モードで実行させる(タスクごとに implementer → reviewer → 検証 → コミット、最終検証パネルまで)。渡すのは workdir・作業単位名・実行する SKILL.md のパスだけとする(5.0)。
+3. 返却の `STATUS` で分岐する。
+   - `GO`: `<engine> set-state completed`(エンジンが中間生成物を凍結する)。`check.py` で error が無いことを確認し、state.json 更新をコミットして unit の完了を報告し、Step 4 へ進む。
+   - `TASK_DEFECT`: `<engine> set-state tasks-generated` で差し戻す。
+   - `NO_GO` / `UNVERIFIED` / `BLOCKED`: 状態を進めず、返却の `FINDINGS`・`UNVERIFIED`・`BLOCKED_REASON` をユーザーに報告して停止する(4.)。
+4. 返却の `LESSONS` が「なし」でなければ、知識 port への昇格の可否をユーザーに諮る(4.)。
 
 ### Step 4: PR 作成と CI 追従
 
@@ -142,8 +165,8 @@ unit: initialized → spec-generated →(gate: spec)→ spec-approved
 
 ## 6. 規律(厳守)
 
-- **生成ロジックを置き換えない**: 各フェーズは対応する部品の SKILL.md の手順(内蔵ゲート含む)をそのまま実行する。この composition が部品の生成規則・テンプレートを再定義しない。
-- **状態遷移は composition だけが行う**: 部品は成果物を書いたら完了。`<engine>` の操作(init / set-state / approve)はこの SKILL の手順でのみ実行する。state.json を手書きしない。roadmap の状態遷移も同じ扱いとする。
+- **生成ロジックを置き換えない**: 各フェーズは対応する部品の SKILL.md の手順(内蔵ゲート含む)をそのまま実行する。委譲する工程(5.0)でも、実行するのは部品の SKILL.md であり、委譲先のエージェント定義は手順を持たない。この composition が部品の生成規則・テンプレートを再定義しない。
+- **状態遷移は composition だけが行う**: 部品は成果物を書いたら完了。`<engine>` の操作(init / set-state / approve)は**このセッション**の手順でのみ実行する。工程を委譲しても状態遷移は委譲先へ渡さない(委譲先は成果物を書いて構造化結果を返すところまでを担う)。state.json を手書きしない。roadmap の状態遷移も同じ扱いとする。
 - **凍結後は変更しない**: unit は `completed`、roadmap は `frozen` に到達した後の中間生成物が参照専用になる。実装後の差異はコードと恒久情報へ反映する(`../dev-core/references/durable-info.md`)。
 - 間接プロンプトインジェクション耐性・構造化受け渡し等の安全則は `../dev-core/references/orchestration-patterns.md` に従う。
 

@@ -3,6 +3,7 @@ name: dev-explorer
 description: 調査サブエージェント。既存コードベース・ドメインのメタ情報を read-only で抽出し、メイン文脈にはダイジェスト(要約・結論)だけを返す。部品・composition が調査を隔離するために起動する。
 tools: Read, Grep, Glob
 model: haiku
+effort: low
 ---
 
 あなたは **調査(Explore)** サブエージェントです。指定範囲を read-only で調べ、**要約だけ**を返します(コード・ファイルを書き換えない)。
