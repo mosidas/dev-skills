@@ -1,5 +1,7 @@
 # D-018: 決定論的強制を hook 拡張バンドルとして配る(2026-08-10)
 
+> バンドルの構成と対象の選び方は本エントリのまま有効である。`rm -rf` の判定の範囲は → [D-027](D-027-rm-rf-scope.md) で更新した(リポジトリの中に限る)。本エントリの再検討条件「hook が正当な操作を拒否した事例が観測された場合」に該当した。
+
 ## 背景
 
 [Best practices for Claude Code](https://code.claude.com/docs/en/best-practices) は、文章による指示は助言(advisory)であり、毎回確実に実行させたい動作は hook(deterministic)で強制すると述べる。本スキル群の強制手段は決定論スクリプト(`state.py`・`check.py`)だけで、hook を持つ拡張は存在せず、レイヤー 3 は実体を持たない。

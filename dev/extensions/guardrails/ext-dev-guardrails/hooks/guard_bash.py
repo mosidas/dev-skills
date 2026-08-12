@@ -5,7 +5,7 @@
 例外を持たず、コマンド文字列の照合だけで判定が閉じるものに限る(D-018)。
 
 入出力の契約:
-  標準入力  PreToolUse の JSON(`tool_name` と `tool_input.command` を読む)
+  標準入力  PreToolUse の JSON(`tool_name`・`tool_input.command`・`cwd` を読む)
   exit 0    許可(何も出力しない)
   exit 2    拒否。標準エラーへ書いた理由が Claude へ返る
 
@@ -15,6 +15,9 @@
   2. シェルの区切り(`;` `&&` `||` `|` `&` `(` `)`)でセグメントへ分ける
   3. 各セグメントの先頭から、環境変数の代入・前置コマンド・git のグローバルオプションを
      読み飛ばし、真のコマンドとサブコマンドを判定する
+  4. `rm -rf` だけは削除対象のパスも見る。正本が禁じる理由は未コミットの変更を失う
+     ことにあり、リポジトリの外の削除はこの理由に当たらないため。相対パスの基点は
+     `cwd` とし、セグメントを跨ぐ `cd` を追跡する
 
 Python 3 標準ライブラリのみで動作する。
 """
@@ -22,6 +25,7 @@ Python 3 標準ライブラリのみで動作する。
 from __future__ import annotations
 
 import json
+import os
 import re
 import shlex
 import sys
@@ -134,27 +138,103 @@ def _check_git(args: list[str]) -> str | None:
     return None
 
 
-def _check_rm(args: list[str]) -> str | None:
+def _resolve(target: str, cwd: str | None) -> str | None:
+    """パスを cwd 基点で絶対化する(解決できなければ None)。
+
+    変数展開・コマンド置換を含む語は展開できないため None を返す。実在しない
+    パスも対象にするため、シンボリックリンクは解決せず字面の正規化にとどめる。
+    """
+    if not target or "$" in target or "`" in target:
+        return None
+    if target.startswith("~"):
+        return None  # ホーム展開はシェルが行うため、この時点では確定しない
+    if os.path.isabs(target):
+        return os.path.normpath(target)
+    if cwd is None:
+        return None
+    return os.path.normpath(os.path.join(cwd, target))
+
+
+def _repo_root(cwd: str | None) -> str | None:
+    """cwd から上へ辿って `.git` を持つディレクトリを探す。"""
+    if cwd is None:
+        return None
+    current = os.path.normpath(cwd)
+    while True:
+        if os.path.exists(os.path.join(current, ".git")):
+            return current
+        parent = os.path.dirname(current)
+        if parent == current:
+            return None
+        current = parent
+
+
+def _inside_repo(path: str, repo_root: str) -> bool:
+    """リポジトリのルートそのもの、またはその配下かを判定する。"""
+    return path == repo_root or path.startswith(repo_root + os.sep)
+
+
+def _check_rm(args: list[str], cwd: str | None, repo_root: str | None) -> str | None:
+    """再帰強制削除のうち、リポジトリの中を対象にするものを拒否する。
+
+    正本(`git-convention.md` 6.)が `rm -rf` を禁じる理由は未コミットの変更を
+    失うことにある。リポジトリの外の削除はこの理由に当たらないため、対象が
+    すべてリポジトリの外だと確定できる場合に限って通す。確定できない対象
+    (変数展開・`cd` の追跡が切れた相対パス・リポジトリを特定できない)は、
+    復元できない操作のため拒否側に倒す。
+    """
     recursive = (
         _has_short(args, "r") or _has_short(args, "R") or _has_flag(args, "--recursive")
     )
     force = _has_short(args, "f") or _has_flag(args, "--force")
-    if recursive and force:
+    if not (recursive and force):
+        return None
+    targets = _positionals(args)
+    if not targets:
+        return None  # 削除対象が無い(実行しても何も消えない)
+    if repo_root is None:
         return "`rm -rf` は復元できない削除を行う"
+    for target in targets:
+        resolved = _resolve(target, cwd)
+        if resolved is None:
+            return (
+                "`rm -rf` の削除対象がリポジトリの外だと確定できない"
+                f"(判定できない指定: {target})"
+            )
+        if _inside_repo(resolved, repo_root):
+            return "`rm -rf` はリポジトリ内で復元できない削除を行う"
     return None
 
 
-def check(command: str) -> str | None:
-    """拒否する理由を返す(許可なら None)。"""
+def _cd_target(tokens: list[str]) -> str | None:
+    """`cd <path>` の行き先を返す(`cd` でなければ None)。"""
+    if not tokens or tokens[0] != "cd":
+        return None
+    operands = _positionals(tokens[1:])
+    return operands[0] if operands else None
+
+
+def check(command: str, cwd: str | None = None) -> str | None:
+    """拒否する理由を返す(許可なら None)。
+
+    `cd` を追跡し、後続セグメントの相対パスをその行き先から解決する
+    (`cd /tmp && rm -rf work` のように作業場所を移す用法を判定するため)。
+    行き先を解決できない `cd` の後は、相対パスの基点が不明になる。
+    """
+    repo_root = _repo_root(cwd)
     for segment in _segments(command):
         tokens = _strip_prefixes(segment)
         if not tokens:
+            continue
+        destination = _cd_target(tokens)
+        if destination is not None:
+            cwd = _resolve(destination, cwd)
             continue
         reason = None
         if tokens[0] == "git":
             reason = _check_git(_git_args(tokens))
         elif tokens[0] == "rm":
-            reason = _check_rm(tokens[1:])
+            reason = _check_rm(tokens[1:], cwd, repo_root)
         if reason:
             return reason
     return None
@@ -171,7 +251,10 @@ def main() -> None:
     command = tool_input.get("command", "") if isinstance(tool_input, dict) else ""
     if not isinstance(command, str):
         sys.exit(0)
-    reason = check(command)
+    cwd = payload.get("cwd")
+    if not isinstance(cwd, str) or not cwd:
+        cwd = os.getcwd()
+    reason = check(command, cwd)
     if reason is None:
         sys.exit(0)
     print(
