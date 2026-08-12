@@ -265,5 +265,67 @@ class FreezeTest(helpers.TempDirTestCase):
         self.assertNotEqual(before, lib.sha256_of(path))
 
 
+class SequenceTest(helpers.TempDirTestCase):
+    """workdir の連番。採番が狂うと同じ番号の workdir が並び、参照が一意でなくなる。"""
+
+    def mkdirs(self, *names: str) -> None:
+        for name in names:
+            (self.tmp / name).mkdir(parents=True)
+
+    def test_連番付きの名前から番号を取り出す(self) -> None:
+        self.assertEqual(lib.sequence_of("001-user-auth"), 1)
+        self.assertEqual(lib.sequence_of("1000-next"), 1000)
+
+    def test_連番でない名前は番号を持たない(self) -> None:
+        for name in ("user-auth", "01-short", "-leading", "001user-auth"):
+            with self.subTest(name=name):
+                self.assertIsNone(lib.sequence_of(name))
+
+    def test_先頭の連番だけを取り除く(self) -> None:
+        self.assertEqual(lib.strip_sequence("001-user-auth"), "user-auth")
+        self.assertEqual(lib.strip_sequence("user-auth"), "user-auth")
+
+    def test_空のルートでは最初の番号を返す(self) -> None:
+        self.assertEqual(lib.next_sequence(self.tmp), 1)
+        self.assertEqual(lib.next_sequence(self.tmp / "存在しない"), 1)
+
+    def test_最大番号の次を返し欠番を埋めない(self) -> None:
+        self.mkdirs("001-a", "005-b")
+        self.assertEqual(lib.next_sequence(self.tmp), 6)
+
+    def test_連番を持たないディレクトリとファイルを数えない(self) -> None:
+        self.mkdirs("legacy-unit")
+        self.write("003-notadir.md", "ファイルは対象外")
+        self.assertEqual(lib.next_sequence(self.tmp), 1)
+
+    def test_同じ_unit_の_workdir_を連番の有無を問わず見つける(self) -> None:
+        self.mkdirs("002-user-auth")
+        self.assertEqual(
+            lib.find_unit_dir(self.tmp, "user-auth"), self.tmp / "002-user-auth"
+        )
+
+    def test_連番なしの同名ディレクトリも同じ_unit_と見なす(self) -> None:
+        self.mkdirs("user-auth")
+        self.assertEqual(lib.find_unit_dir(self.tmp, "user-auth"), self.tmp / "user-auth")
+
+    def test_別の_unit_は見つけない(self) -> None:
+        self.mkdirs("002-user-auth")
+        self.assertIsNone(lib.find_unit_dir(self.tmp, "user-auth-2"))
+
+    def test_workdir_名に使える_unit_名を通す(self) -> None:
+        self.assertIsNone(lib.unit_name_problem("user-auth"))
+
+    def test_workdir_名に使えない_unit_名を検出する(self) -> None:
+        for unit, needle in (
+            ("", "空"),
+            ("a/b", "パス区切り"),
+            ("007-bond", "連番で始まっています"),
+        ):
+            with self.subTest(unit=unit):
+                problem = lib.unit_name_problem(unit)
+                self.assertIsNotNone(problem)
+                self.assertIn(needle, problem)
+
+
 if __name__ == "__main__":
     unittest.main()

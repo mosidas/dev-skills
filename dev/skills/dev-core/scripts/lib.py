@@ -9,6 +9,7 @@ from __future__ import annotations
 import datetime
 import hashlib
 import json
+import re
 import sys
 from pathlib import Path
 
@@ -215,10 +216,77 @@ def freeze(workdir: Path, defn: dict, state: dict) -> list[str]:
 
 
 # ---------------------------------------------------------------------------
+# workdir の連番
+#
+# workdir は作業単位ごとに増え、完了状態への到達で凍結されて以後は参照専用になる。
+# 作成順を名前から読み取れるよう、ルート直下に `NNN-<unit>` の形で採番する。
+
+SEQ_PREFIX_RE = re.compile(r"^(\d{3,})-")
+SEQ_WIDTH = 3
+
+
+def sequence_of(name: str) -> int | None:
+    """`NNN-<unit>` 形式の名前から連番を取り出す(形式に合わなければ None)。"""
+    m = SEQ_PREFIX_RE.match(name)
+    return int(m.group(1)) if m else None
+
+
+def strip_sequence(name: str) -> str:
+    """名前の先頭の連番(`NNN-`)を取り除く。連番が無ければそのまま返す。"""
+    return SEQ_PREFIX_RE.sub("", name, count=1)
+
+
+def next_sequence(root: Path) -> int:
+    """root 直下の連番付きディレクトリの最大番号 + 1 を返す(最初は 1)。
+
+    連番を持たないディレクトリは数に入れない(採番の導入前に作った workdir を
+    そのまま置ける)。欠番があっても最大番号の次を返し、既存の番号を振り直さない。
+    桁数は `SEQ_WIDTH` 以上を受け付けるため、999 を超えても採番が続く。
+    """
+    numbers: list[int] = []
+    if root.is_dir():
+        for child in root.iterdir():
+            if not child.is_dir():
+                continue
+            n = sequence_of(child.name)
+            if n is not None:
+                numbers.append(n)
+    return max(numbers, default=0) + 1
+
+
+def numbered_workdir(root: Path, unit: str) -> Path:
+    """root 直下に次の連番を付けた workdir のパスを組み立てる(作成はしない)。"""
+    return root / f"{next_sequence(root):0{SEQ_WIDTH}d}-{unit}"
+
+
+def find_unit_dir(root: Path, unit: str) -> Path | None:
+    """root 直下から同じ作業単位の workdir を探す(連番の有無を問わない)。
+
+    採番済みの `NNN-<unit>` と、連番を持たない `<unit>` のどちらも同じ作業単位と
+    見なす。二重採番(同じ unit に別番号の workdir を作ること)の検出に使う。
+    """
+    if not root.is_dir():
+        return None
+    for child in sorted(root.iterdir()):
+        if child.is_dir() and strip_sequence(child.name) == unit:
+            return child
+    return None
+
+
+def unit_name_problem(unit: str) -> str | None:
+    """workdir のディレクトリ名に使えない unit 名を検出する(問題が無ければ None)。"""
+    if not unit:
+        return "unit 名が空です"
+    if "/" in unit or "\\" in unit:
+        return f"unit 名にパス区切りを含められません: {unit!r}"
+    if sequence_of(unit) is not None:
+        return f"unit 名が連番で始まっています: {unit!r}(連番はエンジンが付けます)"
+    return None
+
+
+# ---------------------------------------------------------------------------
 # 中間生成物 Markdown の決定論的パース補助(check.py が使う。正規表現ベースの
 # ヒューリスティックのため、結果の最終判断は AI/人間が行う)
-
-import re
 
 REQ_HEADING_RE = re.compile(r"^###\s+Requirement\s+(\d+)\s*:")
 CRITERIA_RE = re.compile(r"^(\d+)\.(\d+)\.\s")

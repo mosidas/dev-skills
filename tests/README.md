@@ -29,8 +29,8 @@ python3 -m unittest discover -s tests -t tests -p test_state.py
 | ----------------------- | -------------------------- | ---------------------------------------------------------------------- |
 | `helpers.py`            | —                          | 一時ディレクトリ・サブプロセス実行・共通のワークフロー定義             |
 | `test_install.py`       | `install.py`               | 用途グループの走査・配布対象・名前衝突・廃止分の削除・拡張バンドルの解決と導入 |
-| `test_lib.py`           | `dev-core/lib.py`          | 定義データの検証・中間生成物のパース・依存循環の検出・凍結             |
-| `test_state.py`         | `dev-core/state.py`        | 遷移の拒否・承認ゲートの強制・完了時の凍結・横断集約                   |
+| `test_lib.py`           | `dev-core/lib.py`          | 定義データの検証・中間生成物のパース・依存循環の検出・凍結・workdir の連番 |
+| `test_state.py`         | `dev-core/state.py`        | 遷移の拒否・承認ゲートの強制・完了時の凍結・横断集約・workdir の採番    |
 | `test_check.py`         | `dev-core/check.py`        | 状態検査・凍結違反・トレーサビリティ・対象ファイルの行数               |
 | `test_ports.py`         | `dev-core/ports.py`        | frontmatter の走査と規約違反の警告                                     |
 | `test_meta_lib.py`      | `meta-core/meta_lib.py`    | frontmatter の YAML サブセット解析・配置の走査・グループの機構の列挙・グループ規約の読み込み |

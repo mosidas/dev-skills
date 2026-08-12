@@ -38,6 +38,7 @@
 ## 3. コマンド
 
 ```sh
+state.py init      --def <workflow.json> --root <dir> --unit <name>
 state.py init      --def <workflow.json> --workdir <dir> [--unit <name>]
 state.py set-state --def <workflow.json> --workdir <dir> <state>
 state.py approve   --def <workflow.json> --workdir <dir> <gate>
@@ -47,6 +48,25 @@ state.py scan      --def <workflow.json> --root <dir> [--json]
 check.py           --workdir <dir> [--def <workflow.json>] [--ports-root docs/dev/ports]
                    [--repo-root .] [--max-file-lines 600] [--json]
 ```
+
+### 3.1. workdir の採番(state.py init)
+
+`init` は workdir の決め方を 2 通り持つ。どちらか一方を指定する(同時指定は拒否する)。
+
+| 指定                            | 動作                                                                    |
+| ------------------------------- | ------------------------------------------------------------------------- |
+| `--root <ルート> --unit <名前>` | ルート直下に `NNN-<unit>` のディレクトリを採番して作る                  |
+| `--workdir <パス>`              | 指定のパスをそのまま使う(採番しない)                                  |
+
+中間生成物は作業単位ごとに増え、完了状態への到達で凍結されて以後は参照専用になる。この累積の順序を名前から読み取れるよう、ルート直下に連番を付ける。採番の規則は次のとおりとする。
+
+- 番号はルート直下で `NNN-` から始まるディレクトリの最大番号 + 1 とし、3 桁の 0 埋めで表す(最初は `001`)。
+- 連番を持たないディレクトリは数に入れない。採番の導入前に作った workdir をルート直下にそのまま置ける。
+- 欠番が生じても番号を振り直さない。桁は 3 桁以上を受け付けるため、999 を超えても採番が続く。
+- 同じ unit の workdir がルート直下に既にあるとき(連番の有無を問わない)、`init` は拒否する。番号違いの重複を作らず、既存の workdir で再開させるためである。
+- `state.json` の `unit` には連番を含まない unit 名を記録する。作成した workdir のパスは `init` が `workdir:` 行に出力する。既存 workdir のパスは `scan` の一覧で特定する(unit 名からパスを組み立てない)。
+
+### 3.2. check.py の検査対象
 
 check.py の `--def` は任意で、与えたときのみ状態検査を行う。Markdown 検査は常に実行され、workdir に存在するファイルだけを対象にする(単独利用の部品でも使える)。
 

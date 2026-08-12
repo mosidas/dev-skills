@@ -72,6 +72,114 @@ class StateMachineTest(helpers.TempDirTestCase):
         self.assertEqual(proc.returncode, 1)
         self.assertIn("states が未定義", proc.stderr)
 
+    # --- init の採番(--root) ---
+
+    def init_root(self, root, unit: str):
+        return run_script(
+            STATE_PY, "init", "--def", self.defn, "--root", root, "--unit", unit
+        )
+
+    def test_root_指定で連番付きの_workdir_を作る(self) -> None:
+        root = self.tmp / "specs"
+        proc = self.init_root(root, "user-auth")
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        created = root / "001-user-auth"
+        self.assertTrue(created.is_dir())
+        self.assertIn(f"workdir: {created}", proc.stdout)
+        state = json.loads((created / "state.json").read_text(encoding="utf-8"))
+        self.assertEqual(state["unit"], "user-auth")
+
+    def test_連番は既存の最大番号の次になり欠番を埋めない(self) -> None:
+        root = self.tmp / "specs"
+        (root / "001-a").mkdir(parents=True)
+        (root / "005-b").mkdir()
+        proc = self.init_root(root, "c")
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        self.assertTrue((root / "006-c").is_dir())
+
+    def test_連番を持たないディレクトリを採番の対象にしない(self) -> None:
+        root = self.tmp / "specs"
+        (root / "legacy-unit").mkdir(parents=True)
+        proc = self.init_root(root, "fresh")
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        self.assertTrue((root / "001-fresh").is_dir())
+
+    def test_999_を超えても採番が続く(self) -> None:
+        root = self.tmp / "specs"
+        (root / "999-old").mkdir(parents=True)
+        proc = self.init_root(root, "next")
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        self.assertTrue((root / "1000-next").is_dir())
+
+    def test_同じ_unit_の_workdir_が既にあれば拒否する(self) -> None:
+        root = self.tmp / "specs"
+        self.init_root(root, "user-auth")
+        proc = self.init_root(root, "user-auth")
+        self.assertEqual(proc.returncode, 1)
+        self.assertIn("同じ作業単位の workdir が既にあります", proc.stderr)
+        self.assertFalse((root / "002-user-auth").exists())
+
+    def test_連番を持たない同名の_workdir_も重複として拒否する(self) -> None:
+        root = self.tmp / "specs"
+        (root / "user-auth").mkdir(parents=True)
+        proc = self.init_root(root, "user-auth")
+        self.assertEqual(proc.returncode, 1)
+        self.assertIn("同じ作業単位の workdir が既にあります", proc.stderr)
+
+    def test_別の_unit_なら拒否しない(self) -> None:
+        root = self.tmp / "specs"
+        self.init_root(root, "user-auth")
+        proc = self.init_root(root, "user-auth-2")
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        self.assertTrue((root / "002-user-auth-2").is_dir())
+
+    def test_root_指定で_unit_を省略すると拒否する(self) -> None:
+        proc = run_script(
+            STATE_PY, "init", "--def", self.defn, "--root", self.tmp / "specs"
+        )
+        self.assertEqual(proc.returncode, 1)
+        self.assertIn("--root には --unit が要ります", proc.stderr)
+
+    def test_workdir_名に使えない_unit_名を拒否する(self) -> None:
+        root = self.tmp / "specs"
+        for unit, needle in (
+            ("a/b", "パス区切り"),
+            ("007-bond", "連番で始まっています"),
+        ):
+            with self.subTest(unit=unit):
+                proc = self.init_root(root, unit)
+                self.assertEqual(proc.returncode, 1)
+                self.assertIn(needle, proc.stderr)
+
+    def test_root_がディレクトリでなければ拒否する(self) -> None:
+        root = self.tmp / "specs"
+        root.write_text("ファイル", encoding="utf-8")
+        proc = self.init_root(root, "user-auth")
+        self.assertEqual(proc.returncode, 1)
+        self.assertIn("--root がディレクトリではありません", proc.stderr)
+
+    def test_root_と_workdir_の同時指定を拒否する(self) -> None:
+        proc = run_script(
+            STATE_PY,
+            "init",
+            "--def",
+            self.defn,
+            "--root",
+            self.tmp / "specs",
+            "--workdir",
+            self.workdir,
+            "--unit",
+            "x",
+        )
+        self.assertNotEqual(proc.returncode, 0)
+        self.assertIn("not allowed with argument", proc.stderr)
+
+    def test_workdir_指定の初期化は連番を付けない(self) -> None:
+        proc = self.init()
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        self.assertTrue((self.workdir / "state.json").is_file())
+        self.assertEqual(self.state_json()["unit"], "unit-a")
+
     # --- set-state ---
 
     def test_定義された遷移で状態を進める(self) -> None:
@@ -194,6 +302,21 @@ class StateMachineTest(helpers.TempDirTestCase):
         self.assertEqual(result["completed"], 1)
         self.assertEqual(len(result["others"]), 1)
         self.assertIn("別ワークフロー", result["others"][0]["note"])
+
+    def test_scan_が連番付きと連番なしの_workdir_を同じに扱う(self) -> None:
+        root = self.tmp / "specs"
+        self.init_root(root, "user-auth")
+        legacy = root / "legacy-unit"
+        legacy.mkdir()
+        run_script(STATE_PY, "init", "--def", self.defn, "--workdir", legacy)
+        result = run_json(
+            STATE_PY, "scan", "--def", self.defn, "--root", root, "--json"
+        )
+        self.assertEqual(result["total"], 2)
+        self.assertEqual(result["others"], [])
+        self.assertEqual(
+            [u["unit"] for u in result["units"]], ["user-auth", "legacy-unit"]
+        )
 
     def test_scan_は不正な_JSON_を対象外として報告する(self) -> None:
         broken = self.tmp / "unit-c"
