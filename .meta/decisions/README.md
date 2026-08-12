@@ -41,3 +41,4 @@
 - [D-022](D-022-autonomy-boundary.md): 自走と headless をレイヤー 3 に閉じ、dev-author をコアから外す
 - [D-023](D-023-structure-inventory-keep.md): 4 観点の棚卸しで維持と決めた構成要素
 - [D-024](D-024-workdir-sequence.md): workdir のディレクトリ名に連番を付け、採番をエンジンが行う
+- [D-025](D-025-roadmap-scoped-spec-layout.md): specs を roadmap ごとの 2 階層にし、roadmap.md を状態機械で凍結する

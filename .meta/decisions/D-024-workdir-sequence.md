@@ -1,5 +1,7 @@
 # D-024: workdir のディレクトリ名に連番を付け、採番をエンジンが行う(2026-08-12)
 
+> 採番の規則と担当は本エントリのまま有効である。採番するルートの位置は → [D-025](D-025-roadmap-scoped-spec-layout.md) で更新した(`docs/specs/NNN-<unit>/` から `docs/specs/NNN-<roadmap 名>/NNN-<unit>/` へ)。
+
 ## 背景
 
 `flow-sdd/SKILL.md` 1. は workdir を `docs/specs/<unit>/` と定め、`<unit>` は小文字ケバブケースのスラッグとしていた。ディレクトリ名がスラッグだけのため、次の 2 点が成立していなかった。

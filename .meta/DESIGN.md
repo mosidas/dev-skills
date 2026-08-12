@@ -37,7 +37,7 @@
 | dev | 1 | スキル | dev-implement | コア部品。tasks.md をもとに TDD 実装(implementer/reviewer/debugger 協調) |
 | dev | 1 | スキル | dev-release | コア部品。出荷可否判定(GO/NO-GO)とリリース計画 |
 | dev | 1 | スキル | dev-check | オプション部品。read-only の整合性検査 |
-| dev | 2 | スキル | flow-sdd | composition。SDD ワークフロー(spec→decompose→implement を承認ゲート付き状態機械で駆動。状態機械定義は workflow.json) |
+| dev | 2 | スキル | flow-sdd | composition。SDD ワークフロー(spec→decompose→implement を承認ゲート付き状態機械で駆動。状態機械定義は unit が workflow.json、roadmap が roadmap.json) |
 | dev | 3 | スキル | ext-dev-guardrails | 拡張。安全制約(破壊的な git 操作・一括ステージング・凍結済み中間生成物の変更)を hook で強制する。バンドル群 `guardrails`。出典: `../dev/extensions/guardrails/ext-dev-guardrails/SKILL.md` |
 | dev | 3 | フック | ext-dev-guardrails/hooks/guard_bash.py | PreToolUse(Bash)。破壊的な git 操作と一括ステージングを拒否する。出典: `../dev/extensions/guardrails/ext-dev-guardrails/hooks/guard_bash.py` |
 | dev | 3 | フック | ext-dev-guardrails/hooks/guard_write.py | PreToolUse(Write / Edit / MultiEdit / NotebookEdit)。凍結済み中間生成物への書き込みを拒否する。出典: `../dev/extensions/guardrails/ext-dev-guardrails/hooks/guard_write.py` |
@@ -137,7 +137,7 @@ flowchart LR
 
 ### flow-sdd
 
-依頼を経路判定して作業単位に分け、各単位を仕様→分解→実装の順に承認ゲート付きで駆動する。承認はすべて人間。セッションの開始時は、記憶ではなくファイル(state.json・tasks.md・git ログ)から現在地を再導出する(D-020)。
+依頼を経路判定して作業単位に分け、各単位を仕様→分解→実装の順に承認ゲート付きで駆動する。承認はすべて人間。作業単位は roadmap ごとにまとめ、`docs/specs/NNN-<roadmap 名>/NNN-<unit>/` に置く(D-025)。roadmap と unit は独立した状態機械として進み、どちらも完了状態への到達で凍結される。セッションの開始時は、記憶ではなくファイル(state.json・tasks.md・git ログ)から現在地を再導出する(D-020)。
 
 ```mermaid
 sequenceDiagram
@@ -149,6 +149,11 @@ sequenceDiagram
     U->>F: SDD 開始・再開(依頼)
     F->>F: Step 0(位置の確認 → 状態と履歴 → 開始時の検証 → 次の作業の選択)
     F->>F: 経路判定(作業単位へ分割)
+    opt 新規の作業のかたまり
+        F->>F: Step R(roadmap.md 生成 → roadmap-generated)
+        F-->>U: roadmap.md 提示
+        U->>F: 承認(gate roadmap → roadmap-approved)
+    end
     loop 各作業単位
         F->>S: 仕様化
         S-->>F: spec.md(spec-generated)
@@ -162,4 +167,7 @@ sequenceDiagram
         I-->>F: コード + テスト(completed)
     end
     F->>F: PR 作成・CI 追従(マージは人間)
+    F-->>U: 恒久情報への移動案(全 unit 完了時)
+    U->>F: 承認
+    F->>F: roadmap.md 凍結(frozen)
 ```

@@ -11,7 +11,7 @@ description: 出荷(リリース)部品(コア)。実装完了した作業単位
 
 - **workdir**: 呼び出し時の引数で指定する。既定は `docs/releases/<version>/`(composition は上書きする)。`<version>` が引数から決まらなければユーザーに確認する(推測で決めない)。
 - **入力**:
-  - 出荷対象の作業単位: `docs/specs/` 配下の完了済み unit(1 つ以上)。指定が無ければ `docs/specs/` を一覧し、出荷対象をユーザーに確認する。
+  - 出荷対象の作業単位: `docs/specs/` 配下の完了済み unit(1 つ以上)。unit は `docs/specs/NNN-<roadmap 名>/NNN-<unit>/` に置かれる。指定が無ければ `docs/specs/` を一覧し、出荷対象をユーザーに確認する。
   - コードベース: 出荷スコープの実装・テストと、README 等の恒久情報。
 - **出力**:
   - `<workdir>/release-report.md`: GO/NO-GO と観点別所見
@@ -44,7 +44,7 @@ description: 出荷(リリース)部品(コア)。実装完了した作業単位
 
 パネル起動の前に、機械的に確認できる前提を確認する。**いずれかを満たさなければ即 NO-GO** とし、理由を `<workdir>/release-report.md` に記録して停止する(検証を省略しない。「急ぐから飛ばす」を許さない)。
 
-- **完了確認**: 対象 unit ごとに `python3 <skills>/dev-core/scripts/state.py show --workdir docs/specs/NNN-<unit>`(`<skills>` は `../dev-core/scripts/` を絶対パスに解決。workdir 名は `docs/specs/` の一覧で確かめる)で state.json を確認し、完了状態(凍結済み。`frozen` の記録が目印)であること。完了状態・凍結の判定に迷う場合は `../dev-core/references/static-check.md` 5. を参照する。state.json が無い unit(単独利用等)は、完了の根拠(実装・テストの所在)を AskUserQuestion で確認し、確認できなければ NO-GO とする。
+- **完了確認**: 対象 unit ごとに `python3 <skills>/dev-core/scripts/state.py show --workdir docs/specs/NNN-<roadmap 名>/NNN-<unit>`(`<skills>` は `../dev-core/scripts/` を絶対パスに解決。workdir のパスは `docs/specs/` の一覧で確かめる)で state.json を確認し、完了状態(凍結済み。`frozen` の記録が目印)であること。完了状態・凍結の判定に迷う場合は `../dev-core/references/static-check.md` 5. を参照する。state.json が無い unit(単独利用等)は、完了の根拠(実装・テストの所在)を AskUserQuestion で確認し、確認できなければ NO-GO とする。
 - **全体グリーン**: テスト・ビルド・リント一式を差分外も含めて実行し、すべてグリーンであること(回帰なし)。
 - **機械確認チェックリスト**(grep・設定確認で機械的に判定できる項目。出典: [addyosmani/agent-skills](https://github.com/addyosmani/agent-skills) shipping-and-launch):
   - 秘密情報(API キー・パスワード)がコードに残っていない
@@ -82,7 +82,7 @@ GO 見込みになったら、`./templates/release-plan-template.md` に従い `
 
 ## 4. 規律(厳守)
 
-- **凍結された中間生成物は read-only**: `docs/specs/NNN-<unit>/` 配下は参照のみで変更しない。出荷検証で判明した差異はコードと恒久情報へ反映する(`../dev-core/references/durable-info.md`)。
+- **凍結された中間生成物は read-only**: `docs/specs/NNN-<roadmap 名>/NNN-<unit>/` 配下と、凍結済みの `roadmap.md` は参照のみで変更しない。出荷検証で判明した差異はコードと恒久情報へ反映する(`../dev-core/references/durable-info.md`)。
 - **検証と記録を区別する**: 出荷前ゲートとパネル(3.1・3.2)はコード・文書を変更しない read-only の検証、リリース計画(3.3)は workdir への記録。コードの修正・デプロイの実行はこの部品の責務外。
 - **状態機械を操作しない**: `state.py` は参照(`show`)のみ使い、状態遷移・承認・凍結は行わない(composition の責務)。
 - **コミット**: `../dev-core/references/git-convention.md` に従う(選択的ステージング・破壊的操作の禁止。git 管理下でない場合はスキップして続行)。

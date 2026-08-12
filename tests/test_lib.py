@@ -312,6 +312,23 @@ class SequenceTest(helpers.TempDirTestCase):
         self.mkdirs("002-user-auth")
         self.assertIsNone(lib.find_unit_dir(self.tmp, "user-auth-2"))
 
+    def test_既定では下位の階層を見ない(self) -> None:
+        self.mkdirs("001-mvp/002-user-auth")
+        self.assertIsNone(lib.find_unit_dir(self.tmp, "user-auth"))
+
+    def test_recursive_で下位の階層の同名_unit_を見つける(self) -> None:
+        self.mkdirs("001-mvp/002-user-auth")
+        self.assertEqual(
+            lib.find_unit_dir(self.tmp, "user-auth", recursive=True),
+            self.tmp / "001-mvp" / "002-user-auth",
+        )
+
+    def test_recursive_でも別の_unit_は見つけない(self) -> None:
+        self.mkdirs("001-mvp/002-user-auth")
+        self.assertIsNone(
+            lib.find_unit_dir(self.tmp, "user-auth-2", recursive=True)
+        )
+
     def test_workdir_名に使える_unit_名を通す(self) -> None:
         self.assertIsNone(lib.unit_name_problem("user-auth"))
 

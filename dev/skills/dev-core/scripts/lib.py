@@ -259,15 +259,18 @@ def numbered_workdir(root: Path, unit: str) -> Path:
     return root / f"{next_sequence(root):0{SEQ_WIDTH}d}-{unit}"
 
 
-def find_unit_dir(root: Path, unit: str) -> Path | None:
-    """root 直下から同じ作業単位の workdir を探す(連番の有無を問わない)。
+def find_unit_dir(root: Path, unit: str, *, recursive: bool = False) -> Path | None:
+    """root 配下から同じ作業単位の workdir を探す(連番の有無を問わない)。
 
     採番済みの `NNN-<unit>` と、連番を持たない `<unit>` のどちらも同じ作業単位と
     見なす。二重採番(同じ unit に別番号の workdir を作ること)の検出に使う。
+    既定では root 直下だけを見る。`recursive` を真にすると root 配下の全階層を
+    走査する(roadmap のディレクトリを跨いだ unit 名の一意性の検査に使う)。
     """
     if not root.is_dir():
         return None
-    for child in sorted(root.iterdir()):
+    children = root.rglob("*") if recursive else root.iterdir()
+    for child in sorted(children):
         if child.is_dir() and strip_sequence(child.name) == unit:
             return child
     return None
