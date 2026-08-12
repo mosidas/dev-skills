@@ -40,3 +40,4 @@
 - [D-021](D-021-completion-false-positive.md): 完了判定の偽陽性への対策を実装者と判定器に置く
 - [D-022](D-022-autonomy-boundary.md): 自走と headless をレイヤー 3 に閉じ、dev-author をコアから外す
 - [D-023](D-023-structure-inventory-keep.md): 4 観点の棚卸しで維持と決めた構成要素
+- [D-024](D-024-workdir-sequence.md): workdir のディレクトリ名に連番を付け、採番をエンジンが行う

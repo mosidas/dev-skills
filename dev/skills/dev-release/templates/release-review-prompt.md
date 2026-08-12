@@ -22,7 +22,7 @@ dev-release の**出荷可否(GO/NO-GO)**判定で、出荷スコープ全体を
 <scope>
 - バージョン: `<version>`
 - 対象 unit: `<unit, ...>`(すべて完了状態・凍結済み)
-- 受け入れ基準の所在: 各 unit の仕様文書 `docs/specs/<unit>/spec.md` と、それを引き継いだテストコード
+- 受け入れ基準の所在: 各 unit の仕様文書 `docs/specs/NNN-<unit>/spec.md` と、それを引き継いだテストコード
 </scope>
 
 <aspect>
