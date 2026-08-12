@@ -13,7 +13,7 @@ description: 拡張スキル(レイヤー 3)。dev スキル群が文章で課�
 
 | 規律 | 拒否する操作 | 正本 |
 | ---- | ------------ | ---- |
-| 破壊的な git 操作の禁止 | `git reset --hard` / `git checkout` によるパス復元(`.`・`./<path>`・`--`)/ `git restore`(`--staged` のみの用法を除く)/ `git clean -f`(`-n` を伴わないもの)/ `git branch` の強制削除(`-D`・`-d --force`・`-df`)/ 強制 push(`--force`・`-f`・`+` を前置した refspec)/ `rm -rf` | dev-core/references/git-convention.md 6. |
+| 破壊的な git 操作の禁止 | `git reset --hard` / `git checkout` によるパス復元(`.`・`./<path>`・`--`)/ `git restore`(`--staged` のみの用法を除く)/ `git clean -f`(`-n` を伴わないもの)/ `git branch` の強制削除(`-D`・`-d --force`・`-df`)/ 強制 push(`--force`・`-f`・`+` を前置した refspec)/ リポジトリ内を対象とする `rm -rf` | dev-core/references/git-convention.md 6. |
 | 選択的ステージング | `git add -A` / `git add --all` / `git add .` | 同上 |
 | 凍結後の中間生成物を変更しない | 書き込み先と同じディレクトリの `state.json` の `frozen` に記録されたファイルへの Write / Edit / MultiEdit / NotebookEdit | dev-core/references/principles.md 1. |
 
@@ -57,6 +57,8 @@ $ python3 <dev-skills のパス>/install.py remove ext-dev-guardrails --target <
 ## 5. 判定の限界
 
 - **判定はコマンド文字列の照合による**。クォートを解釈して語に分け、シェルの区切り(`;` `&&` `||` `|` `&` `(` `)`)でセグメントへ分けたうえで、各セグメントの先頭コマンド(環境変数の代入・`sudo` 等の前置・git のグローバルオプションを読み飛ばした後)とその引数を見る。クォートが閉じていない入力では素朴な分割へ縮退する。変数展開・エイリアス・スクリプト経由の実行(`bash script.sh` の中身)は判定できない。
+- **`rm -rf` だけは削除対象のパスも見る**。正本の禁止がリポジトリ内に限るため(git-convention.md 6.)、対象がすべてリポジトリの外だと確定できる場合に通す。相対パスは PreToolUse の入力が持つ `cwd` を基点に絶対化し、セグメントを跨ぐ `cd` を追跡する(`cd /tmp && rm -rf work` を通すため)。**確定できない対象は拒否する**。変数展開・コマンド置換・チルダ展開を含むパス、行き先を解決できない `cd` の後の相対パス、`.git` を持つ親ディレクトリが見つからない場合が該当する。復元できない操作のため、判定がつかないときは拒否側に倒す(他の判定が許可側に倒すのと逆であり、これは hook の不具合ではなく削除対象の不確定に対する扱いである)。
+- **リポジトリ内の `rm -rf` は、対象が git の管理外(ビルド生成物・`node_modules` 等)でも拒否する**。管理下かの判定には git の実行が要り、コマンド文字列の照合だけでは閉じないためである。該当する場合は `-f` を外した `rm -r` を使う。
 - **強制 push の判定は正本より広い**。正本の禁止は「デフォルトブランチや共有ブランチへの強制 push」だが、hook はブランチの共有性を判定できないため `--force`・`-f`・`+` を前置した refspec を一律に拒否する。作業ブランチで履歴を更新する必要がある場合は `--force-with-lease` を使う(上流の更新を検出して中断するため許可する)。
 - **禁止の対象は正本が列挙する操作に限る**。`git stash drop` / `git stash clear` / `git worktree remove --force` のように未コミットの変更を失いうる操作でも、正本(git-convention.md 6.)が列挙していないものは拒否しない。判定を正本と一致させ、hook が独自の禁止を持たない形にする。
 - **凍結の判定は `state.json` の位置に依存する**。書き込み先と同じディレクトリに `state.json` が無い場合(単独利用で状態機械を使わない場合)は判定できず、許可になる。書き込み先はシンボリックリンクを解決したうえで照合する(別名経由の変更を通さない)。相対パスは PreToolUse の入力が持つ `cwd` を基点に絶対化する。

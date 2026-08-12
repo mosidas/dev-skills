@@ -41,14 +41,14 @@ def run_hook(script: Path, payload: object) -> subprocess.CompletedProcess:
 
 
 class GuardBashTest(unittest.TestCase):
-    def assertDenied(self, command: str) -> None:
+    def assertDenied(self, command: str, cwd: str | None = None) -> None:
         self.assertIsNotNone(
-            guard_bash.check(command), f"拒否されるべきコマンドが通った: {command}"
+            guard_bash.check(command, cwd), f"拒否されるべきコマンドが通った: {command}"
         )
 
-    def assertAllowed(self, command: str) -> None:
+    def assertAllowed(self, command: str, cwd: str | None = None) -> None:
         self.assertIsNone(
-            guard_bash.check(command), f"許可されるべきコマンドが拒否された: {command}"
+            guard_bash.check(command, cwd), f"許可されるべきコマンドが拒否された: {command}"
         )
 
     def test_破壊的な_git_操作を拒否する(self) -> None:
@@ -165,7 +165,8 @@ class GuardBashTest(unittest.TestCase):
         self.assertAllowed("git status && git add src/main.py")
 
     def test_sudo_を前置しても検査する(self) -> None:
-        self.assertDenied("sudo rm -rf /tmp/work")
+        self.assertDenied("sudo rm -rf build")
+        self.assertDenied("sudo git reset --hard")
 
     def test_拒否時に_exit_2_と理由を返す(self) -> None:
         proc = run_hook(
@@ -195,6 +196,119 @@ class GuardBashTest(unittest.TestCase):
     def test_解釈できない入力で作業を止めない(self) -> None:
         proc = run_hook(HOOKS / "guard_bash.py", "これは JSON ではない")
         self.assertEqual(proc.returncode, 0)
+
+
+class GuardBashRemovePathTest(helpers.TempDirTestCase):
+    """`rm -rf` の削除対象がリポジトリの内か外かで判定が分かれることを確かめる。
+
+    正本(git-convention.md 6.)が禁じる理由は未コミットの変更を失うことにあり、
+    リポジトリの外の削除はこの理由に当たらない。変異検査のように使い捨ての複製を
+    リポジトリの外に作る作業を止めないための判定である(D-027)。
+    """
+
+    def setUp(self) -> None:
+        super().setUp()
+        self.repo = self.tmp / "repo"
+        (self.repo / ".git").mkdir(parents=True)
+        (self.repo / "src").mkdir()
+        self.outside = self.tmp / "scratch"
+        self.outside.mkdir()
+        self.cwd = str(self.repo)
+
+    def assertDenied(self, command: str) -> None:
+        self.assertIsNotNone(
+            guard_bash.check(command, self.cwd),
+            f"拒否されるべきコマンドが通った: {command}",
+        )
+
+    def assertAllowed(self, command: str) -> None:
+        self.assertIsNone(
+            guard_bash.check(command, self.cwd),
+            f"許可されるべきコマンドが拒否された: {command}",
+        )
+
+    def test_リポジトリ外の絶対パスを通す(self) -> None:
+        self.assertAllowed(f"rm -rf {self.outside}/work")
+
+    def test_cd_で外へ移った後の相対パスを通す(self) -> None:
+        self.assertAllowed(f"cd {self.outside} && rm -rf work && mkdir work")
+
+    def test_リポジトリ内の相対パスを拒否する(self) -> None:
+        for command in ("rm -rf src", "rm -rf ./src", "rm -rf src/", "rm -rf ."):
+            with self.subTest(command=command):
+                self.assertDenied(command)
+
+    def test_リポジトリ内の絶対パスを拒否する(self) -> None:
+        self.assertDenied(f"rm -rf {self.repo}/src")
+
+    def test_リポジトリのルート自体を拒否する(self) -> None:
+        self.assertDenied(f"rm -rf {self.repo}")
+
+    def test_外へ出てから戻る_cd_を追跡する(self) -> None:
+        self.assertDenied(f"cd {self.outside} && cd {self.repo} && rm -rf src")
+
+    def test_相対パスの_cd_を追跡する(self) -> None:
+        self.assertAllowed(f"cd .. && cd {self.outside.name} && rm -rf work")
+
+    def test_上位への相対パスでリポジトリを抜けたことを判定する(self) -> None:
+        self.assertAllowed("rm -rf ../scratch/work")
+
+    def test_変数展開を含む対象は拒否側に倒す(self) -> None:
+        for command in (
+            'MUT=$(mktemp -d) && rm -rf "$MUT/.git"',
+            "rm -rf $BUILD_DIR",
+            "rm -rf `pwd`/build",
+        ):
+            with self.subTest(command=command):
+                self.assertDenied(command)
+
+    def test_行き先を解決できない_cd_の後は拒否側に倒す(self) -> None:
+        self.assertDenied("cd $WORK && rm -rf tmpdir")
+
+    def test_チルダ展開は確定しないため拒否側に倒す(self) -> None:
+        self.assertDenied("rm -rf ~/scratch/work")
+
+    def test_複数の対象は_1_つでも内側なら拒否する(self) -> None:
+        self.assertDenied(f"rm -rf {self.outside}/work src")
+
+    def test_リポジトリを特定できなければ拒否側に倒す(self) -> None:
+        outside_repo = str(self.outside)
+        self.assertIsNotNone(
+            guard_bash.check(f"rm -rf {self.outside}/work", outside_repo)
+        )
+
+    def test_再帰と強制が揃わなければ対象にしない(self) -> None:
+        for command in ("rm -r src", "rm -f src/main.py", "rm src/main.py"):
+            with self.subTest(command=command):
+                self.assertAllowed(command)
+
+    def test_削除対象を持たない_rm_rf_を対象にしない(self) -> None:
+        self.assertAllowed("rm -rf")
+
+    def test_リポジトリ内でも_git_の禁止操作は変わらず拒否する(self) -> None:
+        self.assertDenied("git reset --hard")
+        self.assertDenied("git add -A")
+
+    def test_hook_が_cwd_を読んで判定する(self) -> None:
+        allowed = run_hook(
+            HOOKS / "guard_bash.py",
+            {
+                "tool_name": "Bash",
+                "tool_input": {"command": f"rm -rf {self.outside}/work"},
+                "cwd": self.cwd,
+            },
+        )
+        self.assertEqual(allowed.returncode, 0, allowed.stderr)
+        denied = run_hook(
+            HOOKS / "guard_bash.py",
+            {
+                "tool_name": "Bash",
+                "tool_input": {"command": "rm -rf src"},
+                "cwd": self.cwd,
+            },
+        )
+        self.assertEqual(denied.returncode, 2)
+        self.assertIn("リポジトリ内", denied.stderr)
 
 
 class GuardWriteTest(helpers.TempDirTestCase):

@@ -43,3 +43,4 @@
 - [D-024](D-024-workdir-sequence.md): workdir のディレクトリ名に連番を付け、採番をエンジンが行う
 - [D-025](D-025-roadmap-scoped-spec-layout.md): specs を roadmap ごとの 2 階層にし、roadmap.md を状態機械で凍結する
 - [D-026](D-026-phase-delegation.md): 自走する工程をサブエージェントへ委譲し、対話を伴う工程は統括に残す
+- [D-027](D-027-rm-rf-scope.md): `rm -rf` の禁止をリポジトリの中に限る
