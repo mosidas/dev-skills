@@ -36,7 +36,7 @@ netdiver の unit #2 を flow-sdd で実装した実運用で、実装フェー�
 | dev-reviewer | opus | high | 合格基準への適合の判定 |
 | dev-decompose-runner | opus | high | File Structure Plan と分解の設計 |
 | dev-debugger | opus | xhigh | 根本原因の切り分け |
-| dev-roadmap-planner | opus | xhigh | 最上流の分解。後続の全工程の区切りを決める |
+| dev-roadmap-planner | opus | xhigh | 最上流の分解。後続の全工程の区切りを決める(→ D-028 で更新) |
 
 ## 却下した選択肢
 
