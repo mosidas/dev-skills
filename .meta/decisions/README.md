@@ -45,3 +45,4 @@
 - [D-026](D-026-phase-delegation.md): 自走する工程をサブエージェントへ委譲し、対話を伴う工程は統括に残す
 - [D-027](D-027-rm-rf-scope.md): `rm -rf` の禁止をリポジトリの中に限る
 - [D-028](D-028-roadmap-planner-fable.md): unit 分解のエージェントを Claude Fable 5 の high effort に割り当てる
+- [D-029](D-029-core-default-scope-from-lock.md): グループ名を省いた `install.py core` の配布範囲を導入済みの記録に合わせる

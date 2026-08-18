@@ -212,14 +212,47 @@ def select_groups(root: Path, names: list[str]) -> list[Path]:
     return [by_name[n] for n in dict.fromkeys(names)]
 
 
-def cmd_core(root: Path, target: Path, names: list[str], dry: bool) -> None:
-    groups = select_groups(root, names)
+def recorded_groups(root: Path, lock: dict[str, dict]) -> tuple[list[str], list[str]]:
+    """lock が記録する導入済みグループを、配布できるものと配布ルートに無いものに分ける。
+
+    グループ名を持たない旧形式の記録(空文字のキー)は、どのグループの導入物か判別
+    できないため対象にしない(呼び出し側は従来どおり全グループの配布へ落ちる)。
+    """
+    available = {g.name for g in core_groups(root)}
+    names = [n for n in lock if n]
+    return [n for n in names if n in available], [n for n in names if n not in available]
+
+
+def cmd_core(root: Path, target: Path, names: list[str], all_groups: bool, dry: bool) -> None:
     lock = load_core_lock(target / CORE_LOCK_REL)
+    # 既定の配布範囲。グループ名の指定も --all も無く、導入済みの記録があるときは、
+    # その記録のグループだけを配る(更新のつもりの実行で未導入のグループを新規に
+    # 入れない)。記録が無い初回導入と旧形式の記録では、従来どおり全グループを配る。
+    if not names and not all_groups:
+        installed, missing = recorded_groups(root, lock)
+        if missing:
+            print(
+                f"core: 記録のグループ {', '.join(sorted(missing))} が配布ルートに無いため配らない"
+                "(導入物はそのまま残す)"
+            )
+        if installed:
+            names = installed
+            print(
+                f"core: 導入済みの記録に従いグループ {', '.join(sorted(installed))} を配布する"
+                "(全グループを入れるには --all)"
+            )
+        elif missing:
+            die(
+                f"記録のグループがすべて配布ルートに無い: {', '.join(sorted(missing))}"
+                "(配布するグループ名を指定するか --all を付ける)"
+            )
+    groups = select_groups(root, names)
     selected = {g.name for g in groups}
     # 廃止判定の範囲。全グループを配布する実行では、前回の記録すべて(グループ名を
     # 持たない旧形式を含む)を対象にする。絞った実行では選んだグループだけを対象にし、
-    # 触らないグループの導入物を消さない。
-    scope = selected if names else selected | set(lock)
+    # 触らないグループの導入物を消さない。記録に従う実行は絞った実行として扱う。
+    all_run = all_groups or not names
+    scope = selected | set(lock) if all_run else selected
     # 廃止判定の範囲外(今回触らない)グループが導入済みの名前。導入先は平坦なため、
     # 上書きの検出に使うとともに、廃止判定でこれらを削除対象から外す。
     kept_skills = {
@@ -514,7 +547,16 @@ def main() -> None:
     p_core.add_argument(
         "groups",
         nargs="*",
-        help="配布する用途グループ名(省略時は全グループ)。複数指定できる",
+        help=(
+            "配布する用途グループ名(複数指定できる)。省略時は、導入済みなら "
+            "lock が記録するグループだけ、記録が無ければ全グループ"
+        ),
+    )
+    p_core.add_argument(
+        "--all",
+        action="store_true",
+        dest="all_groups",
+        help="導入済みの記録に関わらず全グループを配布する",
     )
     p_ext = sub.add_parser("ext", help="拡張バンドルを導入する")
     p_ext.add_argument(
@@ -544,7 +586,9 @@ def main() -> None:
     dry = getattr(args, "dry_run", False)
 
     if args.command == "core":
-        cmd_core(root, target, args.groups, dry)
+        if args.groups and args.all_groups:
+            die("--all とグループ名は同時に指定できない(どちらか一方にする)")
+        cmd_core(root, target, args.groups, args.all_groups, dry)
     elif args.command == "ext":
         cmd_ext(root, target, args.name, dry)
     elif args.command == "remove":
