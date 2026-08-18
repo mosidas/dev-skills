@@ -44,11 +44,15 @@ port(`ports/`)と拡張バンドル(`extensions/`)はグループの機構であ
 利用側プロジェクトへの導入・削除は `install.py` で行う(Python 3 標準ライブラリのみで動作)。
 
 ```sh
-# コア(全用途グループの skills・agents)をハードコピーで導入する
+# コア(skills・agents)をハードコピーで導入・更新する
+# 初回は全用途グループ、導入済みなら lock が記録するグループを配る
 python3 install.py core --target /path/to/project
 
 # 用途グループを選んで導入する(複数指定できる)
 python3 install.py core --target /path/to/project writing authoring
+
+# 導入済みのターゲットへ全用途グループを配布する
+python3 install.py core --target /path/to/project --all
 
 # 拡張バンドルを導入する
 python3 install.py ext <name> --target /path/to/project
@@ -64,4 +68,4 @@ python3 install.py status --target /path/to/project
 
 拡張バンドルは hooks を持つことがあり、その場合は `settings.snippet.json` の内容を利用側の `.claude/settings.json` へ冪等マージする(`remove` でマージ分だけを取り消す)。現在収録しているのは `ext-dev-guardrails`(安全制約の決定論的強制。D-018)である。
 
-導入はハードコピー方式である(シンボリックリンクを使わない。devcontainer 等でホスト側パスが解決できない環境でも動き、利用側は導入物を自リポジトリに Git 管理できる。D-006)。更新は `install.py core` の再実行で行い、廃止されたスキル・エージェント(前回コピーして今回の配布元に無いもの)は自動で削除される。配布対象は用途グループ配下に限るため、`.claude/skills/` に置く `meta-*` は配布されない。グループ名を指定した実行は、そのグループの廃止分だけを削除し、指定しなかったグループの導入物には触らない。
+導入はハードコピー方式である(シンボリックリンクを使わない。devcontainer 等でホスト側パスが解決できない環境でも動き、利用側は導入物を自リポジトリに Git 管理できる。D-006)。更新は `install.py core` の再実行で行い、廃止されたスキル・エージェント(前回コピーして今回の配布元に無いもの)は自動で削除される。配布対象は用途グループ配下に限るため、`.claude/skills/` に置く `meta-*` は配布されない。グループ名を指定した実行は、そのグループの廃止分だけを削除し、指定しなかったグループの導入物には触らない。グループ名を省いた実行は、導入済みの記録(`.claude/dev-core.lock.json`)があればそのグループだけを配る(更新のつもりの再実行で未導入のグループを新規に入れないため)。記録が無い初回導入と、グループ名を持たない旧形式の記録では全グループを配る。導入済みのターゲットへ全グループを入れるには `--all` を付ける。

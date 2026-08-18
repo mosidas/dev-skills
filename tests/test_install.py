@@ -195,6 +195,64 @@ class SelectGroupTest(CoreTestCase):
         self.assertEqual(proc.returncode, 1)
         self.assertIn("配布ルートに無いグループ", proc.stderr)
 
+    def test_導入済みなら引数無しの実行が記録のグループだけを配る(self) -> None:
+        """更新のつもりの実行で未導入のグループを新規に入れない。"""
+        self.run_core("dev")
+        proc = self.run_core()
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        self.assertEqual(self.installed_skills(), ["dev-spec"])
+        self.assertEqual(sorted(self.lock()["groups"]), ["dev"])
+
+    def test_記録に従うときは配布範囲の根拠を示す(self) -> None:
+        self.run_core("dev")
+        proc = self.run_core()
+        self.assertIn("導入済みの記録に従いグループ dev を配布する", proc.stdout)
+
+    def test_全グループを入れるには_all_を付ける(self) -> None:
+        self.run_core("dev")
+        proc = self.run_core("--all")
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        self.assertEqual(
+            self.installed_skills(), ["dev-spec", "japanese-writing", "skill-authoring"]
+        )
+        self.assertEqual(sorted(self.lock()["groups"]), ["authoring", "dev", "writing"])
+
+    def test_all_とグループ名は同時に指定できない(self) -> None:
+        proc = self.run_core("--all", "dev")
+        self.assertEqual(proc.returncode, 1)
+        self.assertIn("同時に指定できない", proc.stderr)
+
+    def test_初回導入は引数無しで全グループを配る(self) -> None:
+        proc = self.run_core()
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        self.assertEqual(
+            self.installed_skills(), ["dev-spec", "japanese-writing", "skill-authoring"]
+        )
+
+    def test_記録のグループが配布ルートから消えても残りを配る(self) -> None:
+        self.run_core("dev", "writing")
+        for f in (self.src / "writing" / "skills" / "japanese-writing").iterdir():
+            f.unlink()
+        (self.src / "writing" / "skills" / "japanese-writing").rmdir()
+        (self.src / "writing" / "skills").rmdir()
+        (self.src / "writing").rmdir()
+        proc = self.run_core()
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        self.assertIn("配布ルートに無いため配らない", proc.stdout)
+        self.assertEqual(self.installed_skills(), ["dev-spec", "japanese-writing"])
+        self.assertEqual(self.locked("writing")["skills"], ["japanese-writing"])
+
+    def test_記録のグループがすべて配布ルートから消えれば停止する(self) -> None:
+        self.run_core("writing")
+        for f in (self.src / "writing" / "skills" / "japanese-writing").iterdir():
+            f.unlink()
+        (self.src / "writing" / "skills" / "japanese-writing").rmdir()
+        (self.src / "writing" / "skills").rmdir()
+        (self.src / "writing").rmdir()
+        proc = self.run_core()
+        self.assertEqual(proc.returncode, 1)
+        self.assertIn("記録のグループがすべて配布ルートに無い", proc.stderr)
+
 
 class LegacyLockTest(CoreTestCase):
     """グループ名を持たない旧形式の lock の扱い。"""
@@ -223,6 +281,13 @@ class LegacyLockTest(CoreTestCase):
         self.run_core("writing")
         self.assertIn("dev-old", self.installed_skills())
         self.assertIn("", self.lock()["groups"])
+
+    def test_旧形式の記録では引数無しの実行が全グループを配る(self) -> None:
+        """グループ名を持たない記録からは導入グループを判別できないため、既定を変えない。"""
+        proc = self.run_core()
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        self.assertNotIn("導入済みの記録に従い", proc.stdout)
+        self.assertEqual(sorted(self.lock()["groups"]), ["dev", "writing"])
 
 
 class ExtTest(helpers.TempDirTestCase):
