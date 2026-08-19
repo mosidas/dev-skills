@@ -19,7 +19,7 @@ netdiver の unit #2 を flow-sdd で実装した実運用で、実装フェー�
 
 ## 決定
 
-- **自走する工程だけを委譲する**。タスク分解フェーズと実装フェーズをサブエージェントへ委譲し、仕様フェーズと経路判定・承認は統括セッションが実行する。roadmap の生成は分解の分析だけを委譲し、提示と承認は統括に残す。
+- **自走する工程だけを委譲する**(→ D-030 で更新。判断基準を「自走し、かつ作業内容が統括の文脈を圧迫するか」へ改め、タスク分解フェーズの委譲をやめた)。タスク分解フェーズと実装フェーズをサブエージェントへ委譲し、仕様フェーズと経路判定・承認は統括セッションが実行する。roadmap の生成は分解の分析だけを委譲し、提示と承認は統括に残す。
 - **起動プロンプトは workdir・作業単位名・実行する SKILL.md のパスに限る**。工程の手順・生成規則・判定基準はファイルにあり、プロンプトへ転記しない。仕様・タスクの内容も転記せず、委譲先が workdir から読む。
 - **委譲先は質問の代わりに停止して返す**。部品の SKILL.md が質問を指示する箇所で、委譲先は構造化結果の `OPEN_QUESTIONS` に論点を挙げて停止する。統括がユーザーに諮り、回答を添えて再委譲する。
 - **状態遷移は委譲先へ渡さない**。`init` / `set-state` / `approve` は統括セッションだけが実行する。D-000 §3.3(部品は composition の状態を進めてはならない)と `flow-sdd/SKILL.md` 6. をそのまま維持する。承認ゲートは人間の応答を要し、委譲先はユーザーと対話できないため、ゲートは統括に置くしかない。
@@ -34,7 +34,7 @@ netdiver の unit #2 を flow-sdd で実装した実運用で、実装フェー�
 | dev-implement-runner | opus | medium | ループの制御。実装の判断は入れ子の dev-implementer が担う |
 | dev-implementer | opus | high | 1 タスクの TDD 実装 |
 | dev-reviewer | opus | high | 合格基準への適合の判定 |
-| dev-decompose-runner | opus | high | File Structure Plan と分解の設計 |
+| dev-decompose-runner | opus | high | File Structure Plan と分解の設計(→ D-030 で廃止) |
 | dev-debugger | opus | xhigh | 根本原因の切り分け |
 | dev-roadmap-planner | opus | xhigh | 最上流の分解。後続の全工程の区切りを決める(→ D-028 で更新) |
 
@@ -60,7 +60,7 @@ D-007 が定める「スクリプト実行機構に依存する実装は拡張(L
 ## 帰結
 
 - `../../dev/skills/dev-roadmap/`(SKILL.md・templates/roadmap-template.md)を新設した。
-- `../../dev/agents/` に 3 定義を追加した。`dev-roadmap-planner`・`dev-decompose-runner`・`dev-implement-runner`。いずれも「起動プロンプトが指定する SKILL.md を読んで実行する」形とし、手順を持たない。
+- `../../dev/agents/` に 3 定義を追加した。`dev-roadmap-planner`・`dev-decompose-runner`(→ D-030 で削除)・`dev-implement-runner`。いずれも「起動プロンプトが指定する SKILL.md を読んで実行する」形とし、手順を持たない。
 - 既存の 4 定義(dev-explorer・dev-implementer・dev-reviewer・dev-debugger)に `effort` を追加した。`model` は変更していない。
 - `../../dev/skills/flow-sdd/SKILL.md`: frontmatter の description に dev-roadmap を加え、2.(経路判定と unit 分解の担当の区別)・5.0(工程の委譲)・Step R・Step 2・Step 3・6.(規律)を更新した。
 - `../../.claude/skills/meta-core/trigger-cases.json` に dev-roadmap の検査ケース 4 件(肯定 2・否定 2)を追加した。否定例は dev-decompose・dev-spec の依頼文を流用し、3 者の取り違えを検出する形にした。
