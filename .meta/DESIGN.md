@@ -38,7 +38,7 @@
 | dev | 1 | スキル | dev-implement | コア部品。tasks.md をもとに TDD 実装(implementer/reviewer/debugger 協調) |
 | dev | 1 | スキル | dev-release | コア部品。出荷可否判定(GO/NO-GO)とリリース計画 |
 | dev | 1 | スキル | dev-check | オプション部品。read-only の整合性検査 |
-| dev | 2 | スキル | flow-sdd | composition。SDD ワークフロー(roadmap→spec→decompose→implement を承認ゲート付き状態機械で駆動。状態機械定義は unit が workflow.json、roadmap が roadmap.json。自走する工程はサブエージェントへ委譲) |
+| dev | 2 | スキル | flow-sdd | composition。SDD ワークフロー(roadmap→spec→decompose→implement を承認ゲート付き状態機械で駆動。状態機械定義は unit が workflow.json、roadmap が roadmap.json。自走し文脈を圧迫する工程はサブエージェントへ委譲) |
 | dev | 3 | スキル | ext-dev-guardrails | 拡張。安全制約(破壊的な git 操作・一括ステージング・凍結済み中間生成物の変更)を hook で強制する。バンドル群 `guardrails`。出典: `../dev/extensions/guardrails/ext-dev-guardrails/SKILL.md` |
 | dev | 3 | フック | ext-dev-guardrails/hooks/guard_bash.py | PreToolUse(Bash)。破壊的な git 操作と一括ステージングを拒否する。出典: `../dev/extensions/guardrails/ext-dev-guardrails/hooks/guard_bash.py` |
 | dev | 3 | フック | ext-dev-guardrails/hooks/guard_write.py | PreToolUse(Write / Edit / MultiEdit / NotebookEdit)。凍結済み中間生成物への書き込みを拒否する。出典: `../dev/extensions/guardrails/ext-dev-guardrails/hooks/guard_write.py` |
@@ -47,7 +47,6 @@
 | dev | 0 | エージェント | dev-reviewer | 役割エージェント。敵対的判定器(文書ゲート・コード検証。観点別に並列起動) |
 | dev | 0 | エージェント | dev-explorer | 役割エージェント。read-only 調査(ダイジェストのみ返す) |
 | dev | 0 | エージェント | dev-roadmap-planner | 工程エージェント。unit 分解の案を独立文脈で組み立てて返す |
-| dev | 0 | エージェント | dev-decompose-runner | 工程エージェント。タスク分解フェーズを独立文脈で通し構造化結果を返す |
 | dev | 0 | エージェント | dev-implement-runner | 工程エージェント。実装フェーズを独立文脈で通し構造化結果を返す |
 | dev | 0 | スクリプト | dev-core/scripts/state.py | 汎用状態機械エンジン(init/set-state/approve/show/status/scan・workdir の採番・凍結) |
 | dev | 0 | スクリプト | dev-core/scripts/check.py | 成果物の静的チェッカ(状態・spec.md・tasks.md の規約検査) |
@@ -146,7 +145,7 @@ flowchart LR
 
 ### flow-sdd
 
-依頼を経路判定して作業単位に分け、各単位を仕様→分解→実装の順に承認ゲート付きで駆動する。承認はすべて人間。自走する工程(unit 分解・タスク分解・実装)はサブエージェントへ委譲し、統括には構造化結果だけが返る。仕様フェーズは対話が本体のため委譲しない(D-026)。作業単位は roadmap ごとにまとめ、`docs/specs/NNN-<roadmap 名>/NNN-<unit>/` に置く(D-025)。roadmap と unit は独立した状態機械として進み、どちらも完了状態への到達で凍結される。セッションの開始時は、記憶ではなくファイル(state.json・tasks.md・git ログ)から現在地を再導出する(D-020)。
+依頼を経路判定して作業単位に分け、各単位を仕様→分解→実装の順に承認ゲート付きで駆動する。承認はすべて人間。自走し、かつ作業内容が統括の文脈を圧迫する工程(unit 分解・実装)はサブエージェントへ委譲し、統括には構造化結果だけが返る。仕様フェーズは対話が本体のため、タスク分解は 1 パスで終わり文脈が積もらないため、どちらも統括が自分で実行する(D-026・D-030)。作業単位は roadmap ごとにまとめ、`docs/specs/NNN-<roadmap 名>/NNN-<unit>/` に置く(D-025)。roadmap と unit は独立した状態機械として進み、どちらも完了状態への到達で凍結される。セッションの開始時は、記憶ではなくファイル(state.json・tasks.md・git ログ)から現在地を再導出する(D-020)。
 
 ```mermaid
 sequenceDiagram
@@ -154,7 +153,7 @@ sequenceDiagram
     participant F as flow-sdd(統括)
     participant R as dev-roadmap-planner
     participant S as dev-spec
-    participant D as dev-decompose-runner
+    participant D as dev-decompose
     participant I as dev-implement-runner
     U->>F: SDD 開始・再開(依頼)
     F->>F: Step 0(位置の確認 → 状態と履歴 → 開始時の検証 → 次の作業の選択)
@@ -171,8 +170,8 @@ sequenceDiagram
         S-->>F: spec.md(spec-generated)
         F-->>U: spec.md 提示
         U->>F: 承認(gate spec → spec-approved)
-        F->>D: タスク分解を委譲
-        D-->>F: tasks.md + 構造化結果(tasks-generated)
+        F->>D: タスク分解(1 パスのため委譲しない)
+        D-->>F: tasks.md(tasks-generated)
         F-->>U: tasks.md 提示
         U->>F: 承認(gate tasks → tasks-approved)
         F->>F: implementing

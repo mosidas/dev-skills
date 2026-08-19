@@ -46,3 +46,4 @@
 - [D-027](D-027-rm-rf-scope.md): `rm -rf` の禁止をリポジトリの中に限る
 - [D-028](D-028-roadmap-planner-fable.md): unit 分解のエージェントを Claude Fable 5 の high effort に割り当てる
 - [D-029](D-029-core-default-scope-from-lock.md): グループ名を省いた `install.py core` の配布範囲を導入済みの記録に合わせる
+- [D-030](D-030-decompose-inline-and-mutation-selfcheck.md): タスク分解を統括へ戻し、検出力の立証を実装者の自己点検で前倒しする

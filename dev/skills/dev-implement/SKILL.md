@@ -91,7 +91,8 @@ description: 実装部品(コア)。タスク定義(workdir の tasks.md)をも�
 2. **GREEN**: テストを通す最小実装を行う。
 3. **REFACTOR**: 全テストを維持したまま整理する。
 4. タスクの `_Requirements:_` が示す受け入れ基準を満たすことを確認する。公開インターフェース・ドメインモデルを追加・変更するタスクでは、事前条件・事後条件・不変条件の扱いを `../dev-core/references/contract-and-domain.md` に従って決め、テストで検証する。外部ライブラリ・フレームワークの API を使う場合は、使用バージョンの公式情報を出典にする(`../dev-core/references/source-driven.md`)。
-5. 実行時挙動に影響するタスクは、変更したフローについて実行時検証(`../dev-core/references/runtime-verification.md`)を行う。検証コマンドのグリーンで代替しない。実行できない場合は UNVERIFIED として報告に明示する。
+5. 受け入れ基準ごとに検出力の自己点検を行う。基準の否定に当たる定型変異を 1 件入れ、その基準を検証するテストが失敗することを確かめ、失敗しなければテストを補強する。変異は作業ツリーに残さない。変異の種類と判定の規律は `../dev-core/references/review-perspectives.md` §2.5 に従う(同§が定める適用する層の限定は、変異注入を**レビューが実行する**場面に掛かる。実装者が自分の書いたテストに対して行う点検はこれに当たらない)。
+6. 実行時挙動に影響するタスクは、変更したフローについて実行時検証(`../dev-core/references/runtime-verification.md`)を行う。検証コマンドのグリーンで代替しない。実行できない場合は UNVERIFIED として報告に明示する。
 
 テストが現実的でないタスク(設定・ドキュメント等)は、検証コマンド(ビルド・リント)で代替する。受け入れ基準はテストコードとして永続化する(`../dev-core/references/durable-info.md`)。
 
@@ -107,8 +108,8 @@ description: 実装部品(コア)。タスク定義(workdir の tasks.md)をも�
 
 各役割は `.claude/agents/` の定義で起動する。**役割→モデルの割当は各 agent 定義の `model` frontmatter が正本**。
 
-- **dev-implementer**(プロンプト: `./templates/implementer-prompt.md`): タスク固有情報・仕様の参照先(仕様文書の該当 ID・該当節)・Implementation Notes・注入知識を渡して実装させる。仕様の本文はプロンプトに転記せず、dev-implementer が参照先を読む。返却 `STATUS`: `READY_FOR_REVIEW` / `BLOCKED` / `NEEDS_CONTEXT`。タスク境界外の変更は返却の `OUT_OF_BOUNDARY`、既存テストへの変更は `TEST_CHANGES` で申告させる(無申告の境界外変更・無申告のテストの後退はレビューで `[Critical]` になる)。
-- **dev-reviewer**(プロンプト: `./templates/reviewer-prompt.md`): タスク定義(受け入れ基準)と実際の `git diff` を照合してレビューさせる。dev-implementer の `OUT_OF_BOUNDARY`・`TEST_CHANGES` 申告をプロンプトに転記して渡す(申告の有無で判定が分かれるため)。返却 `VERDICT`: `APPROVED` / `REJECTED`。
+- **dev-implementer**(プロンプト: `./templates/implementer-prompt.md`): タスク固有情報・仕様の参照先(仕様文書の該当 ID・該当節)・Implementation Notes・注入知識を渡して実装させる。仕様の本文はプロンプトに転記せず、dev-implementer が参照先を読む。返却 `STATUS`: `READY_FOR_REVIEW` / `BLOCKED` / `NEEDS_CONTEXT`。タスク境界外の変更は返却の `OUT_OF_BOUNDARY`、既存テストへの変更は `TEST_CHANGES` で申告させる(無申告の境界外変更・無申告のテストの後退はレビューで `[Critical]` になる)。受け入れ基準ごとの検出力の自己点検(定型変異を 1 件入れてテストが失敗するかの確認)を実装の一部として行わせ、結果を `MUTATION_CHECK` で申告させる。
+- **dev-reviewer**(プロンプト: `./templates/reviewer-prompt.md`): タスク定義(受け入れ基準)と実際の `git diff` を照合してレビューさせる。dev-implementer の `OUT_OF_BOUNDARY`・`TEST_CHANGES`・`MUTATION_CHECK` 申告をプロンプトに転記して渡す(申告の有無で判定が分かれるため)。`MUTATION_CHECK` の照合は静的に行わせ、**この層では変異注入を実行させない**(適用する層は最終検証パネルと出荷ゲート。正本: `../dev-core/references/review-perspectives.md` §2.5)。返却 `VERDICT`: `APPROVED` / `REJECTED`。
 - **dev-debugger**(プロンプト: `./templates/debugger-prompt.md`): 次のいずれかで起動する。クリーンな文脈で根本原因に当たり、リトライループを断ち切る。返却 `NEXT_ACTION`。
   - dev-implementer が `BLOCKED` を返した
   - dev-reviewer が同一タスクを 2 回 `REJECTED` した
