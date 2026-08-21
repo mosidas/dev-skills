@@ -44,6 +44,7 @@ description: 実装部品(コア)。タスク定義(workdir の tasks.md)をも�
 | 最終検証パネルの観点を選ぶとき(14.2)、または対象ファイルの行数超過に対して分割の要否を判断するとき(5.) | `../dev-core/references/review-perspectives.md` |
 | dev-debugger を起動するとき(9. の起動条件・10. の上限超過・14. の NO-GO 起因の行き詰まり) | `./templates/debugger-prompt.md` |
 | 全タスク完了後の最終検証を行うとき(14.) | `./templates/final-review-prompt.md` |
+| レビューの指摘を受けて修正するとき(再投入・最終検証 NO-GO・CI 失敗) | `../dev-core/references/review-response.md` |
 
 ## 3. 知識 port の注入
 
@@ -71,7 +72,8 @@ description: 実装部品(コア)。タスク定義(workdir の tasks.md)をも�
 ## 6. イテレーション規律
 
 - **1 イテレーション = 1 サブタスクのみ**。複数タスクをまとめて実装しない。例外は 6.2 が定める同形の小タスクのバッチに限る。
-- サイクル: dev-implementer 投入 → STATUS 解析 → dev-reviewer 投入 → VERDICT 解析 → 検証コマンド実行 → 選択的コミット & push → 進捗台帳へ 1 行追記(6.1)→ tasks.md のチェックを更新・再読込 → 次タスク。
+- サイクル: dev-implementer 投入 → STATUS 解析 → 差分の実在確認 → dev-reviewer 投入 → VERDICT 解析 → 検証コマンド実行 → 選択的コミット & push → 進捗台帳へ 1 行追記(6.1)→ tasks.md のチェックを更新・再読込 → 次タスク。
+- **差分の実在確認**: `READY_FOR_REVIEW` を受けたら、`git status --porcelain` と `git diff --stat` で変更が実在することを確かめてからレビューへ渡す。サブエージェントの成功報告そのものを完了の根拠にしない。差分が空、または申告した `CHANGED_FILES` と一致しない場合は、レビューを起動せず `NEEDS_CONTEXT` として扱い直す(実体の無い差分にレビュアーを 1 体使わない)。
 - イテレーション間で保持するのは 1 行サマリのみ。
 
 ### 6.1. コンテキストの圧縮をまたぐとき
@@ -118,6 +120,17 @@ description: 実装部品(コア)。タスク定義(workdir の tasks.md)をも�
 
 テストが現実的でないタスク(設定・ドキュメント等)は、検証コマンド(ビルド・リント)で代替する。受け入れ基準はテストコードとして永続化する(`../dev-core/references/durable-info.md`)。
 
+**失敗を観測していないテストは、欠陥を捕らえる能力を立証していない**。テストより先に実装コードを書いた場合は、そのコードを削除してからテストを書く(参照として残さない)。省略の言い分と反駁は次のとおりで、判断の前に照合する。出典は [obra/superpowers](https://github.com/obra/superpowers) の test-driven-development である。
+
+| 言い分 | 反駁 |
+| ------ | ---- |
+| 単純すぎてテストは要らない | 単純なコードも壊れる。テストは受け入れ基準が満たされた記録でもあり、凍結される中間生成物に代わって残る唯一の形である |
+| 後でテストを書く | 後から書いたテストは最初から通る。通ったことは、そのテストが欠陥を捕らえる能力の証明にならない |
+| 手で動かして確認した | 手の確認は再実行できず、何を確認したかも残らない。次の変更で同じ確認を繰り返すことになる |
+| 既に書いた実装を参照として残す | 残せば実装に合わせてテストを書く。それは後追いのテストと同じで、失敗を観測できない |
+| 先に探索が要る | 探索してよい。探索の産物は捨て、テストから書き直す |
+| テストが書きにくい | 設計が使いにくい兆候である。テストの都合ではなくインターフェースを見直す |
+
 ## 8. 非回帰(バグ修正・軽微変更)
 
 バグ修正や軽量タスク定義での直接実装では、既存の正しい挙動を壊さないことを優先する。
@@ -130,7 +143,7 @@ description: 実装部品(コア)。タスク定義(workdir の tasks.md)をも�
 
 各役割は `.claude/agents/` の定義で起動する。**役割→モデルの既定は各 agent 定義の `model` frontmatter が正本**とし、タスクの重さに応じた起動時の上書きは 9.1 に従う。
 
-- **dev-implementer**(プロンプト: `./templates/implementer-prompt.md`): タスク固有情報・仕様の参照先(仕様文書の該当 ID・該当節)・Implementation Notes・注入知識を渡して実装させる。仕様の本文はプロンプトに転記せず、dev-implementer が参照先を読む。返却 `STATUS`: `READY_FOR_REVIEW` / `BLOCKED` / `NEEDS_CONTEXT`。タスク境界外の変更は返却の `OUT_OF_BOUNDARY`、既存テストへの変更は `TEST_CHANGES` で申告させる(無申告の境界外変更・無申告のテストの後退はレビューで `[Critical]` になる)。受け入れ基準ごとの検出力の自己点検(定型変異を 1 件入れてテストが失敗するかの確認)を実装の一部として行わせ、結果を `MUTATION_CHECK` で申告させる。
+- **dev-implementer**(プロンプト: `./templates/implementer-prompt.md`): タスク固有情報・仕様の参照先(仕様文書の該当 ID・該当節)・Implementation Notes・注入知識を渡して実装させる。仕様の本文はプロンプトに転記せず、dev-implementer が参照先を読む。返却 `STATUS`: `READY_FOR_REVIEW` / `BLOCKED` / `NEEDS_CONTEXT`。タスク境界外の変更は返却の `OUT_OF_BOUNDARY`、既存テストへの変更は `TEST_CHANGES` で申告させる(無申告の境界外変更・無申告のテストの後退はレビューで `[Critical]` になる)。受け入れ基準ごとの検出力の自己点検(定型変異を 1 件入れてテストが失敗するかの確認)を実装の一部として行わせ、結果を `MUTATION_CHECK` で申告させる。レビュー却下に対する再投入では、dev-reviewer の `FINDINGS` を `<review_findings>` へ転記して渡す(指摘の扱いの規律は `../dev-core/references/review-response.md`。不明な指摘があれば着手させず `NEEDS_CONTEXT` を返させる)。
 - **dev-reviewer**(プロンプト: `./templates/reviewer-prompt.md`): タスク定義(受け入れ基準)と実際の `git diff` を照合してレビューさせる。dev-implementer の `OUT_OF_BOUNDARY`・`TEST_CHANGES`・`MUTATION_CHECK` 申告をプロンプトに転記して渡す(申告の有無で判定が分かれるため)。`MUTATION_CHECK` の照合は静的に行わせ、**この層では変異注入を実行させない**(適用する層は最終検証パネルと出荷ゲート。正本: `../dev-core/references/review-perspectives.md` §2.5)。返却 `VERDICT`: `APPROVED` / `REJECTED`。
 - **dev-debugger**(プロンプト: `./templates/debugger-prompt.md`): 次のいずれかで起動する。クリーンな文脈で根本原因に当たり、リトライループを断ち切る。返却 `NEXT_ACTION`。
   - dev-implementer が `BLOCKED` を返した
@@ -171,6 +184,8 @@ description: 実装部品(コア)。タスク定義(workdir の tasks.md)をも�
 - 1 タスクあたりの dev-debugger ラウンド: **最大 2 回**。
 - 検証(テスト/ビルド)失敗の修復ラウンド: **最大 3 回**。
 - 2 ラウンドのデバッグでも解決しない場合、tasks.md の該当タスクを `_Blocked: <根本原因>_` でマークし、次タスクへ進む(または停止してユーザーに報告)。
+- **上限への到達は、個別の修正が足りないことではなく構造の問題を示す兆候として扱う**。`_Blocked:` には根本原因に加えて、繰り返しの失敗が示したパターン(修正のたびに別の場所へ症状が出た・共有状態が次々に現れた・修正に作り直しが要る)と、dev-debugger の `ESCALATION` が挙げた構造上の論点を書く。
+- **上限に達したタスクに依存する後続タスクがある場合(`_Depends:` がそのタスクを指す)、次タスクへ進まず停止して報告する**。構造の誤りを残したまま先へ進むと、依存する全タスクがその上に積み上がり、後で戻す範囲が実装フェーズの大半に広がる。依存が無ければ次タスクへ進んでよい。
 
 ## 11. 学習の伝播
 
