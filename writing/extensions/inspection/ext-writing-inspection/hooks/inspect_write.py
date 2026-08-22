@@ -67,7 +67,9 @@ def main() -> None:
         return
     guides = lib.load_guides(HOOK_DIR)
     blocking = lib.blocking_findings(findings, config)
-    reason = lib.format_warning(path, findings, config, guides, blocking)
+    reason = lib.format_warning(
+        path, findings, config, guides, blocking, lib.load_phrase_okays(project)
+    )
     lib.emit({"decision": "block", "reason": reason})
 
 

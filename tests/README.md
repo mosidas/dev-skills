@@ -40,6 +40,7 @@ python3 -m unittest discover -s tests -t tests -p test_state.py
 | `test_meta_loc.py`      | `meta-core/meta_loc.py`    | 領域の割り当て・行数の数え方・除外条件                                 |
 | `test_guard_hooks.py`   | `ext-dev-guardrails/hooks/` | 破壊的な git 操作・一括ステージング・凍結済み成果物への書き込みの拒否、誤検出しないこと、exit code |
 | `test_inspection_hooks.py` | `ext-writing-inspection/hooks/` | 検査対象の判定・重大カテゴリの絞り込み・設定の上書き・警告文・完了ブロックと上限、検査できない環境での素通し |
+| `test_phrase_catalog.py` | `japanese-writing/scripts/forbidden_phrases.json` | NG/OK カタログの整合(重複・包含・OK 例の必須)と lint.py の検出語・severity の導出 |
 
 ## 4. 書き方の規律
 

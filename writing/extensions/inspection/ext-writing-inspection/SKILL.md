@@ -20,7 +20,7 @@ japanese-writing スキルは検査スクリプト(`lint.py`)と規範を持つ�
 
 - 検出の一覧(行番号・severity・カテゴリ・該当箇所)。
 - **検出箇所を含む文を丸ごと書き直す指示**。指摘された語だけを類語に置き換える対処を禁じる(語の置換では検出をすり抜けるだけの別の不自然さが残るため)。
-- カテゴリごとの書き直し指針と言い換え例(`hooks/rewrite_guides.json`)。
+- 語ごとの OK 言い換え例(検出された禁止語に対応。正本は導入先の `.claude/skills/japanese-writing/scripts/forbidden_phrases.json` の NG/OK カタログ)と、カテゴリごとの書き直し指針(`hooks/rewrite_guides.json`)。語を特定できない検出はカテゴリの指針だけになる。
 - 機械検出に出ない不自然さ(文脈のねじれ・冗長・常体と敬体の混在)をエージェント自身が判定して直す指示。
 
 ## 2. 検査の範囲と発火条件
@@ -64,6 +64,7 @@ ext-writing-inspection/
 └── settings.snippet.json
 ```
 
+- **参照**: 導入先の japanese-writing の lint.py(検査の実体)と NG/OK カタログ(語ごとの言い換え例)。カタログが読めない場合は言い換え例を省いて警告する。
 - **入力**: PostToolUse / Stop の JSON(標準入力)。`tool_name`・`tool_input` のファイルパス・`cwd`・`session_id`・`stop_hook_active` を読む。
 - **出力**: 指摘なしは exit 0(何も出力しない)。指摘ありは `{"decision": "block", "reason": ...}` の JSON(PostToolUse では警告のフィードバック、Stop では完了の差し戻し)。
 - **状態**: 検査したファイルの一覧とブロック回数を、一時ディレクトリ配下(`claude-ext-writing-inspection/<プロジェクトのハッシュ>-<セッション ID>.json`)に持つ。リポジトリには何も書かない。

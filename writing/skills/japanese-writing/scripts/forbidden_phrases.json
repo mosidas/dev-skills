@@ -1,0 +1,911 @@
+{
+  "_comment": "禁止語・LLM 常套句の NG/OK カタログ(正本)。lint.py が検出語と severity を、ext-writing-inspection の hook が OK 言い換え例を読む。規範の型の分類と判断基準は references/sentence.md 7. にある。語の追加はこのファイルに行い、部分文字列で他の語を包含させない(同一行での二重検出を生むため)。severity はコーパス校正済みの語を変更しない。",
+  "types": {
+    "conclusion": {
+      "label": "結論の押し付け・まとめ口調",
+      "ref": "sentence.md 7."
+    },
+    "preview": {
+      "label": "予告と空虚な動詞",
+      "ref": "sentence.md 7."
+    },
+    "posture": {
+      "label": "正面から系(姿勢だけの宣言)",
+      "ref": "sentence.md 7."
+    },
+    "empty_emphasis": {
+      "label": "空虚な形容・過剰な強調",
+      "ref": "sentence.md 7."
+    },
+    "formulaic_transition": {
+      "label": "定型導入・空疎な接続",
+      "ref": "sentence.md 7."
+    },
+    "hedging": {
+      "label": "予防線・弱い緩和",
+      "ref": "sentence.md 7."
+    },
+    "exclamation": {
+      "label": "感嘆・共感の演出",
+      "ref": "sentence.md 7."
+    },
+    "hearsay": {
+      "label": "伝聞・匿名の権威づけ・曖昧化",
+      "ref": "sentence.md 7."
+    },
+    "closing": {
+      "label": "締め・呼びかけの定型句",
+      "ref": "sentence.md 7."
+    },
+    "buzzword": {
+      "label": "宣伝調・誇張の常套語",
+      "ref": "sentence.md 7."
+    },
+    "vague": {
+      "label": "具体を省く語",
+      "ref": "sentence.md 3."
+    },
+    "imprecise": {
+      "label": "不正確・文脈依存の語",
+      "ref": "sentence.md 3."
+    }
+  },
+  "phrases": [
+    {
+      "ng": "と言えるでしょう",
+      "type": "conclusion",
+      "severity": "warn",
+      "ok": [
+        "言い切る(〜だ)",
+        "条件を明示して限定する(〜の場合は〜になる)"
+      ],
+      "note": "2026-07 コーパス校正済み"
+    },
+    {
+      "ng": "と言えるだろう",
+      "type": "conclusion",
+      "severity": "warn",
+      "ok": [
+        "言い切る(〜だ)",
+        "根拠を添えて断定する"
+      ],
+      "note": "2026-07 コーパス校正済み"
+    },
+    {
+      "ng": "と言えます",
+      "type": "conclusion",
+      "severity": "warn",
+      "ok": [
+        "言い切る(〜です)",
+        "根拠を先に書いて断定する"
+      ],
+      "note": "2026-07 コーパス校正済み"
+    },
+    {
+      "ng": "ということになるでしょう",
+      "type": "conclusion",
+      "severity": "warn",
+      "ok": [
+        "結論を直接書く(〜になる)"
+      ],
+      "note": "2026-07 コーパス校正済み"
+    },
+    {
+      "ng": "のではないでしょうか",
+      "type": "conclusion",
+      "severity": "warn",
+      "ok": [
+        "意見なら話者標識をつけて言い切る(筆者は〜と考える)"
+      ],
+      "note": "2026-07 コーパス校正済み"
+    },
+    {
+      "ng": "重要なのは",
+      "type": "conclusion",
+      "severity": "info",
+      "ok": [
+        "前置きを消して主張をそのまま書く",
+        "根拠・数値で重要さを示す(応答が 200ms を超えると離脱が増える)"
+      ],
+      "note": "2026-07 コーパス校正で人間側にも一定数出現する弱いシグナルと判定(severity を info に低下)"
+    },
+    {
+      "ng": "大切なのは",
+      "type": "conclusion",
+      "severity": "warn",
+      "ok": [
+        "前置きを消して主張をそのまま書く"
+      ],
+      "note": "2026-07 コーパス校正済み"
+    },
+    {
+      "ng": "ポイントは",
+      "type": "conclusion",
+      "severity": "info",
+      "ok": [
+        "前置きを消して要点そのものを書く"
+      ],
+      "note": "2026-07 コーパス校正で人間側にも一定数出現する弱いシグナルと判定(severity を info に低下)"
+    },
+    {
+      "ng": "結論から言うと",
+      "type": "conclusion",
+      "severity": "warn",
+      "ok": [
+        "宣言を消して結論そのものから書き始める"
+      ],
+      "note": "2026-07 コーパス校正済み"
+    },
+    {
+      "ng": "結論として",
+      "type": "conclusion",
+      "severity": "warn",
+      "ok": [
+        "結論そのものを書く(接続は内容でつなぐ)"
+      ],
+      "note": "2026-07 コーパス校正済み"
+    },
+    {
+      "ng": "いかがでしたか",
+      "type": "conclusion",
+      "severity": "warn",
+      "ok": [
+        "読者への問いかけをやめ、内容の帰結で締める"
+      ],
+      "note": "2026-07 コーパス校正済み"
+    },
+    {
+      "ng": "いかがでしょうか",
+      "type": "conclusion",
+      "severity": "warn",
+      "ok": [
+        "提案なら条件と根拠を書いて勧める(〜なら〜が向く)"
+      ],
+      "note": "2026-07 コーパス校正済み"
+    },
+    {
+      "ng": "まとめると",
+      "type": "conclusion",
+      "severity": "warn",
+      "ok": [
+        "新情報のない要約は削る",
+        "要約するなら 1 文で言い切る"
+      ],
+      "note": "2026-07 コーパス校正済み"
+    },
+    {
+      "ng": "総じて",
+      "type": "conclusion",
+      "severity": "warn",
+      "ok": [
+        "対象と範囲を明示する(3 案のうち 2 案は〜)"
+      ],
+      "note": "2026-07 コーパス校正済み"
+    },
+    {
+      "ng": "非常に重要",
+      "type": "empty_emphasis",
+      "severity": "warn",
+      "ok": [
+        "重要さの中身を書く(これを外すと〜が壊れる)"
+      ],
+      "note": "2026-07 コーパス校正済み"
+    },
+    {
+      "ng": "極めて重要",
+      "type": "empty_emphasis",
+      "severity": "warn",
+      "ok": [
+        "重要さの中身を書く(数値・帰結で示す)"
+      ],
+      "note": "2026-07 コーパス校正済み"
+    },
+    {
+      "ng": "言うまでもなく",
+      "type": "empty_emphasis",
+      "severity": "warn",
+      "ok": [
+        "言うまでもないなら書かない",
+        "必要なら根拠を書く"
+      ],
+      "note": "2026-07 コーパス校正済み"
+    },
+    {
+      "ng": "言うまでもありません",
+      "type": "empty_emphasis",
+      "severity": "warn",
+      "ok": [
+        "言うまでもないなら書かない"
+      ],
+      "note": "2026-07 コーパス校正済み"
+    },
+    {
+      "ng": "まさしく",
+      "type": "empty_emphasis",
+      "severity": "warn",
+      "ok": [
+        "強調語を消して事実の落差で示す"
+      ],
+      "note": "2026-07 コーパス校正済み"
+    },
+    {
+      "ng": "さて、",
+      "type": "formulaic_transition",
+      "severity": "info",
+      "ok": [
+        "転換は内容(出来事・疑問)でつなぐ"
+      ],
+      "note": "2026-07 コーパス校正で人間側にも一定数出現する弱いシグナルと判定(severity を info に低下)"
+    },
+    {
+      "ng": "それでは、",
+      "type": "formulaic_transition",
+      "severity": "warn",
+      "ok": [
+        "導入の合図を消して内容から始める"
+      ],
+      "note": "2026-07 コーパス校正済み"
+    },
+    {
+      "ng": "このように",
+      "type": "formulaic_transition",
+      "severity": "info",
+      "ok": [
+        "指示語のまとめを消す",
+        "指す内容を具体的に書く(この 3 手順で〜)"
+      ],
+      "note": "2026-07 コーパス校正で人間側にも一定数出現する弱いシグナルと判定(severity を info に低下)"
+    },
+    {
+      "ng": "このような中",
+      "type": "formulaic_transition",
+      "severity": "warn",
+      "ok": [
+        "状況を具体的に書く(受注が 2 割減るなか〜)"
+      ],
+      "note": "2026-07 コーパス校正済み"
+    },
+    {
+      "ng": "ここで注目したいのは",
+      "type": "formulaic_transition",
+      "severity": "warn",
+      "ok": [
+        "注目させたい事実をそのまま書く"
+      ],
+      "note": "2026-07 コーパス校正済み"
+    },
+    {
+      "ng": "見ていきましょう",
+      "type": "preview",
+      "severity": "warn",
+      "ok": [
+        "予告を消して内容から書き始める"
+      ],
+      "note": "2026-07 コーパス校正済み"
+    },
+    {
+      "ng": "紹介していきます",
+      "type": "preview",
+      "severity": "warn",
+      "ok": [
+        "予告を消して対象の説明から始める"
+      ],
+      "note": "2026-07 コーパス校正済み"
+    },
+    {
+      "ng": "解説していきます",
+      "type": "preview",
+      "severity": "warn",
+      "ok": [
+        "予告を消して解説そのものから始める"
+      ],
+      "note": "2026-07 コーパス校正済み"
+    },
+    {
+      "ng": "深掘りしていきます",
+      "type": "preview",
+      "severity": "warn",
+      "ok": [
+        "予告を消して分析の中身から始める"
+      ],
+      "note": "2026-07 コーパス校正済み"
+    },
+    {
+      "ng": "一概には言えません",
+      "type": "hedging",
+      "severity": "warn",
+      "ok": [
+        "言い切れない条件を具体的に書く(〜の場合は当てはまらない)"
+      ],
+      "note": "2026-07 コーパス校正済み"
+    },
+    {
+      "ng": "個人差がありますが",
+      "type": "hedging",
+      "severity": "warn",
+      "ok": [
+        "差が出る要因を書く(習熟度によって 1〜3 時間の幅がある)"
+      ],
+      "note": "2026-07 コーパス校正済み"
+    },
+    {
+      "ng": "あくまで一例ですが",
+      "type": "hedging",
+      "severity": "warn",
+      "ok": [
+        "例の位置づけを消して例そのものを書く"
+      ],
+      "note": "2026-07 コーパス校正済み"
+    },
+    {
+      "ng": "正面から扱う",
+      "type": "posture",
+      "severity": "warn",
+      "ok": [
+        "姿勢の宣言を消して、扱う内容そのものを書く"
+      ],
+      "note": "2026-07 コーパス校正済み"
+    },
+    {
+      "ng": "正面から見る",
+      "type": "posture",
+      "severity": "warn",
+      "ok": [
+        "姿勢の宣言を消して、見た結果を書く"
+      ],
+      "note": "2026-07 コーパス校正済み"
+    },
+    {
+      "ng": "正面から書く",
+      "type": "posture",
+      "severity": "warn",
+      "ok": [
+        "姿勢の宣言を消して、内容を書く"
+      ],
+      "note": "2026-07 コーパス校正済み"
+    },
+    {
+      "ng": "正面から立てる",
+      "type": "posture",
+      "severity": "warn",
+      "ok": [
+        "姿勢の宣言を消して、立てた問いを書く"
+      ],
+      "note": "2026-07 コーパス校正済み"
+    },
+    {
+      "ng": "正面から回収する",
+      "type": "posture",
+      "severity": "warn",
+      "ok": [
+        "姿勢の宣言を消して、回収の中身を書く"
+      ],
+      "note": "2026-07 コーパス校正済み"
+    },
+    {
+      "ng": "不可欠",
+      "type": "empty_emphasis",
+      "severity": "info",
+      "ok": [
+        "必要性を具体に書く(〜が無いと〜できない)"
+      ],
+      "note": "2026-07 コーパス校正で人間側にも一定数出現する弱いシグナルと判定(severity を info に低下)"
+    },
+    {
+      "ng": "核心的",
+      "type": "empty_emphasis",
+      "severity": "warn",
+      "ok": [
+        "何の核心かを書く(障害の直接原因は〜)"
+      ],
+      "note": "2026-07 コーパス校正済み"
+    },
+    {
+      "ng": "鍵となる",
+      "type": "empty_emphasis",
+      "severity": "warn",
+      "ok": [
+        "何を左右するのかを書く(〜の成否は〜で決まる)"
+      ],
+      "note": "2026-07 コーパス校正済み"
+    },
+    {
+      "ng": "根本的な",
+      "type": "empty_emphasis",
+      "severity": "warn",
+      "ok": [
+        "どこまで遡るのかを書く(設計時の前提〜に由来する)"
+      ],
+      "note": "2026-07 コーパス校正済み"
+    },
+    {
+      "ng": "多角的",
+      "type": "empty_emphasis",
+      "severity": "warn",
+      "ok": [
+        "どの角度から見たかを列挙する(性能・運用・費用の 3 面で)"
+      ],
+      "note": "2026-07 コーパス校正済み"
+    },
+    {
+      "ng": "包括的",
+      "type": "empty_emphasis",
+      "severity": "warn",
+      "ok": [
+        "範囲を明示する(A〜C のすべてを対象に)"
+      ],
+      "note": "2026-07 コーパス校正済み"
+    },
+    {
+      "ng": "総合的",
+      "type": "empty_emphasis",
+      "severity": "warn",
+      "ok": [
+        "判断材料を列挙する(速度と保守性を併せて)"
+      ],
+      "note": "2026-07 コーパス校正済み"
+    },
+    {
+      "ng": "掘り下げる",
+      "type": "preview",
+      "severity": "warn",
+      "ok": [
+        "作業の宣言を消して、掘り下げた結果を書く"
+      ],
+      "note": "2026-07 コーパス校正済み"
+    },
+    {
+      "ng": "深掘りする",
+      "type": "preview",
+      "severity": "warn",
+      "ok": [
+        "作業の宣言を消して、分析の結果を書く"
+      ],
+      "note": "2026-07 コーパス校正済み"
+    },
+    {
+      "ng": "言語化する",
+      "type": "preview",
+      "severity": "warn",
+      "ok": [
+        "宣言を消して、言語化した内容そのものを書く"
+      ],
+      "note": "2026-07 コーパス校正済み"
+    },
+    {
+      "ng": "について見ていく",
+      "type": "preview",
+      "severity": "warn",
+      "ok": [
+        "予告を消して内容から書き始める"
+      ],
+      "note": "2026-07 コーパス校正済み"
+    },
+    {
+      "ng": "を探求する",
+      "type": "preview",
+      "severity": "warn",
+      "ok": [
+        "何をどう調べたかを具体に書く"
+      ],
+      "note": "2026-07 コーパス校正済み"
+    },
+    {
+      "ng": "要するに",
+      "type": "conclusion",
+      "severity": "info",
+      "ok": [
+        "直前の言い換えなら削って一本化する",
+        "新情報があるなら要約でなくその情報を書く"
+      ],
+      "note": "2026-08 拡充(コーパス未校正のため severity は保守的に付与)"
+    },
+    {
+      "ng": "ということになります",
+      "type": "conclusion",
+      "severity": "info",
+      "ok": [
+        "結論を直接言い切る(〜になる)"
+      ],
+      "note": "2026-08 拡充(コーパス未校正のため severity は保守的に付与)"
+    },
+    {
+      "ng": "と言っても過言ではありません",
+      "type": "conclusion",
+      "severity": "warn",
+      "ok": [
+        "過言なら書かない。根拠を添えて言い切る"
+      ],
+      "note": "2026-08 拡充(コーパス未校正のため severity は保守的に付与)"
+    },
+    {
+      "ng": "と言っても過言ではない",
+      "type": "conclusion",
+      "severity": "warn",
+      "ok": [
+        "過言なら書かない。根拠を添えて言い切る"
+      ],
+      "note": "2026-08 拡充(コーパス未校正のため severity は保守的に付与)"
+    },
+    {
+      "ng": "見ていきます",
+      "type": "preview",
+      "severity": "warn",
+      "ok": [
+        "予告を消して内容から書き始める"
+      ],
+      "note": "2026-08 拡充(コーパス未校正のため severity は保守的に付与)"
+    },
+    {
+      "ng": "掘り下げていきます",
+      "type": "preview",
+      "severity": "warn",
+      "ok": [
+        "予告を消して分析の中身から始める"
+      ],
+      "note": "2026-08 拡充(コーパス未校正のため severity は保守的に付与)"
+    },
+    {
+      "ng": "探っていきます",
+      "type": "preview",
+      "severity": "warn",
+      "ok": [
+        "予告を消して調べた結果から書く"
+      ],
+      "note": "2026-08 拡充(コーパス未校正のため severity は保守的に付与)"
+    },
+    {
+      "ng": "について紹介します",
+      "type": "preview",
+      "severity": "warn",
+      "ok": [
+        "予告を消して対象の説明から始める"
+      ],
+      "note": "2026-08 拡充(コーパス未校正のため severity は保守的に付与)"
+    },
+    {
+      "ng": "していきたいと思います",
+      "type": "preview",
+      "severity": "warn",
+      "ok": [
+        "言い切る(〜する)"
+      ],
+      "note": "2026-08 拡充(コーパス未校正のため severity は保守的に付与)"
+    },
+    {
+      "ng": "劇的に",
+      "type": "empty_emphasis",
+      "severity": "info",
+      "ok": [
+        "変化量を数値で示す(処理時間を 3 分の 1 に)"
+      ],
+      "note": "2026-08 拡充(コーパス未校正のため severity は保守的に付与)"
+    },
+    {
+      "ng": "飛躍的に",
+      "type": "empty_emphasis",
+      "severity": "info",
+      "ok": [
+        "変化量を数値で示す"
+      ],
+      "note": "2026-08 拡充(コーパス未校正のため severity は保守的に付与)"
+    },
+    {
+      "ng": "圧倒的な",
+      "type": "empty_emphasis",
+      "severity": "info",
+      "ok": [
+        "差の中身を書く(同条件で 4 倍のスループット)"
+      ],
+      "note": "2026-08 拡充(コーパス未校正のため severity は保守的に付与)"
+    },
+    {
+      "ng": "計り知れない",
+      "type": "empty_emphasis",
+      "severity": "warn",
+      "ok": [
+        "測れないなら範囲や事例で示す"
+      ],
+      "note": "2026-08 拡充(コーパス未校正のため severity は保守的に付与)"
+    },
+    {
+      "ng": "重要な役割を果た",
+      "type": "empty_emphasis",
+      "severity": "warn",
+      "ok": [
+        "何をどうするかを動詞で書く(〜が〜を防いでいる)"
+      ],
+      "note": "2026-08 拡充(コーパス未校正のため severity は保守的に付与)"
+    },
+    {
+      "ng": "それでは早速",
+      "type": "formulaic_transition",
+      "severity": "warn",
+      "ok": [
+        "導入の合図を消して内容から始める"
+      ],
+      "note": "2026-08 拡充(コーパス未校正のため severity は保守的に付与)"
+    },
+    {
+      "ng": "ご存知でしょうか",
+      "type": "formulaic_transition",
+      "severity": "warn",
+      "ok": [
+        "問いかけをやめて事実から書く"
+      ],
+      "note": "2026-08 拡充(コーパス未校正のため severity は保守的に付与)"
+    },
+    {
+      "ng": "気になりますよね",
+      "type": "formulaic_transition",
+      "severity": "warn",
+      "ok": [
+        "共感の演出を消して、疑問に答える内容を書く"
+      ],
+      "note": "2026-08 拡充(コーパス未校正のため severity は保守的に付与)"
+    },
+    {
+      "ng": "なんですよね",
+      "type": "formulaic_transition",
+      "severity": "info",
+      "ok": [
+        "言い切る(〜だ・〜です)"
+      ],
+      "note": "2026-08 拡充(コーパス未校正のため severity は保守的に付与)"
+    },
+    {
+      "ng": "という側面もあります",
+      "type": "hedging",
+      "severity": "info",
+      "ok": [
+        "側面の中身を条件つきで書く(〜の場合は〜が起きる)"
+      ],
+      "note": "2026-08 拡充(コーパス未校正のため severity は保守的に付与)"
+    },
+    {
+      "ng": "とも限りません",
+      "type": "hedging",
+      "severity": "info",
+      "ok": [
+        "例外の条件を具体的に書く"
+      ],
+      "note": "2026-08 拡充(コーパス未校正のため severity は保守的に付与)"
+    },
+    {
+      "ng": "と言われています",
+      "type": "hearsay",
+      "severity": "info",
+      "ok": [
+        "出典を示す(〜の調査では〜)",
+        "意見なら話者標識をつける(筆者は〜と考える)"
+      ],
+      "note": "2026-08 拡充(コーパス未校正のため severity は保守的に付与)"
+    },
+    {
+      "ng": "という声もあります",
+      "type": "hearsay",
+      "severity": "warn",
+      "ok": [
+        "誰の声かを書く(利用者アンケートでは 3 割が〜)"
+      ],
+      "note": "2026-08 拡充(コーパス未校正のため severity は保守的に付与)"
+    },
+    {
+      "ng": "という声もある",
+      "type": "hearsay",
+      "severity": "warn",
+      "ok": [
+        "誰の声かを書く"
+      ],
+      "note": "2026-08 拡充(コーパス未校正のため severity は保守的に付与)"
+    },
+    {
+      "ng": "ということです",
+      "type": "hearsay",
+      "severity": "info",
+      "ok": [
+        "伝聞のまとめを消して事実を直接書く"
+      ],
+      "note": "2026-08 拡充(コーパス未校正のため severity は保守的に付与)"
+    },
+    {
+      "ng": "ではないかと思います",
+      "type": "hearsay",
+      "severity": "info",
+      "ok": [
+        "確信度をラベルで書く(【要確認】・〜と推定する)"
+      ],
+      "note": "2026-08 拡充(コーパス未校正のため severity は保守的に付与)"
+    },
+    {
+      "ng": "注目されています",
+      "type": "hearsay",
+      "severity": "warn",
+      "ok": [
+        "誰が何を根拠に注目しているかを書く"
+      ],
+      "note": "2026-08 拡充(コーパス未校正のため severity は保守的に付与)"
+    },
+    {
+      "ng": "話題になっています",
+      "type": "hearsay",
+      "severity": "warn",
+      "ok": [
+        "具体的な事実を書く(〜が公開 1 週間で〜件使われた)"
+      ],
+      "note": "2026-08 拡充(コーパス未校正のため severity は保守的に付与)"
+    },
+    {
+      "ng": "驚くべきことに",
+      "type": "exclamation",
+      "severity": "warn",
+      "ok": [
+        "演出を消して事実の落差そのものを書く"
+      ],
+      "note": "2026-08 拡充(コーパス未校正のため severity は保守的に付与)"
+    },
+    {
+      "ng": "興味深いことに",
+      "type": "exclamation",
+      "severity": "warn",
+      "ok": [
+        "演出を消して事実を書き、意外さは前後の対比で示す"
+      ],
+      "note": "2026-08 拡充(コーパス未校正のため severity は保守的に付与)"
+    },
+    {
+      "ng": "参考になれば幸いです",
+      "type": "closing",
+      "severity": "warn",
+      "ok": [
+        "締めの定型を消して内容の帰結で終える"
+      ],
+      "note": "2026-08 拡充(コーパス未校正のため severity は保守的に付与)"
+    },
+    {
+      "ng": "お役に立てれば幸いです",
+      "type": "closing",
+      "severity": "warn",
+      "ok": [
+        "締めの定型を消して内容の帰結で終える"
+      ],
+      "note": "2026-08 拡充(コーパス未校正のため severity は保守的に付与)"
+    },
+    {
+      "ng": "ゲームチェンジャー",
+      "type": "buzzword",
+      "severity": "warn",
+      "ok": [
+        "何が何を置き換えるのかを書く"
+      ],
+      "note": "2026-08 拡充(コーパス未校正のため severity は保守的に付与)"
+    },
+    {
+      "ng": "シームレスに",
+      "type": "buzzword",
+      "severity": "info",
+      "ok": [
+        "無くなる手作業・切り替えを具体に書く"
+      ],
+      "note": "2026-08 拡充(コーパス未校正のため severity は保守的に付与)"
+    },
+    {
+      "ng": "進化を遂げ",
+      "type": "buzzword",
+      "severity": "warn",
+      "ok": [
+        "何がどう変わったかを書く(v2 で〜が〜になった)"
+      ],
+      "note": "2026-08 拡充(コーパス未校正のため severity は保守的に付与)"
+    },
+    {
+      "ng": "徹底解説",
+      "type": "buzzword",
+      "severity": "warn",
+      "ok": [
+        "範囲を具体に書く(全 12 個の設定項目を順に)"
+      ],
+      "note": "2026-08 拡充(コーパス未校正のため severity は保守的に付与)"
+    },
+    {
+      "ng": "完全ガイド",
+      "type": "buzzword",
+      "severity": "warn",
+      "ok": [
+        "範囲と前提を具体に書く"
+      ],
+      "note": "2026-08 拡充(コーパス未校正のため severity は保守的に付与)"
+    },
+    {
+      "ng": "無限の可能性",
+      "type": "buzzword",
+      "severity": "warn",
+      "ok": [
+        "実際にできることを列挙する"
+      ],
+      "note": "2026-08 拡充(コーパス未校正のため severity は保守的に付与)"
+    },
+    {
+      "ng": "様々な",
+      "type": "vague",
+      "severity": "info",
+      "ok": [
+        "代表例を 2〜3 挙げる(Chrome・Safari・Edge で〜)"
+      ],
+      "note": "2026-08 拡充(コーパス未校正のため severity は保守的に付与)"
+    },
+    {
+      "ng": "多様な",
+      "type": "vague",
+      "severity": "info",
+      "ok": [
+        "代表例を 2〜3 挙げる"
+      ],
+      "note": "2026-08 拡充(コーパス未校正のため severity は保守的に付与)"
+    },
+    {
+      "ng": "落とし込む",
+      "type": "imprecise",
+      "severity": "info",
+      "ok": [
+        "事象を名指しする動詞に変える(反映する・実装する・書き写す)"
+      ],
+      "note": "2026-08 拡充(コーパス未校正のため severity は保守的に付与)"
+    },
+    {
+      "ng": "欠く",
+      "type": "imprecise",
+      "severity": "info",
+      "ok": [
+        "事象を名指しする(〜が存在しない・〜が未実装・〜を満たさない)"
+      ],
+      "note": "2026-08 拡充(運用での指摘。辞書形の文字列照合のみで活用形は検出されない。コーパス未校正のため severity は保守的に付与)"
+    },
+    {
+      "ng": "落ちる",
+      "type": "imprecise",
+      "severity": "info",
+      "ok": [
+        "事象を名指しする(仕様から漏れる→反映されない・物→落下する・試験→不合格になる)"
+      ],
+      "note": "2026-08 拡充(運用での指摘。辞書形の文字列照合のみで活用形は検出されない。コーパス未校正のため severity は保守的に付与)"
+    },
+    {
+      "ng": "落とす",
+      "type": "imprecise",
+      "severity": "info",
+      "ok": [
+        "事象を名指しする(実装に落とす→実装に反映する・仕様化する・書き写す)"
+      ],
+      "note": "2026-08 拡充(運用での指摘。辞書形の文字列照合のみで活用形は検出されない。コーパス未校正のため severity は保守的に付与)"
+    },
+    {
+      "ng": "逆方向に",
+      "type": "imprecise",
+      "severity": "info",
+      "ok": [
+        "何から見てどちら向きかを書く(処理の流れと逆に・依存の向きと逆に)"
+      ],
+      "note": "2026-08 拡充(運用での指摘。辞書形の文字列照合のみで活用形は検出されない。コーパス未校正のため severity は保守的に付与)"
+    },
+    {
+      "ng": "要る",
+      "type": "imprecise",
+      "severity": "info",
+      "ok": [
+        "「必要になる」「〜を要する」と書く"
+      ],
+      "note": "2026-08 拡充(運用での指摘。辞書形の文字列照合のみで活用形は検出されない。コーパス未校正のため severity は保守的に付与)"
+    }
+  ],
+  "removed": [
+    {
+      "ng": "最後に",
+      "reason": "2026-07 コーパス校正で削除(人間 48 回 vs AI 2 回。日常語であって AI 手癖ではない。deep-analysis.md §5)"
+    },
+    {
+      "ng": "まさに",
+      "reason": "2026-07 コーパス校正で削除(人間 24 回 vs AI 0 回。日常語であって AI 手癖ではない。deep-analysis.md §5)"
+    }
+  ]
+}

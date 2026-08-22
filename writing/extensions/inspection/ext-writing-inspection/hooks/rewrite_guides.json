@@ -46,7 +46,7 @@
   },
   "inanimate_subject_morph": {
     "instruction": "無生物主語 + 他動詞(形態素検出)。主語を人や状況に戻すか、述語を状態描写に変える(sentence.md 8.)。",
-    "example": { "before": "このデータは改善の必要性を証明している。", "after": "このデータを見るかぎり、改善が要る。" }
+    "example": { "before": "このデータは改善の必要性を証明している。", "after": "このデータを見るかぎり、改善が必要だ。" }
   },
   "english_syntax_cleft_because": {
     "instruction": "「それは〜である。なぜなら〜だ」の 2 文構成(cleft 構文の直訳)。理由を 1 文にまとめるか、理由から先に語る(sentence.md 8.)。",
