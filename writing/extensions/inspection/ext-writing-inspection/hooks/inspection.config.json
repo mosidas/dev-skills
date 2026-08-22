@@ -1,0 +1,29 @@
+{
+  "_comment": "ext-writing-inspection の検査設定。利用側の恒久的な変更は .claude/ext-writing-inspection.config.json(同じキーの浅い上書き)に書く(バンドルの再導入で消えないため)。",
+  "min_japanese_chars": 30,
+  "exclude": [],
+  "lint_timeout_seconds": 120,
+  "stop_max_blocks": 3,
+  "max_findings_in_warning": 10,
+  "blocking": [
+    { "category": "forbidden_phrase", "min_severity": "warn" },
+    { "category": "antithesis_repetition", "min_severity": "critical" }
+  ],
+  "doctypes": [
+    {
+      "name": "business",
+      "paths": ["**minutes**", "**proposal**", "**議事録**"],
+      "genre": "business",
+      "disabled_categories": [],
+      "inspect": true
+    },
+    {
+      "name": "fiction",
+      "paths": ["**fiction/**", "**novel/**"],
+      "genre": "essay",
+      "disabled_categories": ["forbidden_phrase", "nominal_ending", "repeated_sentence_lead"],
+      "inspect": true
+    }
+  ],
+  "default_doctype": { "genre": null, "disabled_categories": [], "inspect": true }
+}

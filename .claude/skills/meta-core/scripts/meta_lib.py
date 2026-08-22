@@ -206,6 +206,25 @@ def group_subdirs(root: Path, subdir: str) -> list[Path]:
     return [group / subdir for group in groups(root) if (group / subdir).is_dir()]
 
 
+def bundle_dirs(root: Path) -> list[Path]:
+    """拡張バンドル 1 件ごとのディレクトリを列挙する(全グループ横断)。
+
+    バンドルは `<グループ>/extensions/<バンドル群>/<バンドル名>/` にあり、SKILL.md を
+    持つものだけを実在とみなす(install.py の resolve_ext と同じ判定)。
+    """
+    return sorted(
+        (
+            bundle
+            for ext_dir in group_subdirs(root, EXTENSIONS_SUBDIR)
+            for bundle_group in ext_dir.iterdir()
+            if bundle_group.is_dir()
+            for bundle in bundle_group.iterdir()
+            if bundle.is_dir() and (bundle / "SKILL.md").is_file()
+        ),
+        key=lambda p: p.name,
+    )
+
+
 def agent_files(root: Path) -> list[Path]:
     """エージェント定義の Markdown を列挙する(全グループ横断)。"""
     return sorted(

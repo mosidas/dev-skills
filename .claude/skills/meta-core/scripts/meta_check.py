@@ -129,6 +129,12 @@ def agent_names(root: Path) -> set[str]:
     return {p.stem for p in meta_lib.agent_files(root)}
 
 
+def bundle_names(root: Path) -> set[str]:
+    """拡張バンドルの名前。導入先では `.claude/skills/<バンドル名>/` になるため、
+    部品名の実在検査・inject 宛先の検査でスキルと同じ既知の名前として扱う。"""
+    return {p.name for p in meta_lib.bundle_dirs(root)}
+
+
 def all_docs(root: Path) -> list[Path]:
     """参照実在検査の対象。
 
@@ -419,7 +425,7 @@ def main() -> None:
             die("スキルのグループを含むルートが見つからない(--root で指定する)")
         root = found
 
-    skills = skill_names(root)
+    skills = skill_names(root) | bundle_names(root)
     agents = agent_names(root)
 
     report = Report()

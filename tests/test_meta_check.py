@@ -343,6 +343,23 @@ class PartNameTest(MetaCheckTestCase):
         self.add_skill("dev-spec", body="dev-spec と dev-skills を挙げる")
         self.assertEqual(self.run_check().findings, [])
 
+    def test_実在する拡張バンドル名は指摘しない(self) -> None:
+        """バンドル名は導入先でスキル名になるため、既知の名前として扱う(D-035)。"""
+        d = self.root / "dev" / "extensions" / "guardrails" / "ext-x"
+        d.mkdir(parents=True)
+        (d / "SKILL.md").write_text(
+            "---\nname: ext-x\ndescription: 説明\n---\n", encoding="utf-8"
+        )
+        self.add_skill("dev-spec", body="ext-x を導入する")
+        report = meta_check.Report()
+        meta_check.check_part_names(
+            self.root,
+            meta_check.skill_names(self.root) | meta_check.bundle_names(self.root),
+            meta_check.agent_names(self.root),
+            report,
+        )
+        self.assertEqual(report.findings, [])
+
 
     def test_規約を宣言しないグループのスキル名は照合しない(self) -> None:
         """名前らしさの判定基準が無い群に、当て推量の指摘を出さない(D-013)。"""

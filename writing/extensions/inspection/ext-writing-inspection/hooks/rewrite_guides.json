@@ -1,0 +1,79 @@
+{
+  "_comment": "lint.py の検出カテゴリごとの書き直し指針と言い換え例。hook の警告に同梱される。規範の正本は導入先の .claude/skills/japanese-writing/references/(sentence.md・composition.md・paragraph.md・inspection.md)にあり、本ファイルは警告へ添える要約に留まる。",
+  "forbidden_phrase": {
+    "instruction": "常套句で強調・予告・まとめの感触だけを足している。型を削り、具体的な内容そのものから書き直す(sentence.md 7.)。",
+    "example": { "before": "重要なのは応答速度です。", "after": "応答が 200ms を超えると離脱が目に見えて増える。" }
+  },
+  "translationese": {
+    "instruction": "英語直訳調の言い回し。その言い回しを選ぶ必然性が文脈になければ、日本語として自然な形へ文ごと組み替える(sentence.md 8.)。",
+    "example": { "before": "このツールを使うことで、作業時間を短縮することができる。", "after": "このツールを使うと、作業時間が短縮できる。" }
+  },
+  "translationese_morph": {
+    "instruction": "形態素列で検出した翻訳調。「〜することができる」「〜を行う」等は可能形・単純な動詞へ文ごと書き直す(sentence.md 8.)。",
+    "example": { "before": "設定の変更を行うことが可能です。", "after": "設定を変更できます。" }
+  },
+  "antithesis_repetition": {
+    "instruction": "「〜ではなく」型の対比が繰り返されている。最も重要な対比だけ残し、他は肯定文か具体例へ変える(sentence.md 4.)。",
+    "example": { "before": "これは手段ではなく目的だ。速さではなく正確さが要る。", "after": "これは目的そのものだ。正確さを最優先にする。" }
+  },
+  "low_sentence_variance": {
+    "instruction": "文長が均質でリズムが単調。一番言いたい文を短く切り、背景説明はあえて長くして、短文と長文を隣接させる(sentence.md 4.)。"
+  },
+  "low_burstiness": {
+    "instruction": "文長の起伏が乏しい。段落の要点を 20 字前後の短文で言い切り、その前後に長い説明文を置いてリズムを作る(sentence.md 4.)。"
+  },
+  "nominal_ending": {
+    "instruction": "体言止めが 1 つもないことの参考情報。機械的に増やさない。開発ドキュメントでは体言止めを避ける規範(format.md 3.)が優先される。"
+  },
+  "uniform_paragraph_structure": {
+    "instruction": "段落あたりの文数が揃いすぎている。重要な段落を厚く、そうでない段落を短くして濃淡をつける(composition.md 4.6)。"
+  },
+  "repeated_sentence_lead": {
+    "instruction": "同じ書き出しの型を使い回している。書き出しを変えるか、文構造ごと組み替える(sentence.md 4.)。意図的な反復なら残してよい。"
+  },
+  "repeated_syntax_template": {
+    "instruction": "同じ構文の骨格を使い回している。時系列・因果の順に文を分解し直すなど、骨格ごと組み替える(sentence.md 4.)。"
+  },
+  "low_lexical_diversity_ttr": {
+    "instruction": "語彙の使い回し。類語的な言い換えでなく、より具体的な語(固有名詞・数値・動作)への置き換えを探す(sentence.md 3.)。"
+  },
+  "low_lexical_diversity_mtld": {
+    "instruction": "語彙の使い回し。類語的な言い換えでなく、より具体的な語(固有名詞・数値・動作)への置き換えを探す(sentence.md 3.)。"
+  },
+  "english_syntax_inanimate_subject": {
+    "instruction": "無生物主語 + 他動詞(This fact suggests の直訳)。主語を人や状況に戻すか、述語を状態描写に変える(sentence.md 8.)。",
+    "example": { "before": "この事実は、従来の前提が誤っていたことを示している。", "after": "この事実から、従来の前提が誤っていたと分かる。" }
+  },
+  "inanimate_subject_morph": {
+    "instruction": "無生物主語 + 他動詞(形態素検出)。主語を人や状況に戻すか、述語を状態描写に変える(sentence.md 8.)。",
+    "example": { "before": "このデータは改善の必要性を証明している。", "after": "このデータを見るかぎり、改善が要る。" }
+  },
+  "english_syntax_cleft_because": {
+    "instruction": "「それは〜である。なぜなら〜だ」の 2 文構成(cleft 構文の直訳)。理由を 1 文にまとめるか、理由から先に語る(sentence.md 8.)。",
+    "example": { "before": "それは単純な話ではない。なぜなら、利害が絡み合っているからだ。", "after": "利害が絡み合っていて、単純な話ではない。" }
+  },
+  "low_specificity": {
+    "instruction": "固有名詞・数値・実例が乏しい一般論の段落。言い回しでなく素材の問題であり、集め直してから書き直す(composition.md 3.6・paragraph.md 4.)。"
+  },
+  "paragraph_lead_conjunction": {
+    "instruction": "段落頭の接続詞が多い。接続詞を削り、内容そのもので前の段落とつなげる(sentence.md 7. の定型導入)。"
+  },
+  "high_length_autocorrelation": {
+    "instruction": "隣接する文の長さが似通い続けている。段落ごとに要点の短文を 1 つ立て、説明文と長短を交互にする(sentence.md 4.)。"
+  },
+  "boilerplate_heading": {
+    "instruction": "「まとめ」「はじめに」等の定型見出し。その節の結論を要約した見出しへ言い換える(composition.md 7.)。"
+  },
+  "numbered_phase_structure": {
+    "instruction": "番号付きフェーズ・ステップの定型構造。本当に手順なのかを確かめ、説明なら地の文へ戻す(composition.md 4.6)。"
+  },
+  "high_bold_density": {
+    "instruction": "太字が多すぎて強調が効いていない。本当に立てたい 1〜2 箇所へ絞る(format.md)。"
+  },
+  "high_bullet_ratio": {
+    "instruction": "箇条書きへの偏り。因果・経緯が隠れている項目は地の文へ戻す。真に並列な一覧だけ残す(composition.md)。"
+  },
+  "high_emoji_symbol_density": {
+    "instruction": "絵文字・記号による演出が多い。事実の落差そのもので伝え、装飾を削る(sentence.md 5.)。"
+  }
+}

@@ -1,6 +1,6 @@
 # dev-skills
 
-Claude Code 向けの汎用スキル群。開発の部品(dev-spec: 壁打ちで契約と受け入れ基準を確定 / dev-decompose / dev-implement / dev-release)とそれらを束ねる SDD ワークフロー(flow-sdd)、拡張バンドル(dev/extensions/)に加えて、日本語の技術文書の作成規範(japanese-writing)とスキルの設計規範(skill-authoring)を用途ごとのグループで持つ。
+Claude Code 向けの汎用スキル群。開発の部品(dev-spec: 壁打ちで契約と受け入れ基準を確定 / dev-decompose / dev-implement / dev-release)とそれらを束ねる SDD ワークフロー(flow-sdd)、拡張バンドル(dev/extensions/・writing/extensions/)に加えて、日本語の技術文書の作成規範(japanese-writing)とスキルの設計規範(skill-authoring)を用途ごとのグループで持つ。
 
 設計思想・レイヤー構成・規律は [.meta/DESIGN.md](.meta/DESIGN.md) を参照。
 
@@ -24,7 +24,9 @@ dev-skills/
 │   └── extensions/              # Layer 3: 拡張バンドル(<バンドル群>/ 配下に ext-*・flow-*)
 │       └── guardrails/          #   安全制約を hook で強制するバンドル群(ext-dev-guardrails)
 ├── writing/                     # 用途グループ: 文書作成(配布する)
-│   └── skills/japanese-writing/ # 日本語の開発ドキュメント・技術文書の作成規範
+│   ├── skills/japanese-writing/ # 日本語の開発ドキュメント・技術文書の作成規範
+│   └── extensions/              # 拡張バンドル
+│       └── inspection/          #   検査を hook で発火させるバンドル群(ext-writing-inspection)
 ├── authoring/                   # 用途グループ: スキル作成(配布する)
 │   └── skills/skill-authoring/  # スキルの設計規範
 ├── .claude/
@@ -37,7 +39,7 @@ dev-skills/
 
 グループごとに異なる前提(部品名らしさ・状態名らしさ・レイヤーの割り当て)は、グループ直下の `group.json` が宣言する。宣言を持たないグループは既定で成立し、`meta-*` は特定のグループの構造を前提にしない(D-013)。
 
-port(`ports/`)と拡張バンドル(`extensions/`)はグループの機構であり、グループ配下に置く。どちらも dev グループの仕組みで、`writing`・`authoring` は持たない。`skills/`・`agents/` の外にあるため配布されず、`meta-*` はグループ配下を走査する(D-014)。
+port(`ports/`)と拡張バンドル(`extensions/`)はグループの機構であり、グループ配下に置く。port は dev グループだけが持ち、拡張バンドルは dev(guardrails)と writing(inspection)が持つ。`skills/`・`agents/` の外にあるため配布されず、`meta-*` はグループ配下を走査する(D-014)。
 
 ## 導入
 
@@ -66,6 +68,6 @@ python3 install.py status --target /path/to/project
 
 各コマンドは `--dry-run` で変更せずに実行内容を確認できる(status を除く)。
 
-拡張バンドルは hooks を持つことがあり、その場合は `settings.snippet.json` の内容を利用側の `.claude/settings.json` へ冪等マージする(`remove` でマージ分だけを取り消す)。現在収録しているのは `ext-dev-guardrails`(安全制約の決定論的強制。D-018)である。
+拡張バンドルは hooks を持つことがあり、その場合は `settings.snippet.json` の内容を利用側の `.claude/settings.json` へ冪等マージする(`remove` でマージ分だけを取り消す)。現在収録しているのは `ext-dev-guardrails`(安全制約の決定論的強制。D-018)と `ext-writing-inspection`(日本語 Markdown の検査を書き込み直後と完了時に hook で発火させる。japanese-writing の導入と uv が前提。D-035)である。
 
 導入はハードコピー方式である(シンボリックリンクを使わない。devcontainer 等でホスト側パスが解決できない環境でも動き、利用側は導入物を自リポジトリに Git 管理できる。D-006)。更新は `install.py core` の再実行で行い、廃止されたスキル・エージェント(前回コピーして今回の配布元に無いもの)は自動で削除される。配布対象は用途グループ配下に限るため、`.claude/skills/` に置く `meta-*` は配布されない。グループ名を指定した実行は、そのグループの廃止分だけを削除し、指定しなかったグループの導入物には触らない。グループ名を省いた実行は、導入済みの記録(`.claude/dev-core.lock.json`)があればそのグループだけを配る(更新のつもりの再実行で未導入のグループを新規に入れないため)。記録が無い初回導入と、グループ名を持たない旧形式の記録では全グループを配る。導入済みのターゲットへ全グループを入れるには `--all` を付ける。

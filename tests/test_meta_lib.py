@@ -159,6 +159,26 @@ class LayoutTest(helpers.TempDirTestCase):
             [p.name for p in meta_lib.agent_files(self.root)], ["dev-reviewer.md"]
         )
 
+    def test_拡張バンドルをグループ横断で集める(self) -> None:
+        """バンドルは SKILL.md を持つものだけを実在とみなす(D-035)。"""
+        for group, bundle_group, name, with_skill in (
+            ("dev", "guardrails", "ext-a", True),
+            ("writing", "inspection", "ext-b", True),
+            ("dev", "guardrails", "ext-empty", False),
+        ):
+            d = self.root / group / meta_lib.EXTENSIONS_SUBDIR / bundle_group / name
+            d.mkdir(parents=True)
+            (self.root / group / meta_lib.SKILLS_SUBDIR).mkdir(
+                parents=True, exist_ok=True
+            )
+            if with_skill:
+                (d / "SKILL.md").write_text(
+                    f"---\nname: {name}\ndescription: 説明\n---\n", encoding="utf-8"
+                )
+        self.assertEqual(
+            [p.name for p in meta_lib.bundle_dirs(self.root)], ["ext-a", "ext-b"]
+        )
+
     def test_分類をグループ名から決める(self) -> None:
         self.assertEqual(meta_lib.family_of(self.root / "dev"), "dev")
         self.assertEqual(meta_lib.family_of(self.root / ".claude"), "meta")
