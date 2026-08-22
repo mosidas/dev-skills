@@ -143,8 +143,8 @@ description: 実装部品(コア)。タスク定義(workdir の tasks.md)をも�
 
 各役割は `.claude/agents/` の定義で起動する。**役割→モデルの既定は各 agent 定義の `model` frontmatter が正本**とし、タスクの重さに応じた起動時の上書きは 9.1 に従う。
 
-- **dev-implementer**(プロンプト: `./templates/implementer-prompt.md`): タスク固有情報(`_Interfaces:` を含む)・tasks.md の `## Global Constraints`・仕様の参照先(仕様文書の該当 ID・該当節)・Implementation Notes・注入知識を渡して実装させる。仕様の本文はプロンプトに転記せず、dev-implementer が参照先を読む。返却 `STATUS`: `READY_FOR_REVIEW` / `BLOCKED` / `NEEDS_CONTEXT`。タスク境界外の変更は返却の `OUT_OF_BOUNDARY`、既存テストへの変更は `TEST_CHANGES` で申告させる(無申告の境界外変更・無申告のテストの後退はレビューで `[Critical]` になる)。受け入れ基準ごとの検出力の自己点検(定型変異を 1 件入れてテストが失敗するかの確認)を実装の一部として行わせ、結果を `MUTATION_CHECK` で申告させる。レビュー却下に対する再投入では、dev-reviewer の `FINDINGS` を `<review_findings>` へ転記して渡す(指摘の扱いの規律は `../dev-core/references/review-response.md`。不明な指摘があれば着手させず `NEEDS_CONTEXT` を返させる)。
-- **dev-reviewer**(プロンプト: `./templates/reviewer-prompt.md`): タスク定義(受け入れ基準・`_Interfaces:`)と `## Global Constraints`、実際の `git diff` を照合してレビューさせる。dev-implementer の `OUT_OF_BOUNDARY`・`TEST_CHANGES`・`MUTATION_CHECK` 申告をプロンプトに転記して渡す(申告の有無で判定が分かれるため)。`MUTATION_CHECK` の照合は静的に行わせ、**この層では変異注入を実行させない**(適用する層は最終検証パネルと出荷ゲート。正本: `../dev-core/references/review-perspectives.md` §2.5)。返却 `VERDICT`: `APPROVED` / `REJECTED`。
+- **dev-implementer**(プロンプト: `./templates/implementer-prompt.md`): タスク固有情報(`_Interfaces:` を含む)・tasks.md の `## Global Constraints`・仕様の参照先(仕様文書の該当 ID・該当節)・Implementation Notes・注入知識を渡して実装させる。仕様の本文はプロンプトに転記せず、dev-implementer が参照先を読む。返却 `STATUS`: `READY_FOR_REVIEW` / `BLOCKED` / `NEEDS_CONTEXT`。タスク境界外の変更・既存テストへの変更・検証の結果・検出力の自己点検の結果は、返却本文ではなくレポートファイルへ書かせる(9.2)。無申告の境界外変更・無申告のテストの後退はレビューで `[Critical]` になる。受け入れ基準ごとの検出力の自己点検(定型変異を 1 件入れてテストが失敗するかの確認)は実装の一部として行わせる。レビュー却下に対する再投入では、dev-reviewer の `FINDINGS` を `<review_findings>` へ転記して渡す(指摘の扱いの規律は `../dev-core/references/review-response.md`。不明な指摘があれば着手させず `NEEDS_CONTEXT` を返させる)。
+- **dev-reviewer**(プロンプト: `./templates/reviewer-prompt.md`): タスク定義(受け入れ基準・`_Interfaces:`)と `## Global Constraints`、実際の `git diff` を照合してレビューさせる。dev-implementer のレポートファイルのパスを `<implementer_report>` で渡す(9.2。申告の有無で判定が分かれるため、レビュアーはこのファイルを読んで差分と照合する)。`MUTATION_CHECK` の照合は静的に行わせ、**この層では変異注入を実行させない**(適用する層は最終検証パネルと出荷ゲート。正本: `../dev-core/references/review-perspectives.md` §2.5)。返却 `VERDICT`: `APPROVED` / `REJECTED`。
 - **dev-debugger**(プロンプト: `./templates/debugger-prompt.md`): 次のいずれかで起動する。クリーンな文脈で根本原因に当たり、リトライループを断ち切る。返却 `NEXT_ACTION`。
   - dev-implementer が `BLOCKED` を返した
   - dev-reviewer が同一タスクを 2 回 `REJECTED` した
@@ -177,6 +177,16 @@ description: 実装部品(コア)。タスク定義(workdir の tasks.md)をも�
 - **再投入では 1 段上げる**。レビュー却下に対する再投入(10.)では、直前の起動より 1 段上のモデルを指定する。既定が最上位なら据え置く。同じモデルで同じタスクを 3 回繰り返さない(実装者が自分の見落としに気づけない状態が続くため)。
 - **下限を `sonnet` とする**。実装とレビューに `haiku` を使わない。多段の作業では最も安いモデルがターン数を 2〜3 倍に増やし、総消費が下がらない。1 パスで終わる読み取り(調査の隔離。`../dev-core/references/orchestration-patterns.md` パターン 5)はこの限りではなく、dev-explorer の既定を変えない。
 - 選んだ model と根拠(当たった条件、または既定を使った理由)を、そのタスクの実装が終わった時点で `## Implementation Notes` に 1 行で記録する(選択の再現性の担保)。
+
+### 9.2. 報告の受け渡し
+
+dev-implementer の返却は、この部品が分岐に使う 6 フィールド(`STATUS`・`SUMMARY`・`CHANGED_FILES`・`REPORT_FILE`・`NOTES`・`BLOCKER`)に限る。詳細(`UNTOUCHED`・`OUT_OF_BOUNDARY`・`TEST_CHANGES`・`VERIFICATION`・`MUTATION_CHECK`)はレポートファイルへ書かせ、レビュアーへはそのパスを渡す。返却本文へ載せた内容は、この部品の文脈に残り以後のターンごとに読み直されるため、判断に使わない詳細を載せない。出典は [obra/superpowers](https://github.com/obra/superpowers) の subagent-driven-development である。
+
+- **書き出し先はリポジトリの外の一時ディレクトリとする**。パスは `<一時ディレクトリ>/dev-implement/<作業単位名>/task-<タスク番号>-report.md` とし、起動のたびにこの部品が決めて `<report_file>` で渡す。リポジトリの中へ置かない理由は 2 つある。利用側へ `.gitignore` の追加を強いないこと、workdir の中身を中間生成物だけに保ち凍結と `check.py` の検査の対象を増やさないことである。同じ置き方は実行時検証の隔離した複製が既に採る(`../dev-core/references/runtime-verification.md` §3.1)。
+- **この部品はレポートを読まない**。読むのは返却の 6 フィールドだけとする。レポートを読むのは dev-reviewer である。
+- **修正の再投入では同じパスを渡し、追記させる**。前回の内容を消させない(何を試したかがレビューの材料になる)。
+- **書き出せない場合は縮退する**。`REPORT_FILE: なし` が返ったら、返却本文に含まれる 5 項目を `<implementer_report>` へ転記してレビュアーへ渡す。機構が使えないことで申告を省かせない。
+- **圧縮をまたいだレポートを引き継がない**。処理中だったタスクは未完了として再投入されるため、レポートも新しく作られる。完了の判定は進捗台帳(6.1)が持つ。
 
 ## 10. 有界リトライ(無限ループ防止)
 
