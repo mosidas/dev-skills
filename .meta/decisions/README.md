@@ -49,3 +49,4 @@
 - [D-030](D-030-decompose-inline-and-mutation-selfcheck.md): タスク分解を統括へ戻し、検出力の立証を実装者の自己点検で前倒しする
 - [D-031](D-031-implement-loop-cost.md): 実装ループの消費量を、モデルの可変化・検証の一元化・同形タスクの束ねで下げる
 - [D-032](D-032-debug-phases-and-review-reception.md): デバッグの手順を 4 段に定め、レビュー指摘の受け取りと TDD の規律を明文化する
+- [D-033](D-033-task-interfaces-and-skill-verification.md): タスク間のインターフェースを分解で明示し、スキルの記述に形式の選択と検証を課す
