@@ -79,7 +79,9 @@ def main() -> None:
         return
     state["stop_blocks"] += 1
     lib.save_state(state_file, state)
-    reason = lib.format_stop_reason(remaining, lib.load_guides(HOOK_DIR))
+    reason = lib.format_stop_reason(
+        remaining, lib.load_guides(HOOK_DIR), lib.load_phrase_okays(project)
+    )
     lib.emit({"decision": "block", "reason": reason})
 
 

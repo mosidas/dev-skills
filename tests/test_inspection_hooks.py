@@ -44,7 +44,7 @@ text = open(sys.argv[1], encoding="utf-8").read()
 findings = []
 if "NGWORD" in text:
     findings.append({"line": 1, "category": "forbidden_phrase", "severity": "warn",
-                     "excerpt": "重要なのは", "detail": "禁止語"})
+                     "excerpt": "重要なのは", "detail": "禁止語/LLM常套句ヒット: 「重要なのは」"})
 if "INFOONLY" in text:
     findings.append({"line": 2, "category": "translationese", "severity": "info",
                      "excerpt": "することができる", "detail": "翻訳調"})
@@ -203,6 +203,37 @@ class FormatWarningTest(LibTestCase):
         self.assertEqual(missing, [], f"指針が無いカテゴリ: {missing}")
 
 
+class PhraseOkayTest(LibTestCase):
+    FINDING = {
+        "line": 1,
+        "category": "forbidden_phrase",
+        "severity": "warn",
+        "excerpt": "重要なのは",
+        "detail": "禁止語/LLM常套句ヒット: 「重要なのは」",
+    }
+
+    def test_カタログから語ごとの_OK_例を読む(self) -> None:
+        catalog = self.tmp / Path(lib.PHRASE_CATALOG_REL)
+        catalog.parent.mkdir(parents=True)
+        catalog.write_text(
+            json.dumps({"phrases": [{"ng": "重要なのは", "ok": ["a", "b"]}]}),
+            encoding="utf-8",
+        )
+        self.assertEqual(lib.load_phrase_okays(self.tmp), {"重要なのは": ["a", "b"]})
+
+    def test_カタログが無ければ空を返す(self) -> None:
+        self.assertEqual(lib.load_phrase_okays(self.tmp), {})
+        self.assertEqual(lib.load_phrase_okays(None), {})
+
+    def test_検出行に_OK_例を添える(self) -> None:
+        line = lib._finding_line(self.FINDING, {"重要なのは": ["a", "b"]})
+        self.assertIn("→ OK: a / b", line)
+
+    def test_語を特定できない検出には添えない(self) -> None:
+        finding = dict(self.FINDING, detail="集計検出")
+        self.assertNotIn("→ OK:", lib._finding_line(finding, {"重要なのは": ["a"]}))
+
+
 class StateTest(LibTestCase):
     def test_検査したファイルを重複なく記録する(self) -> None:
         with mock.patch.object(lib.tempfile, "gettempdir", return_value=str(self.tmp)):
@@ -231,6 +262,24 @@ class HookProcessTestCase(helpers.TempDirTestCase):
         self.state_dir.mkdir()
         stub = self.tmp / "stub_lint.py"
         stub.write_text(STUB_LINT, encoding="utf-8")
+        catalog = self.project / Path(lib.PHRASE_CATALOG_REL)
+        catalog.parent.mkdir(parents=True, exist_ok=True)
+        catalog.write_text(
+            json.dumps(
+                {
+                    "phrases": [
+                        {
+                            "ng": "重要なのは",
+                            "type": "conclusion",
+                            "severity": "warn",
+                            "ok": ["前置きを消して主張をそのまま書く"],
+                        }
+                    ]
+                },
+                ensure_ascii=False,
+            ),
+            encoding="utf-8",
+        )
         self.env = {
             **os.environ,
             "CLAUDE_PROJECT_DIR": str(self.project),
@@ -284,6 +333,14 @@ class InspectWriteTest(HookProcessTestCase):
         self.assertEqual(decision["decision"], "block")
         self.assertIn("forbidden_phrase", decision["reason"])
         self.assertIn("丸ごと書き直す", decision["reason"])
+        self.assertIn("→ OK: 前置きを消して主張をそのまま書く", decision["reason"])
+
+    def test_カタログが無くても警告は成立する(self) -> None:
+        (self.project / Path(lib.PHRASE_CATALOG_REL)).unlink()
+        path = self.write_doc("doc.md", "NGWORD")
+        decision = self.decision(self.run_hook(INSPECT_WRITE, self.write_payload(path)))
+        self.assertIn("forbidden_phrase", decision["reason"])
+        self.assertNotIn("→ OK:", decision["reason"])
 
     def test_検出がなければ何も出力しない(self) -> None:
         path = self.write_doc("doc.md")
@@ -332,6 +389,7 @@ class InspectStopTest(HookProcessTestCase):
         self.assertEqual(decision["decision"], "block")
         self.assertIn("forbidden_phrase", decision["reason"])
         self.assertIn("doc.md", decision["reason"])
+        self.assertIn("→ OK: 前置きを消して主張をそのまま書く", decision["reason"])
 
     def test_重大でない検出はブロックしない(self) -> None:
         self.record("doc.md", "INFOONLY")  # translationese info は blocking 宣言に無い

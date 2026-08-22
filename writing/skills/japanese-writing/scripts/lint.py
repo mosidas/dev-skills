@@ -60,92 +60,37 @@ from textcore import (
 
 # ---------------------------------------------------------------------------
 # 辞書: 禁止語・LLM 常套句カタログ
-# ここは「拡張前提」のカタログ。新しい手癖フレーズに気づいたら追記していく。
-# 出典: HANDOFF.md 55-62行目、および note記事「禁止語60語超」の言及。
+# 正本は同ディレクトリの forbidden_phrases.json(NG/OK 対のカタログ)。語ごとに
+# type(型の分類)・severity・ok(言い換え例)を持ち、本スクリプトは ng と severity を、
+# ext-writing-inspection の hook は ok(グッドパターン)を読む。語の追加はカタログへ行う。
 #
-# 2026-07 コーパス校正（corpus/reports/archive/deep-analysis.md §4a）による見直し:
-# 実コーパス（人間103文書 + AI 81文書）で forbidden_phrase 全体の文書発火率が
-# human 58〜67% > ai 30〜33% と逆転していた。単語別ヒット数を見ると、
-# 「最後に」（人間48回 vs AI 2回）と「まさに」（人間24回 vs AI 0回）の2語だけで
-# 人間側ヒットの63%を占めており、これらは単なる日常語であって AI 特有の
-# 手癖ではないと判明したため削除した（deep-analysis.md §5 の明示的な推奨）。
-# 「重要なのは」「このように」「不可欠」「ポイントは」「さて、」は人間側でも
-# 一定数ヒットする（人間6〜15回 vs AI 2回前後）ため削除まではせず、
-# FORBIDDEN_PHRASES_WEAK_SIGNAL に移して severity を info に格下げしている
-# （検出は残すが「重大な逆向きシグナル」としては扱わない）。
-# 逆に「いかがでしょうか」「大切なのは」「根本的な」「まとめると」は
-# AI側ヒットの方が優勢で、当初の設計意図どおりの語として warn のまま残す。
+# 2026-07 コーパス校正(corpus/reports/archive/deep-analysis.md §4a)の判断は
+# カタログへ引き継いだ。「最後に」「まさに」は削除(removed に記録)、
+# 「重要なのは」「このように」「不可欠」「ポイントは」「さて、」は severity=info の
+# 弱いシグナルへ格下げ(note に記録)。校正済みの語の severity はカタログでも変更しない。
+# 2026-08 の拡充語(コーパス未校正)は severity を保守的(info または warn)に付けている。
 # ---------------------------------------------------------------------------
-FORBIDDEN_PHRASES: list[str] = [
-    # 結論の押し付け・まとめ口調
-    "と言えるでしょう",
-    "と言えるだろう",
-    "と言えます",
-    "ということになるでしょう",
-    "のではないでしょうか",
-    "重要なのは",
-    "大切なのは",
-    "ポイントは",
-    "結論から言うと",
-    "結論として",
-    "いかがでしたか",
-    "いかがでしょうか",
-    # 「最後に」はコーパス校正で削除（人間48回 vs AI 2回、日常語であってAI手癖ではない）
-    "まとめると",
-    "総じて",
-    # 過剰な強調・持ち上げ
-    "非常に重要",
-    "極めて重要",
-    "言うまでもなく",
-    "言うまでもありません",
-    # 「まさに」はコーパス校正で削除（人間24回 vs AI 0回、日常語であってAI手癖ではない）
-    "まさしく",
-    # 定型導入・空疎な接続
-    "さて、",
-    "それでは、",
-    "このように",
-    "このような中",
-    "ここで注目したいのは",
-    "見ていきましょう",
-    "紹介していきます",
-    "解説していきます",
-    "深掘りしていきます",
-    # 予防線・免責的な言い回し
-    "一概には言えません",
-    "個人差がありますが",
-    "あくまで一例ですが",
-    # 正面から系（出典: japanese-tech-writing の規範から。中身の代わりに姿勢だけを宣言する）
-    "正面から扱う",
-    "正面から見る",
-    "正面から書く",
-    "正面から立てる",
-    "正面から回収する",
-    # 空虚な形容（出典: japanese-tech-writing の規範から。主張の中身を説明せず強調・網羅感だけ付ける）
-    "不可欠",
-    "核心的",
-    "鍵となる",
-    "根本的な",
-    "多角的",
-    "包括的",
-    "総合的",
-    # 空虚な動詞・予告口調（出典: japanese-tech-writing の規範から。何をどう書いたか示さず終わる）
-    "掘り下げる",
-    "深掘りする",
-    "言語化する",
-    "について見ていく",
-    "を探求する",
-]
+PHRASE_CATALOG_PATH = Path(__file__).resolve().parent / "forbidden_phrases.json"
 
-# コーパス校正で「人間側でも一定数ヒットするため弱いシグナル」と判定した語。
-# 削除はせず検出は残すが、severity を warn ではなく info に下げる
-# （deep-analysis.md §4a: 人間6〜15回 vs AI 2回前後、比率は逆転していないが
-# 絶対数として人間の日常的な使用がそれなりにある語）。
+
+def _load_phrase_catalog(path: Path = PHRASE_CATALOG_PATH) -> dict:
+    """NG/OK カタログを読む。配布物の一部であり、欠落・破損は例外で早期に落とす。"""
+    catalog = json.loads(path.read_text(encoding="utf-8"))
+    phrases = catalog.get("phrases")
+    if not isinstance(phrases, list) or not phrases:
+        raise ValueError(f"{path} の phrases が空または不正")
+    return catalog
+
+
+PHRASE_CATALOG: dict = _load_phrase_catalog()
+FORBIDDEN_PHRASES: list[str] = [p["ng"] for p in PHRASE_CATALOG["phrases"]]
+# severity=info の語(コーパス校正で弱いシグナルと判定された語、および未校正の保守的な新語)。
 FORBIDDEN_PHRASES_WEAK_SIGNAL: set[str] = {
-    "重要なのは",
-    "このように",
-    "不可欠",
-    "ポイントは",
-    "さて、",
+    p["ng"] for p in PHRASE_CATALOG["phrases"] if p.get("severity") == "info"
+}
+# 語ごとの補足(コーパス校正の判断・未校正の旨)。info の検出の detail に添える。
+PHRASE_NOTES: dict[str, str] = {
+    p["ng"]: p["note"] for p in PHRASE_CATALOG["phrases"] if p.get("note")
 }
 
 # ---------------------------------------------------------------------------
@@ -604,8 +549,8 @@ def detect_forbidden_phrases(
                 is_weak_signal = phrase in FORBIDDEN_PHRASES_WEAK_SIGNAL
                 severity = "info" if is_weak_signal else "warn"
                 detail = f"禁止語/LLM常套句ヒット: 「{phrase}」"
-                if is_weak_signal:
-                    detail += "（コーパス校正で人間側にも一定数出現する弱いシグナルと判定、severity低下）"
+                if is_weak_signal and phrase in PHRASE_NOTES:
+                    detail += f"（{PHRASE_NOTES[phrase]}）"
                 findings.append(
                     Finding(
                         line=no,

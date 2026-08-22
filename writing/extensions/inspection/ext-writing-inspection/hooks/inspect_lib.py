@@ -28,6 +28,8 @@ PATH_KEYS = ("file_path", "notebook_path", "path")
 MARKDOWN_SUFFIXES = {".md", ".markdown"}
 SEVERITY_ORDER = {"info": 0, "warn": 1, "critical": 2}
 LINT_REL = ".claude/skills/japanese-writing/scripts/lint.py"
+# NG/OK カタログ(語ごとの言い換え例)。正本は japanese-writing のスクリプトと同じ場所にある。
+PHRASE_CATALOG_REL = ".claude/skills/japanese-writing/scripts/forbidden_phrases.json"
 GENRES = {"essay", "tech", "business"}
 # テストと利用側での差し替え用。設定するとコマンド(shlex 分割)が
 # ["uv", "run", <lint.py>] の代わりに使われる。
@@ -236,6 +238,36 @@ def load_guides(hook_dir: Path) -> dict:
     return guides if isinstance(guides, dict) else {}
 
 
+# 検出の detail から語を取り出すパターン(lint.py の「禁止語/LLM常套句ヒット: 「…」」形式)。
+_DETAIL_PHRASE_RE = re.compile(r"「(.+?)」")
+
+
+def load_phrase_okays(project: Path | None) -> dict[str, list[str]]:
+    """NG/OK カタログから「語 → OK 言い換え例」の対応を読む(読めなければ空)。"""
+    if project is None:
+        return {}
+    catalog = _load_json(project / PHRASE_CATALOG_REL)
+    okays: dict[str, list[str]] = {}
+    for entry in catalog.get("phrases", []):
+        if not isinstance(entry, dict):
+            continue
+        ng, ok = entry.get("ng"), entry.get("ok")
+        if isinstance(ng, str) and isinstance(ok, list):
+            okays[ng] = [o for o in ok if isinstance(o, str)]
+    return okays
+
+
+def _phrase_okay(f: dict, phrase_okays: dict[str, list[str]]) -> str | None:
+    """検出に対応する語ごとの OK 例を返す(語を特定できなければ None)。"""
+    if not phrase_okays:
+        return None
+    m = _DETAIL_PHRASE_RE.search(str(f.get("detail", "")))
+    if m is None:
+        return None
+    okays = phrase_okays.get(m.group(1))
+    return " / ".join(okays) if okays else None
+
+
 def sort_findings(findings: list[dict]) -> list[dict]:
     return sorted(
         findings,
@@ -246,10 +278,14 @@ def sort_findings(findings: list[dict]) -> list[dict]:
     )
 
 
-def _finding_line(f: dict) -> str:
+def _finding_line(f: dict, phrase_okays: dict[str, list[str]] | None = None) -> str:
     severity = f.get("severity", "info")
     excerpt = str(f.get("excerpt", "")).strip()
-    return f"- L{f.get('line', '?')} [{severity}] {f.get('category', '?')}: {excerpt}"
+    line = f"- L{f.get('line', '?')} [{severity}] {f.get('category', '?')}: {excerpt}"
+    okay = _phrase_okay(f, phrase_okays or {})
+    if okay:
+        line += f" → OK: {okay}"
+    return line
 
 
 def _guide_lines(categories: list[str], guides: dict) -> list[str]:
@@ -267,7 +303,12 @@ def _guide_lines(categories: list[str], guides: dict) -> list[str]:
 
 
 def format_warning(
-    path: Path, findings: list[dict], config: dict, guides: dict, blocking: list[dict]
+    path: Path,
+    findings: list[dict],
+    config: dict,
+    guides: dict,
+    blocking: list[dict],
+    phrase_okays: dict[str, list[str]] | None = None,
 ) -> str:
     """PostToolUse でエージェントへ返す警告文。
 
@@ -284,7 +325,7 @@ def format_warning(
         "",
         "検出:",
     ]
-    lines += [_finding_line(f) for f in shown]
+    lines += [_finding_line(f, phrase_okays) for f in shown]
     if len(ordered) > limit:
         lines.append(f"- ほか {len(ordered) - limit} 件(全件は lint.py の再実行で確認する)")
     categories = list(dict.fromkeys(f.get("category", "") for f in shown))
@@ -305,7 +346,11 @@ def format_warning(
     return "\n".join(lines)
 
 
-def format_stop_reason(remaining: dict[str, list[dict]], guides: dict) -> str:
+def format_stop_reason(
+    remaining: dict[str, list[dict]],
+    guides: dict,
+    phrase_okays: dict[str, list[str]] | None = None,
+) -> str:
     """Stop でエージェントへ返すブロック理由。ファイルごとの重大検出を列挙する。"""
     lines = [
         "japanese-writing 検査: 重大カテゴリの検出が残っているため完了できない。"
@@ -315,7 +360,7 @@ def format_stop_reason(remaining: dict[str, list[dict]], guides: dict) -> str:
     categories: list[str] = []
     for file, findings in remaining.items():
         lines.append(f"{file}:")
-        lines += [_finding_line(f) for f in sort_findings(findings)]
+        lines += [_finding_line(f, phrase_okays) for f in sort_findings(findings)]
         for f in findings:
             cat = f.get("category", "")
             if cat not in categories:
