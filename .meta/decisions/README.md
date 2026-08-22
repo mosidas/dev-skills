@@ -50,3 +50,4 @@
 - [D-031](D-031-implement-loop-cost.md): 実装ループの消費量を、モデルの可変化・検証の一元化・同形タスクの束ねで下げる
 - [D-032](D-032-debug-phases-and-review-reception.md): デバッグの手順を 4 段に定め、レビュー指摘の受け取りと TDD の規律を明文化する
 - [D-033](D-033-task-interfaces-and-skill-verification.md): タスク間のインターフェースを分解で明示し、スキルの記述に形式の選択と検証を課す
+- [D-034](D-034-file-based-implementer-report.md): 実装者の報告をファイル経由にし、返却を分岐に使う 6 フィールドへ絞る
