@@ -92,6 +92,13 @@ FORBIDDEN_PHRASES_WEAK_SIGNAL: set[str] = {
 PHRASE_NOTES: dict[str, str] = {
     p["ng"]: p["note"] for p in PHRASE_CATALOG["phrases"] if p.get("note")
 }
+# 照合文字列 → 辞書形(ng)の対応。カタログの forms(活用形)も ng と同じ
+# severity・note で検出する(2026-08-29: 活用形が素通りしていた運用指摘への対応)。
+FORBIDDEN_PHRASE_VARIANTS: list[tuple[str, str]] = [
+    (variant, p["ng"])
+    for p in PHRASE_CATALOG["phrases"]
+    for variant in [p["ng"], *p.get("forms", [])]
+]
 
 # ---------------------------------------------------------------------------
 # 辞書: 翻訳調パターン（英語直訳っぽい構文）
@@ -540,17 +547,19 @@ def detect_forbidden_phrases(
     findings = []
     for no, line in lines:
         raw_line = _raw_or_masked(raw_lines_by_no, no, line)
-        for phrase in FORBIDDEN_PHRASES:
+        for phrase, dict_form in FORBIDDEN_PHRASE_VARIANTS:
             idx = line.find(phrase)
             if idx != -1:
                 start = max(0, idx - 10)
                 end = idx + len(phrase) + 10
                 excerpt = raw_line[start:end] if len(raw_line) >= end else line[start:end]
-                is_weak_signal = phrase in FORBIDDEN_PHRASES_WEAK_SIGNAL
+                is_weak_signal = dict_form in FORBIDDEN_PHRASES_WEAK_SIGNAL
                 severity = "info" if is_weak_signal else "warn"
                 detail = f"禁止語/LLM常套句ヒット: 「{phrase}」"
-                if is_weak_signal and phrase in PHRASE_NOTES:
-                    detail += f"（{PHRASE_NOTES[phrase]}）"
+                if phrase != dict_form:
+                    detail += f"（辞書形「{dict_form}」の活用形）"
+                if is_weak_signal and dict_form in PHRASE_NOTES:
+                    detail += f"（{PHRASE_NOTES[dict_form]}）"
                 findings.append(
                     Finding(
                         line=no,
@@ -1667,6 +1676,10 @@ def run_lint(
     text = mask_markdown_structure(raw_text)
     lines = iter_lines_with_no(text)
     raw_lines_by_no = dict(iter_lines_with_no(raw_text))
+    # 語彙系の検出器(禁止語・翻訳調)は、見出し・箇条書き・引用・表の中の語も
+    # 対象にする(2026-08-29: 箇条書き内の禁止語が素通りしていた運用指摘への対応)。
+    # コードブロック・インラインコード・フロントマターのマスクは通常どおり効かせる。
+    lex_lines = iter_lines_with_no(mask_markdown_structure(raw_text, keep_structure_text=True))
     sentences = split_sentences_with_lines(lines, raw_lines_by_no)
     # sudachipy の形態素解析結果は複数の検出器で使い回す（トークナイズは1回だけ）。
     tokenized = tokenize_sentences(sentences)
@@ -1674,8 +1687,8 @@ def run_lint(
     findings: list[Finding] = []
     findings += structural_findings
     # --- 表層（正規表現）ベースの検出器 ---
-    findings += detect_forbidden_phrases(lines, raw_lines_by_no)
-    findings += detect_translationese(lines, raw_lines_by_no)
+    findings += detect_forbidden_phrases(lex_lines, raw_lines_by_no)
+    findings += detect_translationese(lex_lines, raw_lines_by_no)
     findings += detect_antithesis_repetition(
         lines,
         raw_lines_by_no,
