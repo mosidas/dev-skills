@@ -228,11 +228,17 @@ def _blank_inline_code_spans(line: str) -> str:
     return line
 
 
-def mask_markdown_structure(text: str) -> str:
+def mask_markdown_structure(text: str, keep_structure_text: bool = False) -> str:
     """見出し・リスト項目・コードブロック内・引用ブロック・表・YAMLフロントマターの行を
     空文字に置き換え、さらにインラインコードスパンとリンク/画像URLを空白化したテキストを返す。
     行数・行番号（およびインラインコードスパンの行内オフセット）は元のテキストと
     完全に一致させる（削除ではなくマスク）。
+
+    keep_structure_text=True では、見出し・リスト項目・引用・表の行を空文字化せず、
+    テキストを残したままインラインコードスパンだけを空白化する（コードブロック・
+    フロントマター・HTML コメントのマスクは通常どおり行う）。語彙系の検出器
+    （禁止語・翻訳調）が箇条書きや見出しの中の語も対象にするための入り口で、
+    文型・構造系の検出器には通常モード（False）を使う。
 
     インデントコードブロック（4スペースインデント）はマスク対象に含めない。
     箇条書きの折り返しや引用の字下げ等と見分けがつきにくく、誤マスクのリスクが
@@ -294,8 +300,9 @@ def mask_markdown_structure(text: str) -> str:
             or (_TABLE_ROW_RE.match(line) and line.count("|") >= 2)
             or _TABLE_DELIMITER_RE.match(line)
         ):
-            masked_lines.append("")
-            continue
+            if not keep_structure_text:
+                masked_lines.append("")
+                continue
         masked_lines.append(_blank_inline_code_spans(line))
     return "\n".join(masked_lines)
 

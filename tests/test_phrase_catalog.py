@@ -50,6 +50,19 @@ class PhraseCatalogTest(unittest.TestCase):
         overlaps = [(a, b) for a in ngs for b in ngs if a != b and a in b]
         self.assertEqual(overlaps, [])
 
+    def test_活用形が文字列で他の照合文字列を包含しない(self) -> None:
+        """forms(活用形)も ng と同列に照合されるため、包含の禁止を全照合文字列に広げる。"""
+        variants = []
+        for p in self.phrases:
+            forms = p.get("forms", [])
+            self.assertIsInstance(forms, list, p["ng"])
+            for form in forms:
+                self.assertIsInstance(form, str, p["ng"])
+                self.assertTrue(form, p["ng"])
+            variants.extend([p["ng"], *forms])
+        overlaps = [(a, b) for a in variants for b in variants if a != b and a in b]
+        self.assertEqual(overlaps, [])
+
     def test_削除済みの語が検出語に残っていない(self) -> None:
         ngs = {p["ng"] for p in self.phrases}
         for entry in self.catalog.get("removed", []):
