@@ -225,6 +225,27 @@ class MarkerTest(helpers.TempDirTestCase):
         path = self.write("spec.md", "適切に処理する\n通常の行\n")
         self.assertEqual(lib.find_ambiguous(path), [(1, "適切に")])
 
+    def test_行全体が閉じタグの行をツールのマークアップ混入として返す(self) -> None:
+        path = self.write(
+            "tasks.md", "## Implementation Notes\n</content>\n  </invoke>\n"
+        )
+        self.assertEqual(
+            lib.find_tool_markup(path), [(2, "</content>"), (3, "</invoke>")]
+        )
+
+    def test_インラインコードで引用した閉じタグは検出しない(self) -> None:
+        path = self.write(
+            "tasks.md",
+            "- 末尾に混入していたマークアップ(`</content>` と `</invoke>` の 2 行)を削除した\n",
+        )
+        self.assertEqual(lib.find_tool_markup(path), [])
+
+    def test_コードフェンス内の閉じタグは検出しない(self) -> None:
+        path = self.write(
+            "spec.md", "```xml\n</content>\n```\n</invoke>\n"
+        )
+        self.assertEqual(lib.find_tool_markup(path), [(4, "</invoke>")])
+
 
 class DependsCycleTest(unittest.TestCase):
     def _tasks(self, graph: dict[str, list[str]]) -> list[dict]:
