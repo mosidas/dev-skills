@@ -99,7 +99,7 @@ File Structure Plan と契約の境界(spec.md §5–6 のインターフェー�
 - 各サブタスクにタスク固有情報(要件 ID・境界・対象ファイル・検証コマンド)が揃っているか。
 - 1 タスクの規模がテスト込みで自己完結する範囲(目安: 数百行以内)か。
 
-`REJECTED` なら最大 2 回自己修復し、`QUESTIONS` は `AskUserQuestion` で解消する。
+`REJECTED` なら最大 2 回自己修復し、`QUESTIONS` は `AskUserQuestion` で解消する。上限に達してなお `REJECTED` のときは、`../dev-core/templates/doc-gate-prompt.md` 冒頭の「自己修復の上限到達の扱い」に従って停止する(上限到達を合格と読まない)。
 
 ### Step 7: 保存とコミット
 
