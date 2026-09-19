@@ -13,7 +13,7 @@ import unittest
 
 import helpers
 
-SCRIPTS = helpers.REPO_ROOT / "writing" / "skills" / "japanese-writing" / "scripts"
+SCRIPTS = helpers.REPO_ROOT / "skills" / "japanese-writing" / "scripts"
 CATALOG_PATH = SCRIPTS / "forbidden_phrases.json"
 
 sys.path.insert(0, str(SCRIPTS))

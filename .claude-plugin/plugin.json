@@ -1,0 +1,7 @@
+{
+  "name": "japanese-writing",
+  "description": "日本語の開発ドキュメント・技術文書の作成規範(スキル)と、書き込み直後の lint・完了時の再検査を行う hooks。",
+  "version": "1.0.0",
+  "author": { "name": "mosidas" },
+  "repository": "https://github.com/mosidas/dev-skills"
+}

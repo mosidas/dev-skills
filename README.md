@@ -1,73 +1,104 @@
-# dev-skills
+# japanese-writing
 
-Claude Code 向けの汎用スキル群。開発の部品(dev-spec: 壁打ちで契約と受け入れ基準を確定 / dev-decompose / dev-implement / dev-release)とそれらを束ねる SDD ワークフロー(flow-sdd)、拡張バンドル(dev/extensions/・writing/extensions/)に加えて、日本語の技術文書の作成規範(japanese-writing)とスキルの設計規範(skill-authoring)を用途ごとのグループで持つ。
+日本語の技術文書を書くための規範スキルと、その検査を自動で走らせる hooks を配る Claude Code プラグイン。
 
-設計思想・レイヤー構成・規律は [.meta/DESIGN.md](.meta/DESIGN.md) を参照。
+## 1. 概要
 
-## 構成
+配るものは 2 つある。
 
-スキルは用途グループごとのディレクトリに置く。`install.py core` は配布ルート直下で `skills/` を持つディレクトリを用途グループとみなし、その配下だけを配布する(D-011)。利用側はグループ名を指定して必要な群だけを導入できる(D-012)。
+- **スキル `japanese-writing`**: 仕様書・手順書・調査レポート・議事録・記事などの日本語文書を書く・推敲する・リライトするときの規範。文・段落・構成・書式の規約と、文書タイプ別の指針、検査スクリプト(`lint.py` ほか)を持つ。
+- **検査 hooks**: 日本語 Markdown の書き込み直後に `lint.py` を実行して書き直しを促し、セッション完了時に再検査して重大カテゴリの検出が残るあいだ完了を差し戻す。
+
+スキルは Claude が必要と判断したときに読み込まれる。hooks はプラグインを有効にしたセッションで決定論的に発火する。
+
+## 2. 構成
 
 ```
-dev-skills/
-├── CLAUDE.md                    # 言語規約など最小限のプロジェクト指示
-├── install.py                   # 導入スクリプト(コアのコピー・拡張バンドルの展開)
-├── .meta/                       # 設計文書
-├── dev/                         # 用途グループ: 開発スキル(配布する)
-│   ├── group.json               # このグループの検査規約(meta-* が読む。配布しない)
-│   ├── agents/                  # 役割エージェント(Layer 0)
-│   ├── skills/
-│   │   ├── dev-core/            # Layer 0: 共有リファレンス + スクリプト
-│   │   ├── dev-<部品名>/        # Layer 1: 各部品(SKILL.md + templates/)
-│   │   └── flow-<ワークフロー名>/ # Layer 2: composition(SKILL.md + 状態機械定義)
-│   ├── ports/                   # 知識 port のサンプル(配布しない)
-│   └── extensions/              # Layer 3: 拡張バンドル(<バンドル群>/ 配下に ext-*・flow-*)
-│       └── guardrails/          #   安全制約を hook で強制するバンドル群(ext-dev-guardrails)
-├── writing/                     # 用途グループ: 文書作成(配布する)
-│   ├── skills/japanese-writing/ # 日本語の開発ドキュメント・技術文書の作成規範
-│   └── extensions/              # 拡張バンドル
-│       └── inspection/          #   検査を hook で発火させるバンドル群(ext-writing-inspection)
-├── authoring/                   # 用途グループ: スキル作成(配布する)
-│   └── skills/skill-authoring/  # スキルの設計規範
-├── .claude/
-│   └── skills/
-│       └── meta-<部品名>/       # スキル群自体の検査・生成(配布しない。D-006)
-└── tests/                       # 同梱スクリプトの単体テスト(配布しない。D-010)
+.claude-plugin/
+├── plugin.json            # プラグインのマニフェスト
+└── marketplace.json       # このリポジトリ自身をマーケットプレイスとして宣言する
+skills/japanese-writing/
+├── SKILL.md               # 規範の入口(工程と読み込み順)
+├── references/            # 文・段落・構成・書式・検査・文書タイプ別の規範
+└── scripts/               # lint.py・outline.py・terms.py・semantic.py と NG/OK カタログ
+hooks/
+├── hooks.json             # PostToolUse と Stop の配線
+├── inspect_write.py       # PostToolUse: 書き込み直後の検査と警告
+├── inspect_stop.py        # Stop: 再検査と重大カテゴリによる完了ブロック
+├── inspect_lib.py         # 共通処理(設定・対象判定・lint 実行・警告文・状態)
+├── inspection.config.json # 検査設定の正本
+└── rewrite_guides.json    # カテゴリごとの書き直し指針・言い換え例
+tests/                     # カタログと hooks の単体テスト
 ```
 
-`meta-*` は dev-skills 自身のスキル群を検査・生成する保守用の道具で、利用側へは配布しない。Claude Code がこのリポジトリで読み込む場所である `.claude/skills/` に置き、用途グループの外に出すことで配布対象から外す。
+## 3. 導入
 
-グループごとに異なる前提(部品名らしさ・状態名らしさ・レイヤーの割り当て)は、グループ直下の `group.json` が宣言する。宣言を持たないグループは既定で成立し、`meta-*` は特定のグループの構造を前提にしない(D-013)。
-
-port(`ports/`)と拡張バンドル(`extensions/`)はグループの機構であり、グループ配下に置く。port は dev グループだけが持ち、拡張バンドルは dev(guardrails)と writing(inspection)が持つ。`skills/`・`agents/` の外にあるため配布されず、`meta-*` はグループ配下を走査する(D-014)。
-
-## 導入
-
-利用側プロジェクトへの導入・削除は `install.py` で行う(Python 3 標準ライブラリのみで動作)。
-
-```sh
-# コア(skills・agents)をハードコピーで導入・更新する
-# 初回は全用途グループ、導入済みなら lock が記録するグループを配る
-python3 install.py core --target /path/to/project
-
-# 用途グループを選んで導入する(複数指定できる)
-python3 install.py core --target /path/to/project writing authoring
-
-# 導入済みのターゲットへ全用途グループを配布する
-python3 install.py core --target /path/to/project --all
-
-# 拡張バンドルを導入する
-python3 install.py ext <name> --target /path/to/project
-
-# 導入済み拡張を削除する
-python3 install.py remove <name> --target /path/to/project
-
-# 導入状態を表示する
-python3 install.py status --target /path/to/project
+```console
+$ claude plugin marketplace add mosidas/dev-skills
+$ claude plugin install japanese-writing@japanese-writing
 ```
 
-各コマンドは `--dry-run` で変更せずに実行内容を確認できる(status を除く)。
+設定ファイルで宣言することもできる。プロジェクト単位の有効化は `.claude/settings.json` に書く。
 
-拡張バンドルは hooks を持つことがあり、その場合は `settings.snippet.json` の内容を利用側の `.claude/settings.json` へ冪等マージする(`remove` でマージ分だけを取り消す)。現在収録しているのは `ext-dev-guardrails`(安全制約の決定論的強制。D-018)と `ext-writing-inspection`(日本語 Markdown の検査を書き込み直後と完了時に hook で発火させる。japanese-writing の導入と uv が前提。D-035)である。
+```json
+{
+  "enabledPlugins": {
+    "japanese-writing@japanese-writing": true
+  }
+}
+```
 
-導入はハードコピー方式である(シンボリックリンクを使わない。devcontainer 等でホスト側パスが解決できない環境でも動き、利用側は導入物を自リポジトリに Git 管理できる。D-006)。更新は `install.py core` の再実行で行い、廃止されたスキル・エージェント(前回コピーして今回の配布元に無いもの)は自動で削除される。配布対象は用途グループ配下に限るため、`.claude/skills/` に置く `meta-*` は配布されない。グループ名を指定した実行は、そのグループの廃止分だけを削除し、指定しなかったグループの導入物には触らない。グループ名を省いた実行は、導入済みの記録(`.claude/dev-core.lock.json`)があればそのグループだけを配る(更新のつもりの再実行で未導入のグループを新規に入れないため)。記録が無い初回導入と、グループ名を持たない旧形式の記録では全グループを配る。導入済みのターゲットへ全グループを入れるには `--all` を付ける。
+マーケットプレイスの宣言(`extraKnownMarketplaces`)はユーザー設定(`~/.claude/settings.json`)に書く。ネットワーク上のマーケットプレイスはプロジェクト設定では信頼されない。
+
+```json
+{
+  "extraKnownMarketplaces": {
+    "japanese-writing": {
+      "source": { "source": "github", "repo": "mosidas/dev-skills" }
+    }
+  }
+}
+```
+
+hooks はセッション開始時に読み込まれる。有効化した後は、新しいセッションから発火する。
+
+## 4. 前提
+
+`uv` が使えること。`lint.py` は形態素解析に sudachipy を使い、依存は `uv run` がスクリプト先頭の宣言から解決する。`uv` が無い環境では hooks は検査を諦めて何もせず、スキルは手動チェックリスト(`references/inspection.md` 8.)で代替する。
+
+`semantic.py` だけは torch と sentence-transformers に依存する重量級の opt-in 検出器であり、hooks からは呼ばない。
+
+## 5. 検査 hooks
+
+| hook | 発火 | 動作 |
+| :-- | :-- | :-- |
+| PostToolUse(Write / Edit / MultiEdit / NotebookEdit) | 日本語 Markdown の書き込み直後 | `lint.py` を `--json` で実行し、検出があれば警告を返す。書き込みは取り消さない |
+| Stop | セッション完了時 | そのセッションで検査したファイルを再検査し、重大カテゴリの検出が残るあいだ完了をブロックする |
+
+発火するのは、拡張子が `.md` / `.markdown` で、日本語文字が 30 文字以上あり、除外パターンに一致しないファイルへの書き込みに限る。警告には、検出の一覧・該当文を丸ごと書き直す指示・語ごとの言い換え例・カテゴリ別の指針が入る。
+
+重大カテゴリの既定は `forbidden_phrase`(severity warn 以上)と `antithesis_repetition`(critical のみ)である。Stop のブロックは既定 3 回で打ち切り、解消しない検出で作業が封鎖され続ける事態を避ける。
+
+設定の正本は `hooks/inspection.config.json` である。利用側の変更は `.claude/japanese-writing-inspection.json` に同じキーで書く(浅い上書き。プラグインを更新しても残る)。キーの一覧は `skills/japanese-writing/references/inspection.md` 2.5 にある。
+
+次のいずれかに当たると、hooks は書き込みと完了を止めずに素通しする。
+
+- `uv` が無い、または `lint.py` を実行できない。
+- lint がタイムアウトした、または異常終了した。
+- 検査対象の条件(拡張子・日本語文字数・除外パターン・文書種別)を満たさない。
+
+検査が発火しているかは、禁止語を含む Markdown を書いて警告が返ることで確かめる。
+
+## 6. 開発
+
+テストは標準ライブラリの `unittest` だけで動く。
+
+```console
+$ python3 -m unittest discover -s tests -t tests
+```
+
+マニフェストの検査は次のコマンドで行う。
+
+```console
+$ claude plugin validate . --strict
+```
