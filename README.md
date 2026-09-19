@@ -1,35 +1,20 @@
 # dev-skills
 
-開発作業のスキルと、日本語文書の検査を自動で走らせる hooks を配る Claude Code プラグイン。プラグイン名は `dev-skills`、マーケットプレイス名は `mosidas` で、スキルは `/dev-skills:<スキル名>` で呼ぶ。
+Claude Code のプラグインである。開発作業で使うスキルと、日本語 Markdown を書き込むたびに検査する hooks を配る。プラグイン名は `dev-skills`、マーケットプレイス名は `mosidas` で、スキルは `/dev-skills:<スキル名>` で呼ぶ。
 
-## 1. 概要
+## 1. 配るもの
 
-配るものは 2 つある。
+| 種類 | 名前 | 役割 |
+| :-- | :-- | :-- |
+| スキル | `write-doc` | 仕様書・手順書・調査レポート・議事録・記事などの日本語文書を書く・推敲する・リライトするときの規範。読み手・表記・文・段落・検査の規範と、検査スクリプト(`lint.py` ほか)を持つ |
+| hooks | 検査 hooks | 日本語 Markdown の書き込み直後に `lint.py` を実行して書き直しを促し、セッション完了時に再検査して、重大な検出が残るあいだ完了を差し戻す |
 
-- **スキル `write-doc`**: 仕様書・手順書・調査レポート・議事録・記事などの日本語文書を書く・推敲する・リライトするときの規範。読み手・表記・文・段落の規約と、検査スクリプト(`lint.py` ほか)を持つ。
-- **検査 hooks**: 日本語 Markdown の書き込み直後に `lint.py` を実行して書き直しを促し、セッション完了時に再検査して重大カテゴリの検出が残るあいだ完了を差し戻す。
+スキルは、Claude が日本語文書の作成・推敲と判断したときに自動で読み込まれる。`/dev-skills:write-doc` で明示的に呼んでもよい。hooks に呼び出しの操作はない。プラグインを有効にしたセッションで自動で発火する。
 
-スキルは Claude が必要と判断したときに読み込まれる。hooks はプラグインを有効にしたセッションで決定論的に発火する。
+## 2. 前提
 
-## 2. 構成
-
-```
-.claude-plugin/
-├── plugin.json            # プラグインのマニフェスト
-└── marketplace.json       # このリポジトリ自身をマーケットプレイスとして宣言する
-skills/write-doc/
-├── SKILL.md               # 規範の入口(工程と参照ファイル)
-├── references/            # 読み手・表記・文・段落・検査の規範
-└── scripts/               # lint.py・outline.py・terms.py・semantic.py と NG/OK カタログ
-hooks/
-├── hooks.json             # PostToolUse と Stop の配線
-├── inspect_write.py       # PostToolUse: 書き込み直後の検査と警告
-├── inspect_stop.py        # Stop: 再検査と重大カテゴリによる完了ブロック
-├── inspect_lib.py         # 共通処理(設定・対象判定・lint 実行・警告文・状態)
-├── inspection.config.json # 検査設定の正本
-└── rewrite_guides.json    # カテゴリごとの書き直し指針・言い換え例
-tests/                     # カタログと hooks の単体テスト
-```
+- `uv` が使えること。`lint.py` は形態素解析に sudachipy を使い、依存は `uv run` がスクリプト先頭の宣言から解決する。`uv` が無い環境では hooks は検査を行わず、スキルは規範に沿って目視で点検する。
+- `semantic.py`(文埋め込みで話題の平板さを検出する opt-in の検出器)だけは torch と sentence-transformers に依存し、初回実行時にモデル約 1GB をダウンロードする。hooks からは呼ばない。
 
 ## 3. 導入
 
@@ -38,17 +23,7 @@ $ claude plugin marketplace add mosidas/dev-skills
 $ claude plugin install dev-skills@mosidas
 ```
 
-設定ファイルで宣言することもできる。プロジェクト単位の有効化は `.claude/settings.json` に書く。
-
-```json
-{
-  "enabledPlugins": {
-    "dev-skills@mosidas": true
-  }
-}
-```
-
-マーケットプレイスの宣言(`extraKnownMarketplaces`)はユーザー設定(`~/.claude/settings.json`)に書く。ネットワーク上のマーケットプレイスはプロジェクト設定では信頼されない。
+設定ファイルで宣言してもよい。マーケットプレイスの宣言はユーザー設定(`~/.claude/settings.json`)に書く。ネットワーク上のマーケットプレイスはプロジェクト設定では信頼されないためである。
 
 ```json
 {
@@ -60,26 +35,30 @@ $ claude plugin install dev-skills@mosidas
 }
 ```
 
-hooks はセッション開始時に読み込まれる。有効化した後は、新しいセッションから発火する。
+プロジェクト単位の有効化は `.claude/settings.json` に書く。
 
-## 4. 前提
+```json
+{
+  "enabledPlugins": {
+    "dev-skills@mosidas": true
+  }
+}
+```
 
-`uv` が使えること。`lint.py` は形態素解析に sudachipy を使い、依存は `uv run` がスクリプト先頭の宣言から解決する。`uv` が無い環境では hooks は検査を諦めて何もせず、スキルは規範に沿って目視で点検する。
+hooks はセッション開始時に読み込まれるため、有効化した後は新しいセッションから発火する。
 
-`semantic.py` だけは torch と sentence-transformers に依存する重量級の opt-in 検出器であり、hooks からは呼ばない。
-
-## 5. 検査 hooks
+## 4. 検査 hooks
 
 | hook | 発火 | 動作 |
 | :-- | :-- | :-- |
 | PostToolUse(Write / Edit / MultiEdit / NotebookEdit) | 日本語 Markdown の書き込み直後 | `lint.py` を `--json` で実行し、検出があれば警告を返す。書き込みは取り消さない |
 | Stop | セッション完了時 | そのセッションで検査したファイルを再検査し、重大カテゴリの検出が残るあいだ完了をブロックする |
 
-発火するのは、拡張子が `.md` / `.markdown` で、日本語文字が 30 文字以上あり、除外パターンに一致しないファイルへの書き込みに限る。警告には、検出の一覧・該当文を丸ごと書き直す指示・語ごとの言い換え例・カテゴリ別の指針が入る。
+発火するのは、拡張子が `.md` / `.markdown` で、日本語文字が 30 文字以上あり、除外パターンに一致しないファイルへの書き込みに限る。警告には、検出の一覧、該当文を丸ごと書き直す指示、語ごとの言い換え例、カテゴリ別の指針が入る。
 
-重大カテゴリの既定は `forbidden_phrase`(severity warn 以上)と `antithesis_repetition`(critical のみ)である。Stop のブロックは既定 3 回で打ち切り、解消しない検出で作業が封鎖され続ける事態を避ける。
+重大カテゴリとは、Stop が完了をブロックする検出カテゴリの宣言で、既定は `forbidden_phrase`(severity warn 以上。動詞カタログのうち空虚な動詞 4 語)と `antithesis_repetition`(critical のみ)である。ブロックは既定 3 回で打ち切るため、解消できない検出があっても完了できない状態は続かない。
 
-設定の正本は `hooks/inspection.config.json` である。利用側の変更は `.claude/write-doc-inspection.json` に同じキーで書く(浅い上書き。プラグインを更新しても残る)。キーの一覧は `skills/write-doc/references/inspection.md` 3. にある。
+設定の正本は `hooks/inspection.config.json` である。利用側の変更は `.claude/write-doc-inspection.json` に同じキーで書く。浅い上書きなので、プラグインを更新しても残る。キーの一覧は `skills/write-doc/references/inspection.md` 3. にある。
 
 次のいずれかに当たると、hooks は書き込みと完了を止めずに素通しする。
 
@@ -87,7 +66,27 @@ hooks はセッション開始時に読み込まれる。有効化した後は�
 - lint がタイムアウトした、または異常終了した。
 - 検査対象の条件(拡張子・日本語文字数・除外パターン・文書種別)を満たさない。
 
-検査が発火しているかは、禁止語を含む Markdown を書いて警告が返ることで確かめる。
+検査が発火しているかは、カタログに登録した動詞を含む Markdown を書いて警告が返ることで確かめる。
+
+## 5. 構成
+
+```
+.claude-plugin/
+├── plugin.json            # プラグインのマニフェスト
+└── marketplace.json       # このリポジトリ自身をマーケットプレイスとして宣言する
+skills/write-doc/
+├── SKILL.md               # 規範の入口(工程と参照ファイル)
+├── references/            # 読み手・表記・文・段落・検査の規範
+└── scripts/               # lint.py・outline.py・terms.py・semantic.py と動詞の NG/OK カタログ
+hooks/
+├── hooks.json             # PostToolUse と Stop の配線
+├── inspect_write.py       # PostToolUse: 書き込み直後の検査と警告
+├── inspect_stop.py        # Stop: 再検査と重大カテゴリによる完了ブロック
+├── inspect_lib.py         # 共通処理(設定・対象判定・lint 実行・警告文・状態)
+├── inspection.config.json # 検査設定の正本
+└── rewrite_guides.json    # カテゴリごとの書き直し指針・言い換え例
+tests/                     # カタログと hooks の単体テスト
+```
 
 ## 6. 開発
 
