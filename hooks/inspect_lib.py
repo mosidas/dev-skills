@@ -2,8 +2,8 @@
 
 `inspect_write.py`(PostToolUse)と `inspect_stop.py`(Stop)が共有する、設定の読み込み・
 検査対象の判定・lint.py の実行・検出の絞り込み・警告文の組み立て・セッション状態の
-記録をまとめる。検査の実体はプラグイン同梱の japanese-writing スキルの
-`skills/japanese-writing/scripts/lint.py` であり、本ライブラリは検出器を持たない。
+記録をまとめる。検査の実体はプラグイン同梱の write-doc スキルの
+`skills/write-doc/scripts/lint.py` であり、本ライブラリは検出器を持たない。
 
 hook 自身は Python 3 標準ライブラリのみで動作する。lint.py の実行だけは uv に委ねる
 (sudachipy 依存のため)。uv・lint.py・設定のいずれかが欠けている場合は検査を諦めて
@@ -29,9 +29,9 @@ MARKDOWN_SUFFIXES = {".md", ".markdown"}
 SEVERITY_ORDER = {"info": 0, "warn": 1, "critical": 2}
 # プラグインルート相対のパス。検査の実体とカタログはプラグインに同梱されており、
 # 利用側プロジェクトの内容には依存しない。
-LINT_REL = "skills/japanese-writing/scripts/lint.py"
-# NG/OK カタログ(語ごとの言い換え例)。正本は japanese-writing のスクリプトと同じ場所にある。
-PHRASE_CATALOG_REL = "skills/japanese-writing/scripts/forbidden_phrases.json"
+LINT_REL = "skills/write-doc/scripts/lint.py"
+# NG/OK カタログ(語ごとの言い換え例)。正本は write-doc のスクリプトと同じ場所にある。
+PHRASE_CATALOG_REL = "skills/write-doc/scripts/forbidden_phrases.json"
 # プラグインルート(hooks/ の親)。Claude Code が渡す環境変数があればそれを優先する。
 PLUGIN_ROOT_ENV = "CLAUDE_PLUGIN_ROOT"
 DEFAULT_PLUGIN_ROOT = Path(__file__).resolve().parent.parent
@@ -39,8 +39,8 @@ GENRES = {"essay", "tech", "business"}
 # テストと利用側での差し替え用。設定するとコマンド(shlex 分割)が
 # ["uv", "run", <lint.py>] の代わりに使われる。
 LINT_CMD_ENV = "WRITING_INSPECTION_LINT_CMD"
-OVERRIDE_REL = ".claude/japanese-writing-inspection.json"
-STATE_DIR_NAME = "claude-japanese-writing-inspection"
+OVERRIDE_REL = ".claude/write-doc-inspection.json"
+STATE_DIR_NAME = "claude-write-doc-inspection"
 
 _JAPANESE_RE = re.compile(r"[぀-ヿ㐀-鿿]")
 
@@ -78,7 +78,7 @@ def plugin_root() -> Path:
 def load_config(hook_dir: Path, project_dir: Path | None) -> dict:
     """プラグイン同梱の設定に、利用側の上書き設定を浅いマージで重ねて返す。
 
-    上書き設定(`.claude/japanese-writing-inspection.json`)は利用側プロジェクトの資産であり、
+    上書き設定(`.claude/write-doc-inspection.json`)は利用側プロジェクトの資産であり、
     プラグインの更新で消えない場所に置く。
     """
     config = dict(DEFAULT_CONFIG)
@@ -326,7 +326,7 @@ def format_warning(
     limit = int(config.get("max_findings_in_warning", 10))
     shown = ordered[:limit]
     lines = [
-        f"japanese-writing 検査: {path} に {len(findings)} 件の検出。",
+        f"write-doc 検査: {path} に {len(findings)} 件の検出。",
         "検出箇所を含む文を丸ごと書き直すこと。指摘された語だけを類語に置き換えて済ませない"
         "(文の構造ごと組み替える)。",
         "",
@@ -344,7 +344,7 @@ def format_warning(
         "",
         "機械検出は表層しか見ない。書き直しの際は該当段落を読み直し、検出に出ない不自然さ"
         "(文脈のねじれ・冗長・常体と敬体の混在・意味の薄い強調)も自分で判定して直すこと。"
-        "規範は japanese-writing スキルの references/(sentence.md 3. の動詞、sentence.md 5. の翻訳調ほか)にある。",
+        "規範は write-doc スキルの references/(sentence.md 3. の動詞、sentence.md 5. の翻訳調ほか)にある。",
     ]
     if blocking:
         lines.append(
@@ -360,7 +360,7 @@ def format_stop_reason(
 ) -> str:
     """Stop でエージェントへ返すブロック理由。ファイルごとの重大検出を列挙する。"""
     lines = [
-        "japanese-writing 検査: 重大カテゴリの検出が残っているため完了できない。"
+        "write-doc 検査: 重大カテゴリの検出が残っているため完了できない。"
         "以下の各箇所について、検出箇所を含む文を丸ごと書き直してから完了すること。",
         "",
     ]

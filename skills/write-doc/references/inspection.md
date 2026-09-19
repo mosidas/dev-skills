@@ -7,7 +7,7 @@
 
 ## 2. 検査スクリプト
 
-スクリプトはプラグインの `skills/japanese-writing/scripts/` にある。コマンド例の `<スキルのディレクトリ>` には、Claude Code がスキル読み込み時に示す本スキルの絶対パスを入れる(シェルの cwd はプロジェクト側のままである)。
+スクリプトはプラグインの `skills/write-doc/scripts/` にある。コマンド例の `<スキルのディレクトリ>` には、Claude Code がスキル読み込み時に示す本スキルの絶対パスを入れる(シェルの cwd はプロジェクト側のままである)。
 
 ```sh
 uv run <スキルのディレクトリ>/scripts/lint.py <file.md> [--json]
@@ -46,7 +46,7 @@ uv run <スキルのディレクトリ>/scripts/semantic.py <file.md> [--json] [
 | PostToolUse(Write / Edit / MultiEdit / NotebookEdit) | 日本語 Markdown の書き込み直後 | lint.py を `--json` で実行し、検出があれば警告をエージェントへ返す。処理は止めない(書き込みは成立済み)。書き直しの結果へ再び検査がかかる |
 | Stop | セッション完了時 | このセッションで検査したファイルを再検査し、重大カテゴリの検出が残るあいだ完了をブロックする(`stop_max_blocks` 回が上限) |
 
-発火するのは、拡張子が `.md` / `.markdown` で、日本語文字が `min_japanese_chars`(既定 30)文字以上あり、`exclude` に一致せず、文書種別の `inspect` が `true` の書き込みに限る。設定の正本はプラグインの `hooks/inspection.config.json` である。利用側プロジェクトの恒久的な変更は `.claude/japanese-writing-inspection.json` に同じキーで書く(浅い上書き。プラグインを更新しても残る)。
+発火するのは、拡張子が `.md` / `.markdown` で、日本語文字が `min_japanese_chars`(既定 30)文字以上あり、`exclude` に一致せず、文書種別の `inspect` が `true` の書き込みに限る。設定の正本はプラグインの `hooks/inspection.config.json` である。利用側プロジェクトの恒久的な変更は `.claude/write-doc-inspection.json` に同じキーで書く(浅い上書き。プラグインを更新しても残る)。
 
 | キー | 意味 |
 | :-- | :-- |

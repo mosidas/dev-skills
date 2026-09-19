@@ -1,4 +1,4 @@
-"""japanese-writing の動詞カタログ(forbidden_phrases.json)の整合テスト。
+"""write-doc の動詞カタログ(forbidden_phrases.json)の整合テスト。
 
 カタログはデータであり、破損・重複・包含(同一行での二重検出の原因)を機械検査で塞ぐ。
 lint.py がカタログから検出語と severity を正しく導出することも確かめる。
@@ -13,7 +13,7 @@ import unittest
 
 import helpers
 
-SCRIPTS = helpers.REPO_ROOT / "skills" / "japanese-writing" / "scripts"
+SCRIPTS = helpers.REPO_ROOT / "skills" / "write-doc" / "scripts"
 CATALOG_PATH = SCRIPTS / "forbidden_phrases.json"
 
 sys.path.insert(0, str(SCRIPTS))
