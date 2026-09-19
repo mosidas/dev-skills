@@ -1,8 +1,8 @@
 # dev-skills
 
-Claude Code のプラグインである。開発作業で使うスキルと、日本語 Markdown を書き込むたびに検査する hooks を配る。プラグイン名は `dev-skills`、マーケットプレイス名は `mosidas` で、スキルは `/dev-skills:<スキル名>` で呼ぶ。
+Claude Code のプラグインである。開発作業で使うスキルと、日本語 Markdown を書き込むたびに検査する hooks を同梱する。プラグイン名は `dev-skills`、マーケットプレイス名は `mosidas` で、スキルは `/dev-skills:<スキル名>` で呼ぶ。
 
-## 1. 配るもの
+## 1. 同梱するもの
 
 | 種類 | 名前 | 役割 |
 | :-- | :-- | :-- |
