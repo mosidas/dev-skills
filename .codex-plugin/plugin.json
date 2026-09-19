@@ -1,0 +1,19 @@
+{
+  "name": "dev-skills",
+  "version": "1.2.0",
+  "description": "開発作業のスキル集。日本語の技術文書の作成規範(write-doc)とスライド構成の規範(write-slide)。",
+  "author": {
+    "name": "mosidas"
+  },
+  "repository": "https://github.com/mosidas/dev-skills",
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "dev-skills",
+    "shortDescription": "日本語の技術文書とスライド構成の規範",
+    "longDescription": "開発作業のスキル集。日本語の技術文書の作成規範(write-doc)とスライド構成の規範(write-slide)を提供する。",
+    "developerName": "mosidas",
+    "category": "Productivity",
+    "capabilities": [],
+    "defaultPrompt": "この仕様書を write-doc の規範で推敲して。"
+  }
+}
