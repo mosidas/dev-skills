@@ -1,6 +1,6 @@
 # dev-skills
 
-Claude Code のプラグインである。開発作業で使うスキルと、日本語 Markdown を書き込むたびに検査する hooks を提供する。
+Claude Code・Codex CLI・Antigravity CLI のプラグインである。開発作業で使うスキルを 3 つの CLI に提供し、Claude Code には日本語 Markdown を書き込むたびに検査する hooks も提供する。
 
 ## 1. 提供するもの
 
@@ -8,10 +8,10 @@ Claude Code のプラグインである。開発作業で使うスキルと、�
 | :-- | :-- | :-- |
 | `write-doc` | スキル | 仕様書・手順書・調査レポート・議事録・記事などの日本語文書を書く・推敲する・リライトするときの規範。読み手・表記・文・段落・検査の規範と、検査スクリプト(`lint.py` ほか)を持つ |
 | `write-slide` | スキル | プレゼン資料・説明資料のスライド構成を作る・点検するときの規範。型の選択、メッセージライン、ページの役割分担、文体と強調を定める |
-| `hooks/inspect_write.py` | hook(PostToolUse) | 日本語 Markdown の書き込み直後に `lint.py` を実行し、検出があれば書き直しを促す警告を返す |
-| `hooks/inspect_stop.py` | hook(Stop) | セッション完了時に再検査し、重大カテゴリの検出が残るあいだ完了を差し戻す |
+| `hooks/inspect_write.py` | hook(PostToolUse、Claude Code のみ) | 日本語 Markdown の書き込み直後に `lint.py` を実行し、検出があれば書き直しを促す警告を返す |
+| `hooks/inspect_stop.py` | hook(Stop、Claude Code のみ) | セッション完了時に再検査し、重大カテゴリの検出が残るあいだ完了を差し戻す |
 
-スキルは Claude が用途を判断して自動で読み込む。`/dev-skills:write-doc`・`/dev-skills:write-slide` で明示的に呼んでもよい。hooks に呼び出しの操作はない。プラグインを有効にしたセッションで、日本語 Markdown の書き込みとセッション完了のたびに自動で発火する。
+スキルは各 CLI が用途を判断して自動で読み込む。Claude Code では `/dev-skills:write-doc`・`/dev-skills:write-slide`、Codex CLI では `$dev-skills:write-doc`、Antigravity CLI では `/write-doc` で明示的に呼んでもよい。hooks に呼び出しの操作はない。プラグインを有効にした Claude Code のセッションで、日本語 Markdown の書き込みとセッション完了のたびに自動で発火する。hooks の stdin の形式は CLI ごとに異なるため、Codex CLI と Antigravity CLI では hooks を提供しない。
 
 ## 2. 前提
 
@@ -19,6 +19,8 @@ Claude Code のプラグインである。開発作業で使うスキルと、�
 - `semantic.py`(文埋め込みで話題の平板さを検出する opt-in の検出器)だけは torch と sentence-transformers に依存し、初回実行時にモデル約 1GB をダウンロードする。hooks からは呼ばない。
 
 ## 3. 導入
+
+### Claude Code
 
 ```console
 $ claude plugin marketplace add mosidas/dev-skills
@@ -49,6 +51,40 @@ $ claude plugin install dev-skills@mosidas
 
 hooks はセッション開始時に読み込まれるため、有効化した後は新しいセッションから発火する。
 
+### Codex CLI
+
+マニフェストは `.codex-plugin/plugin.json` である。Codex CLI はマーケットプレイス経由でプラグインを導入するため、個人マーケットプレイス `~/.agents/plugins/marketplace.json`(ルートはホームディレクトリ。自動で発見される)にこのリポジトリのクローンを登録し、`codex plugin add` で導入する。
+
+```json
+{
+  "name": "personal",
+  "plugins": [
+    {
+      "name": "dev-skills",
+      "source": { "source": "local", "path": "./repos/dev-skills" },
+      "policy": { "installation": "AVAILABLE", "authentication": "ON_INSTALL" },
+      "category": "Productivity"
+    }
+  ]
+}
+```
+
+```console
+$ codex plugin add dev-skills@personal
+```
+
+導入先は `~/.codex/plugins/cache/personal/dev-skills/<version>/` である。クローンを更新したら同じコマンドで導入し直す。スキルは `$dev-skills:write-doc` の名前で読み込まれる。Codex CLI のプラグインは hooks を扱わない(`codex features list` の `plugin_hooks` は removed)。
+
+### Antigravity CLI
+
+マニフェストはリポジトリ直下の `plugin.json` である。クローンのパスを指定して導入する。
+
+```console
+$ agy plugin install <クローンのパス>
+```
+
+導入先は `~/.gemini/config/plugins/dev-skills/`(コピー)である。クローンを更新したら同じコマンドで導入し直す。スキルは `/write-doc`・`/write-slide` のスラッシュコマンドにもなる。
+
 ## 4. 検査 hooks
 
 | hook | 発火 | 動作 |
@@ -74,8 +110,11 @@ hooks はセッション開始時に読み込まれるため、有効化した�
 
 ```
 .claude-plugin/
-├── plugin.json            # プラグインのマニフェスト
+├── plugin.json            # Claude Code 向けのマニフェスト
 └── marketplace.json       # このリポジトリ自身をマーケットプレイスとして宣言する
+.codex-plugin/
+└── plugin.json            # Codex CLI 向けのマニフェスト
+plugin.json                # Antigravity CLI 向けのマニフェスト
 skills/write-doc/
 ├── SKILL.md               # 規範の入口(工程と参照ファイル)
 ├── references/            # 読み手・表記・文・段落・検査の規範
@@ -100,10 +139,12 @@ tests/                     # カタログと hooks の単体テスト
 $ python3 -m unittest discover -s tests -t tests
 ```
 
-プラグインの内容を変更したら、`.claude-plugin/plugin.json` の `version` を上げる。`claude plugin update` は version が同じだと最新と判定し、変更を取り込まない。
+プラグインの内容を変更したら、`.claude-plugin/plugin.json` と `.codex-plugin/plugin.json` の `version` を同じ値に上げる。`claude plugin update` は version が同じだと最新と判定し、変更を取り込まない。
 
-マニフェストの検査は次のコマンドで行う。
+マニフェストの検査は次のコマンドで行う。Codex CLI の検査スクリプトは同梱スキル `plugin-creator` のもので、`interface` の 5 項目と `defaultPrompt` を必須とする。
 
 ```console
 $ claude plugin validate . --strict
+$ uv run --with pyyaml python3 ~/.codex/skills/.system/plugin-creator/scripts/validate_plugin.py .
+$ agy plugin validate .
 ```
