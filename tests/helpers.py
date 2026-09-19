@@ -1,9 +1,7 @@
 """テストの共通ヘルパ。
 
-スクリプトの実体は各スキルの `scripts/` にあり、パッケージ化されていない
-(利用側へハードコピーで配る単体のスクリプトのため)。テストからはそのディレクトリを
-`sys.path` へ追加して読み込む。exit code と日本語のエラーメッセージを確かめる検査は、
-`die()` が `sys.exit` を呼ぶためサブプロセスで実行する。
+exit code と日本語のエラーメッセージを確かめる検査は、スクリプトが `sys.exit` を呼ぶため
+サブプロセスで実行する。
 
 Python 3 標準ライブラリのみを使用する(追加インストール不要の担保)。
 """
@@ -18,12 +16,6 @@ import unittest
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
-DEV_SCRIPTS = REPO_ROOT / "dev" / "skills" / "dev-core" / "scripts"
-META_SCRIPTS = REPO_ROOT / ".claude" / "skills" / "meta-core" / "scripts"
-
-for _d in (DEV_SCRIPTS, META_SCRIPTS):
-    if str(_d) not in sys.path:
-        sys.path.insert(0, str(_d))
 
 
 def run_script(script: Path, *args: object) -> subprocess.CompletedProcess:
@@ -74,22 +66,3 @@ class TempDirTestCase(unittest.TestCase):
         hit = [t for t in texts if needle in t]
         if hit:
             raise AssertionError(f"{needle!r} を含む要素があってはならない: {hit}")
-
-
-WORKFLOW_DEF = {
-    "name": "testflow",
-    "states": ["initialized", "drafted", "approved", "completed"],
-    "initial": "initialized",
-    "final": ["completed"],
-    "transitions": [
-        {"from": "initialized", "to": "drafted"},
-        {"from": "drafted", "to": "approved", "gate": "draft"},
-        {"from": "approved", "to": "completed"},
-        {"from": "drafted", "to": "initialized"},
-    ],
-    "artifacts": {
-        "drafted": ["spec.md"],
-        "approved": ["spec.md"],
-        "completed": ["spec.md"],
-    },
-}

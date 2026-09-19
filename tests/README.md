@@ -1,6 +1,6 @@
 # スクリプトの単体テスト
 
-各スキルの `scripts/` に置く決定論スクリプトと `install.py` に対する単体テスト。スキル群自体の品質(メタレベル)を担保する道具の 1 つで、機械検査(meta-check)が「文書間の整合」を見るのに対し、本テストは「スクリプトが主張どおり動くこと」を見る。
+プラグインが同梱する NG/OK カタログと検査 hooks に対する単体テスト。標準ライブラリの `unittest` だけを使い、追加インストールなしで実行できる(hooks が標準ライブラリのみで動く規律と揃える)。
 
 ## 1. 実行
 
@@ -13,38 +13,22 @@ python3 -m unittest discover -s tests -t tests
 個別のファイルだけを走らせるときは次のようにする。
 
 ```sh
-python3 -m unittest discover -s tests -t tests -p test_state.py
+python3 -m unittest discover -s tests -t tests -p test_phrase_catalog.py
 ```
 
-追加インストールは不要である(標準ライブラリの `unittest` のみを使う。dev-core・meta-core のスクリプトが標準ライブラリのみで動く規律と揃える)。
+## 2. 構成
 
-## 2. 配置と配布
+| ファイル | 対象 | 主な検査 |
+| :-- | :-- | :-- |
+| `helpers.py` | — | 一時ディレクトリとサブプロセス実行の共通処理 |
+| `test_phrase_catalog.py` | `skills/japanese-writing/scripts/forbidden_phrases.json` | NG/OK カタログの整合(重複・包含・OK 例の必須)と lint.py の検出語・severity の導出 |
+| `test_inspection_hooks.py` | `hooks/` | 検査対象の判定・重大カテゴリの絞り込み・設定の上書き・警告文・完了ブロックと上限、検査できない環境での素通し |
 
-- テストは**配布物に含めない**。`install.py core` は用途グループの `skills/*` と `agents/*` をコピーするため、`tests/` はその対象外になる。`meta-*` を配布しない方針(D-006)と同じ扱いである(D-010)。
-- スクリプトはパッケージ化されていない(利用側へ単体でハードコピーするため)。テストからは `helpers.py` が `sys.path` へスクリプトのディレクトリを追加して読み込む。
+lint.py の実行は環境変数 `WRITING_INSPECTION_LINT_CMD` でスタブへ差し替える。テストは `uv` と sudachipy に依存しない。
 
-## 3. 構成
+## 3. 書き方の規律
 
-| ファイル                | 対象                       | 主な検査                                                             |
-| ----------------------- | -------------------------- | ---------------------------------------------------------------------- |
-| `helpers.py`            | —                          | 一時ディレクトリ・サブプロセス実行・共通のワークフロー定義             |
-| `test_install.py`       | `install.py`               | 用途グループの走査・配布対象・名前衝突・廃止分の削除・拡張バンドルの解決と導入 |
-| `test_lib.py`           | `dev-core/lib.py`          | 定義データの検証・中間生成物のパース・依存循環の検出・凍結・workdir の連番 |
-| `test_state.py`         | `dev-core/state.py`        | 遷移の拒否・承認ゲートの強制・完了時の凍結・横断集約・workdir の採番    |
-| `test_check.py`         | `dev-core/check.py`        | 状態検査・凍結違反・トレーサビリティ・対象ファイルの行数               |
-| `test_ports.py`         | `dev-core/ports.py`        | frontmatter の走査と規約違反の警告                                     |
-| `test_meta_lib.py`      | `meta-core/meta_lib.py`    | frontmatter の YAML サブセット解析・配置の走査・グループの機構の列挙・グループ規約の読み込み |
-| `test_meta_check.py`    | `meta-core/meta_check.py`  | 参照・frontmatter・依存規律・状態整合・グループ規約・未記入マーカー・回帰検出 |
-| `test_trigger_check.py` | `meta-core/trigger_check.py` | 肯定例・否定例・近接衝突・ケース網羅・仕様ファイルの異常系            |
-| `test_meta_extract.py`  | `meta-core/meta_extract.py` | 部品・スクリプト・エージェント・状態機械・inject グラフの抽出         |
-| `test_meta_loc.py`      | `meta-core/meta_loc.py`    | 領域の割り当て・行数の数え方・除外条件                                 |
-| `test_guard_hooks.py`   | `ext-dev-guardrails/hooks/` | 破壊的な git 操作・一括ステージング・凍結済み成果物への書き込みの拒否、誤検出しないこと、exit code |
-| `test_inspection_hooks.py` | `ext-writing-inspection/hooks/` | 検査対象の判定・重大カテゴリの絞り込み・設定の上書き・警告文・完了ブロックと上限、検査できない環境での素通し |
-| `test_phrase_catalog.py` | `japanese-writing/scripts/forbidden_phrases.json` | NG/OK カタログの整合(重複・包含・OK 例の必須)と lint.py の検出語・severity の導出 |
-
-## 4. 書き方の規律
-
-- **一時ディレクトリで自己完結させる**。リポジトリ内のファイルを書き換えるテストを書かない。実リポジトリを対象にするのは read-only の検査(`--root` を渡して実行する形)に限る。
-- **exit code とエラーメッセージはサブプロセスで確かめる**。`die()` が `sys.exit` を呼ぶため、関数を直接呼ぶと処理が中断する。
+- **一時ディレクトリで自己決着させる**。リポジトリ内のファイルを書き換えるテストを書かない。
+- **exit code とエラーメッセージはサブプロセスで確かめる**。hook は `sys.exit` を呼ぶため、関数を直接呼ぶと処理が中断する。
 - **検出できることと誤検出しないことを対で書く**。違反を入れて検出を確かめるだけでは、常に検出する実装(偽陽性)を通してしまう。
-- テスト名は日本語で、何が成り立つべきかを書く(`test_定義にない遷移を拒否する`)。Python の識別子に使えない記号(半角スペース・括弧)を含めない。
+- テスト名は日本語で、何が成り立つべきかを書く(`test_状態が無ければ何もしない`)。Python の識別子に使えない記号(半角スペース・括弧)を含めない。

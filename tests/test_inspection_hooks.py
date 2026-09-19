@@ -1,4 +1,4 @@
-"""ext-writing-inspection の hook の単体テスト。
+"""日本語検査 hooks の単体テスト。
 
 検査対象の判定・重大カテゴリの絞り込み・設定の上書き・警告文の組み立てをライブラリ関数で、
 発火から警告・完了ブロックまでの一連の動作をサブプロセスで確かめる。lint.py の実行は
@@ -19,14 +19,7 @@ from unittest import mock
 
 import helpers
 
-HOOKS = (
-    helpers.REPO_ROOT
-    / "writing"
-    / "extensions"
-    / "inspection"
-    / "ext-writing-inspection"
-    / "hooks"
-)
+HOOKS = helpers.REPO_ROOT / "hooks"
 
 sys.path.insert(0, str(HOOKS))
 
@@ -141,10 +134,7 @@ class ConfigTest(LibTestCase):
         (hook_dir / "inspection.config.json").write_text(
             json.dumps({"min_japanese_chars": 10, "stop_max_blocks": 5}), encoding="utf-8"
         )
-        self.write(
-            ".claude/ext-writing-inspection.config.json",
-            json.dumps({"stop_max_blocks": 1}),
-        )
+        self.write(lib.OVERRIDE_REL, json.dumps({"stop_max_blocks": 1}))
         config = lib.load_config(hook_dir, self.tmp)
         self.assertEqual(config["min_japanese_chars"], 10)
         self.assertEqual(config["stop_max_blocks"], 1)
@@ -160,6 +150,25 @@ class ConfigTest(LibTestCase):
         config = lib.load_config(HOOKS, None)
         categories = [rule["category"] for rule in config["blocking"]]
         self.assertIn("forbidden_phrase", categories)
+
+
+class LintCommandTest(LibTestCase):
+    def test_プラグイン同梱の_lint_py_を_uv_run_で叩く(self) -> None:
+        with mock.patch.dict(os.environ, {}, clear=False):
+            os.environ.pop(lib.LINT_CMD_ENV, None)
+            os.environ.pop(lib.PLUGIN_ROOT_ENV, None)
+            cmd = lib.lint_command()
+        self.assertEqual(cmd[:2], ["uv", "run"])
+        self.assertEqual(Path(cmd[2]), helpers.REPO_ROOT / lib.LINT_REL)
+
+    def test_lint_py_が無いプラグインでは諦める(self) -> None:
+        with mock.patch.dict(os.environ, {lib.PLUGIN_ROOT_ENV: str(self.tmp)}):
+            os.environ.pop(lib.LINT_CMD_ENV, None)
+            self.assertIsNone(lib.lint_command())
+
+    def test_環境変数で差し替えたコマンドを優先する(self) -> None:
+        with mock.patch.dict(os.environ, {lib.LINT_CMD_ENV: '"/bin/echo" stub'}):
+            self.assertEqual(lib.lint_command(), ["/bin/echo", "stub"])
 
 
 class FormatWarningTest(LibTestCase):
@@ -188,12 +197,7 @@ class FormatWarningTest(LibTestCase):
     def test_同梱の指針が全カテゴリを持つ(self) -> None:
         """lint.py の検出カテゴリすべてに書き直しの指針が対応づく。"""
         lint_src = (
-            helpers.REPO_ROOT
-            / "writing"
-            / "skills"
-            / "japanese-writing"
-            / "scripts"
-            / "lint.py"
+            helpers.REPO_ROOT / lib.LINT_REL
         ).read_text(encoding="utf-8")
         import re
 
@@ -212,6 +216,9 @@ class PhraseOkayTest(LibTestCase):
         "detail": "禁止語/LLM常套句ヒット: 「重要なのは」",
     }
 
+    def plugin_root(self) -> Path:
+        return mock.patch.dict(os.environ, {lib.PLUGIN_ROOT_ENV: str(self.tmp)})
+
     def test_カタログから語ごとの_OK_例を読む(self) -> None:
         catalog = self.tmp / Path(lib.PHRASE_CATALOG_REL)
         catalog.parent.mkdir(parents=True)
@@ -219,11 +226,12 @@ class PhraseOkayTest(LibTestCase):
             json.dumps({"phrases": [{"ng": "重要なのは", "ok": ["a", "b"]}]}),
             encoding="utf-8",
         )
-        self.assertEqual(lib.load_phrase_okays(self.tmp), {"重要なのは": ["a", "b"]})
+        with self.plugin_root():
+            self.assertEqual(lib.load_phrase_okays(), {"重要なのは": ["a", "b"]})
 
     def test_カタログが無ければ空を返す(self) -> None:
-        self.assertEqual(lib.load_phrase_okays(self.tmp), {})
-        self.assertEqual(lib.load_phrase_okays(None), {})
+        with self.plugin_root():
+            self.assertEqual(lib.load_phrase_okays(), {})
 
     def test_検出行に_OK_例を添える(self) -> None:
         line = lib._finding_line(self.FINDING, {"重要なのは": ["a", "b"]})
@@ -262,7 +270,9 @@ class HookProcessTestCase(helpers.TempDirTestCase):
         self.state_dir.mkdir()
         stub = self.tmp / "stub_lint.py"
         stub.write_text(STUB_LINT, encoding="utf-8")
-        catalog = self.project / Path(lib.PHRASE_CATALOG_REL)
+        self.plugin = self.tmp / "plugin"
+        self.plugin.mkdir()
+        catalog = self.plugin / Path(lib.PHRASE_CATALOG_REL)
         catalog.parent.mkdir(parents=True, exist_ok=True)
         catalog.write_text(
             json.dumps(
@@ -283,6 +293,7 @@ class HookProcessTestCase(helpers.TempDirTestCase):
         self.env = {
             **os.environ,
             "CLAUDE_PROJECT_DIR": str(self.project),
+            lib.PLUGIN_ROOT_ENV: str(self.plugin),
             "TMPDIR": str(self.state_dir),
             lib.LINT_CMD_ENV: f'"{sys.executable}" "{stub}"',
         }
@@ -336,7 +347,7 @@ class InspectWriteTest(HookProcessTestCase):
         self.assertIn("→ OK: 前置きを消して主張をそのまま書く", decision["reason"])
 
     def test_カタログが無くても警告は成立する(self) -> None:
-        (self.project / Path(lib.PHRASE_CATALOG_REL)).unlink()
+        (self.plugin / Path(lib.PHRASE_CATALOG_REL)).unlink()
         path = self.write_doc("doc.md", "NGWORD")
         decision = self.decision(self.run_hook(INSPECT_WRITE, self.write_payload(path)))
         self.assertIn("forbidden_phrase", decision["reason"])
