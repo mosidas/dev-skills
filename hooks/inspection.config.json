@@ -1,5 +1,5 @@
 {
-  "_comment": "日本語検査 hooks の設定(正本)。利用側の恒久的な変更は .claude/japanese-writing-inspection.json(同じキーの浅い上書き)に書く(プラグインの更新で消えないため)。",
+  "_comment": "日本語検査 hooks の設定(正本)。利用側の恒久的な変更は .claude/japanese-writing-inspection.json(同じキーの浅い上書き)に書く(プラグインの更新で消えないため)。blocking の forbidden_phrase は warn 以上、すなわち動詞カタログの空虚な動詞(掘り下げる・深掘りする・言語化する・を探求する)だけで Stop をブロックする。",
   "min_japanese_chars": 30,
   "exclude": [],
   "lint_timeout_seconds": 120,

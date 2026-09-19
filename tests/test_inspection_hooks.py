@@ -37,7 +37,7 @@ text = open(sys.argv[1], encoding="utf-8").read()
 findings = []
 if "NGWORD" in text:
     findings.append({"line": 1, "category": "forbidden_phrase", "severity": "warn",
-                     "excerpt": "重要なのは", "detail": "禁止語/LLM常套句ヒット: 「重要なのは」"})
+                     "excerpt": "重要なのは", "detail": "不正確・話し言葉の動詞ヒット: 「重要なのは」"})
 if "INFOONLY" in text:
     findings.append({"line": 2, "category": "translationese", "severity": "info",
                      "excerpt": "することができる", "detail": "翻訳調"})
@@ -213,7 +213,7 @@ class PhraseOkayTest(LibTestCase):
         "category": "forbidden_phrase",
         "severity": "warn",
         "excerpt": "重要なのは",
-        "detail": "禁止語/LLM常套句ヒット: 「重要なのは」",
+        "detail": "不正確・話し言葉の動詞ヒット: 「重要なのは」",
     }
 
     def plugin_root(self) -> Path:

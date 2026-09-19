@@ -247,7 +247,7 @@ def load_guides(hook_dir: Path) -> dict:
     return guides if isinstance(guides, dict) else {}
 
 
-# 検出の detail から語を取り出すパターン(lint.py の「禁止語/LLM常套句ヒット: 「…」」形式)。
+# 検出の detail から語を取り出すパターン(lint.py の「不正確・話し言葉の動詞ヒット: 「…」」形式)。
 _DETAIL_PHRASE_RE = re.compile(r"「(.+?)」")
 
 
@@ -344,7 +344,7 @@ def format_warning(
         "",
         "機械検出は表層しか見ない。書き直しの際は該当段落を読み直し、検出に出ない不自然さ"
         "(文脈のねじれ・冗長・常体と敬体の混在・意味の薄い強調)も自分で判定して直すこと。"
-        "規範は japanese-writing スキルの references/(sentence.md 7.〜8. ほか)にある。",
+        "規範は japanese-writing スキルの references/(sentence.md 3. の動詞、sentence.md 5. の翻訳調ほか)にある。",
     ]
     if blocking:
         lines.append(
