@@ -1,17 +1,19 @@
 # dev-skills
 
-Claude Code・Codex CLI・Antigravity CLI のプラグインである。開発作業で使うスキルを 3 つの CLI に提供し、Claude Code には日本語 Markdown を書き込むたびに検査する hooks も提供する。
+Claude Code・Codex CLI・Antigravity CLI のプラグインである。開発作業で使うスキルとサブエージェントを 3 つの CLI に提供し、Claude Code には日本語 Markdown を書き込むたびに検査する hooks も提供する。
 
 ## 1. 提供するもの
 
 | 構成要素 | 種別 | 役割 |
 | :-- | :-- | :-- |
+| `develop` | スキル | 実装タスクを計画から PR まで進める統括の手順。Backlog.md のタスク、GitHub flow、git hook(lefthook・husky)、planner・implementer・reviewer による実装と点検のループ、push 後の CI 確認を定める |
+| `planner`・`implementer`・`reviewer` | サブエージェント(`agents/`) | develop が起動する 3 つの役割。planner は計画(コード変更なし)、implementer はステップ 1 つ分の実装とコミット、reviewer は適合・テスト・欠陥・簡潔さの点検(コード変更なし) |
 | `write-doc` | スキル | 仕様書・手順書・調査レポート・議事録・記事などの日本語文書を書く・推敲する・リライトするときの規範。読み手・表記・文・段落・検査の規範と、検査スクリプト(`lint.py` ほか)を持つ |
 | `write-slide` | スキル | プレゼン資料・説明資料のスライド構成を作る・点検するときの規範。型の選択、メッセージライン、ページの役割分担、文体と強調を定める |
 | `hooks/inspect_write.py` | hook(PostToolUse、Claude Code のみ) | 日本語 Markdown の書き込み直後に `lint.py` を実行し、検出があれば書き直しを促す警告を返す |
 | `hooks/inspect_stop.py` | hook(Stop、Claude Code のみ) | セッション完了時に再検査し、重大カテゴリの検出が残るあいだ完了を差し戻す |
 
-スキルは各 CLI が用途を判断して自動で読み込む。Claude Code では `/dev-skills:write-doc`・`/dev-skills:write-slide`、Codex CLI では `$dev-skills:write-doc`、Antigravity CLI では `/write-doc` で明示的に呼んでもよい。hooks に呼び出しの操作はない。プラグインを有効にした Claude Code のセッションで、日本語 Markdown の書き込みとセッション完了のたびに自動で発火する。hooks の stdin の形式は CLI ごとに異なるため、Codex CLI と Antigravity CLI では hooks を提供しない。
+スキルは各 CLI が用途を判断して自動で読み込む。Claude Code では `/dev-skills:develop`・`/dev-skills:write-doc`・`/dev-skills:write-slide`、Codex CLI では `$dev-skills:develop`、Antigravity CLI では `/develop` で明示的に呼んでもよい。サブエージェントは Claude Code では `dev-skills:planner` のように plugin 名つきで起動する。Codex CLI はプラグインの `agents/` を読まないため、develop の委譲は Claude Code で行う。hooks に呼び出しの操作はない。プラグインを有効にした Claude Code のセッションで、日本語 Markdown の書き込みとセッション完了のたびに自動で発火する。hooks の stdin の形式は CLI ごとに異なるため、Codex CLI と Antigravity CLI では hooks を提供しない。
 
 ## 2. 前提
 
@@ -115,6 +117,13 @@ $ agy plugin install <クローンのパス>
 .codex-plugin/
 └── plugin.json            # Codex CLI 向けのマニフェスト
 plugin.json                # Antigravity CLI 向けのマニフェスト
+agents/
+├── planner.md             # 計画(opus、書き込み不可)
+├── implementer.md         # 実装とコミット(sonnet)
+└── reviewer.md            # 点検と判定(opus、書き込み不可)
+skills/develop/
+├── SKILL.md               # 統括の工程(タスク・ブランチ・計画・実装と点検のループ・PR・完了)
+└── references/            # git-flow.md(ブランチ・PR・CI・マージ)、hooks.md(lefthook・husky)
 skills/write-doc/
 ├── SKILL.md               # 規範の入口(工程と参照ファイル)
 ├── references/            # 読み手・表記・文・段落・検査の規範
