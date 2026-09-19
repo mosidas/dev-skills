@@ -26,7 +26,6 @@ description: 日本語の開発ドキュメント・技術文書(仕様書・規
 | `references/inspection.md` | 検査スクリプトと hooks の使い方、検出への対応、判断台帳、収束条件 | 書いた後に点検・推敲するとき |
 
 - 検査スクリプトは `scripts/` にあり、`uv run` で実行する(依存はスクリプト内で宣言済み)。
-- 文書に図を載せるときは diagram-authoring に従う。本スキルは図の書式(`references/format.md` 4.)だけを扱い、図にする内容と描き方は扱わない。
 
 ## 3. 優先規則
 
