@@ -1,4 +1,4 @@
-"""japanese-writing の NG/OK カタログ(forbidden_phrases.json)の整合テスト。
+"""japanese-writing の動詞カタログ(forbidden_phrases.json)の整合テスト。
 
 カタログはデータであり、破損・重複・包含(同一行での二重検出の原因)を機械検査で塞ぐ。
 lint.py がカタログから検出語と severity を正しく導出することも確かめる。
@@ -68,10 +68,6 @@ class PhraseCatalogTest(unittest.TestCase):
         for entry in self.catalog.get("removed", []):
             self.assertNotIn(entry["ng"], ngs)
 
-    def test_拡充の規模を満たす(self) -> None:
-        """完了条件: 既存資料から抽出した語を数十語以上追加する(既存 48 語 + 新規)。"""
-        self.assertGreaterEqual(len(self.phrases), 80)
-
     def test_lint_がカタログから検出語を導出する(self) -> None:
         self.assertEqual(lint.FORBIDDEN_PHRASES, [p["ng"] for p in self.phrases])
         self.assertEqual(
@@ -79,23 +75,32 @@ class PhraseCatalogTest(unittest.TestCase):
             {p["ng"] for p in self.phrases if p["severity"] == "info"},
         )
 
-    def test_コーパス校正済みの弱シグナル判定を引き継ぐ(self) -> None:
-        """校正済みの語の severity を変更しない(deep-analysis.md §4a の判断の保存)。"""
-        for ng in ("重要なのは", "このように", "不可欠", "ポイントは", "さて、"):
+    def test_空虚な動詞だけが_warn_を持つ(self) -> None:
+        """severity の方針を固定する。正当な用法のある語は info、空虚な動詞だけ warn。"""
+        empty_verbs = {"掘り下げる", "深掘りする", "言語化する", "を探求する"}
+        warns = {p["ng"] for p in self.phrases if p["severity"] == "warn"}
+        self.assertEqual(warns, empty_verbs)
+        for ng in ("落とし込む", "を選ぶ", "チェックする"):
             self.assertIn(ng, lint.FORBIDDEN_PHRASES_WEAK_SIGNAL, ng)
-        for ng in ("いかがでしょうか", "大切なのは", "根本的な", "まとめると"):
-            self.assertNotIn(ng, lint.FORBIDDEN_PHRASES_WEAK_SIGNAL, ng)
+
+    def test_型が_3_つで全エントリがその型を持つ(self) -> None:
+        """カタログは動詞に絞る。型は imprecise・colloquial・loanword の 3 つだけとする。"""
+        self.assertEqual(set(self.catalog["types"]), {"imprecise", "colloquial", "loanword"})
+        for entry in self.phrases:
+            self.assertIn(entry["type"], self.catalog["types"], entry["ng"])
 
     def test_検出が動く(self) -> None:
-        findings = lint.detect_forbidden_phrases([(1, "参考になれば幸いです。")])
+        findings = lint.detect_forbidden_phrases([(1, "仕様に落とし込む。")])
         self.assertEqual(len(findings), 1)
         self.assertEqual(findings[0].category, "forbidden_phrase")
-        self.assertEqual(findings[0].severity, "warn")
+        self.assertEqual(findings[0].severity, "info")
+        warn_findings = lint.detect_forbidden_phrases([(1, "原因を掘り下げる。")])
+        self.assertEqual(len(warn_findings), 1)
+        self.assertEqual(warn_findings[0].severity, "warn")
 
-    def test_新語は保守的な_severity_を持つ(self) -> None:
+    def test_severity_が_info_か_warn_に限られる(self) -> None:
         for entry in self.phrases:
-            if str(entry.get("note", "")).startswith("2026-08"):
-                self.assertIn(entry["severity"], ("info", "warn"), entry["ng"])
+            self.assertIn(entry["severity"], ("info", "warn"), entry["ng"])
 
 
 if __name__ == "__main__":

@@ -59,16 +59,16 @@ from textcore import (
 )
 
 # ---------------------------------------------------------------------------
-# 辞書: 禁止語・LLM 常套句カタログ
-# 正本は同ディレクトリの forbidden_phrases.json(NG/OK 対のカタログ)。語ごとに
-# type(型の分類)・severity・ok(言い換え例)を持ち、本スクリプトは ng と severity を、
-# 検査 hook は ok(グッドパターン)を読む。語の追加はカタログへ行う。
+# 辞書: 動詞のカタログ
+# 正本は同ディレクトリの forbidden_phrases.json(NG/OK 対のカタログ)。不正確・
+# 文脈依存の動詞(imprecise)、話し言葉の和語の動詞(colloquial)、訳語が定着して
+# いる外来語の動詞(loanword)を収める。語ごとに type・severity・ok(言い換え例)を
+# 持ち、本スクリプトは ng と severity を、検査 hook は ok を読む。語の追加はカタログへ行う。
 #
-# 2026-07 コーパス校正(corpus/reports/archive/deep-analysis.md §4a)の判断は
-# カタログへ引き継いだ。「最後に」「まさに」は削除(removed に記録)、
-# 「重要なのは」「このように」「不可欠」「ポイントは」「さて、」は severity=info の
-# 弱いシグナルへ格下げ(note に記録)。校正済みの語の severity はカタログでも変更しない。
-# 2026-08 の拡充語(コーパス未校正)は severity を保守的(info または warn)に付けている。
+# severity は、正当な用法があり文脈判断を要する語を info、空虚な動詞(掘り下げる・
+# 深掘りする・言語化する・を探求する)を warn とする。2026-07 のコーパス校正
+# (corpus/reports/archive/deep-analysis.md §4a)で削除した「最後に」「まさに」は
+# カタログの removed に記録してある。
 # ---------------------------------------------------------------------------
 PHRASE_CATALOG_PATH = Path(__file__).resolve().parent / "forbidden_phrases.json"
 
@@ -84,7 +84,7 @@ def _load_phrase_catalog(path: Path = PHRASE_CATALOG_PATH) -> dict:
 
 PHRASE_CATALOG: dict = _load_phrase_catalog()
 FORBIDDEN_PHRASES: list[str] = [p["ng"] for p in PHRASE_CATALOG["phrases"]]
-# severity=info の語(コーパス校正で弱いシグナルと判定された語、および未校正の保守的な新語)。
+# severity=info の語(正当な用法があり、文脈判断を要する語)。
 FORBIDDEN_PHRASES_WEAK_SIGNAL: set[str] = {
     p["ng"] for p in PHRASE_CATALOG["phrases"] if p.get("severity") == "info"
 }
@@ -215,7 +215,7 @@ LEXDIV_MIN_DOC_CHARS = 4000
 # low_specificity（具体性/一般論臭）検出器のパラメータ
 #
 # Phase 3（HANDOFF.md 参照）: 「固有名詞・数値・実例がなく、抽象名詞ばかりの
-# 段落」は、表層の禁止語や統語パターンとは別種のAI臭（＝素材不足のサイン）で、
+# 段落」は、表層の語や統語パターンとは別種のAI臭（＝素材不足のサイン）で、
 # 既存の検出器では拾えない。段落単位で具体性シグナルを合成スコア化し、
 # 閾値未満なら info で指摘する。
 #
@@ -555,7 +555,7 @@ def detect_forbidden_phrases(
                 excerpt = raw_line[start:end] if len(raw_line) >= end else line[start:end]
                 is_weak_signal = dict_form in FORBIDDEN_PHRASES_WEAK_SIGNAL
                 severity = "info" if is_weak_signal else "warn"
-                detail = f"禁止語/LLM常套句ヒット: 「{phrase}」"
+                detail = f"不正確・話し言葉の動詞ヒット: 「{phrase}」"
                 if phrase != dict_form:
                     detail += f"（辞書形「{dict_form}」の活用形）"
                 if is_weak_signal and dict_form in PHRASE_NOTES:
@@ -993,7 +993,7 @@ def detect_rhythm_statistics(
         autocorr = cov / (statistics.pstdev(xs) * statistics.pstdev(ys))
 
     # 閾値 -0.62: このスキルの原則は「自然な人間の文章で誤検知しない」こと。
-    # 人間が書いた自然な文章（fixtures/natural.md 相当）でも burstiness は
+    # 人間が書いた自然な文章でも burstiness は
     # -0.55 前後まで下がることが実測で分かっている（モーラ計算の拗音補正後の実測値）。
     # -0.55 ちょうどを閾値にすると、その実測値のごく僅かな変動で人間の文章にまで
     # 誤検知するため、マージンを取って -0.62 まで緩めている。
@@ -1258,7 +1258,7 @@ def detect_low_specificity(
     これは文体（言い回し）の問題ではなく、段落を支える固有名詞・数値・一次情報
     そのものが足りていない「素材不足」のサインであるため、detail では
     書き直しではなく情報収集を検討するよう促す
-    （references/composition.md の「素材の収集」、references/paragraph.md の接地の基準を参照）。
+    （references/paragraph.md の「接地」の基準を参照）。
     """
     tokenizer = get_tokenizer()
     from sudachipy import SplitMode
@@ -1328,7 +1328,7 @@ def detect_low_specificity(
                         f"抽象名詞率={abstract_noun_ratio:.3f}, 例示マーカー={'あり' if has_example_marker else 'なし'}。"
                         "固有名詞・数値・実例が乏しく一般論に留まっている疑い。"
                         "素材不足のサインであり、文体の修正でなく情報収集を検討する"
-                        "（references/composition.md の「素材の収集」を参照）"
+                        "（references/paragraph.md の「接地」を参照）"
                     ),
                 )
             )
@@ -1676,8 +1676,8 @@ def run_lint(
     text = mask_markdown_structure(raw_text)
     lines = iter_lines_with_no(text)
     raw_lines_by_no = dict(iter_lines_with_no(raw_text))
-    # 語彙系の検出器(禁止語・翻訳調)は、見出し・箇条書き・引用・表の中の語も
-    # 対象にする(2026-08-29: 箇条書き内の禁止語が素通りしていた運用指摘への対応)。
+    # 語彙系の検出器(動詞カタログ・翻訳調)は、見出し・箇条書き・引用・表の中の語も
+    # 対象にする(2026-08-29: 箇条書き内の語が素通りしていた運用指摘への対応)。
     # コードブロック・インラインコード・フロントマターのマスクは通常どおり効かせる。
     lex_lines = iter_lines_with_no(mask_markdown_structure(raw_text, keep_structure_text=True))
     sentences = split_sentences_with_lines(lines, raw_lines_by_no)

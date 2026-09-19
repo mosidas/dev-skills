@@ -6,7 +6,7 @@
 
 配るものは 2 つある。
 
-- **スキル `japanese-writing`**: 仕様書・手順書・調査レポート・議事録・記事などの日本語文書を書く・推敲する・リライトするときの規範。文・段落・構成・書式の規約と、文書タイプ別の指針、検査スクリプト(`lint.py` ほか)を持つ。
+- **スキル `japanese-writing`**: 仕様書・手順書・調査レポート・議事録・記事などの日本語文書を書く・推敲する・リライトするときの規範。読み手・表記・文・段落の規約と、検査スクリプト(`lint.py` ほか)を持つ。
 - **検査 hooks**: 日本語 Markdown の書き込み直後に `lint.py` を実行して書き直しを促し、セッション完了時に再検査して重大カテゴリの検出が残るあいだ完了を差し戻す。
 
 スキルは Claude が必要と判断したときに読み込まれる。hooks はプラグインを有効にしたセッションで決定論的に発火する。
@@ -18,8 +18,8 @@
 ├── plugin.json            # プラグインのマニフェスト
 └── marketplace.json       # このリポジトリ自身をマーケットプレイスとして宣言する
 skills/japanese-writing/
-├── SKILL.md               # 規範の入口(工程と読み込み順)
-├── references/            # 文・段落・構成・書式・検査・文書タイプ別の規範
+├── SKILL.md               # 規範の入口(工程と参照ファイル)
+├── references/            # 読み手・表記・文・段落・検査の規範
 └── scripts/               # lint.py・outline.py・terms.py・semantic.py と NG/OK カタログ
 hooks/
 ├── hooks.json             # PostToolUse と Stop の配線
@@ -64,7 +64,7 @@ hooks はセッション開始時に読み込まれる。有効化した後は�
 
 ## 4. 前提
 
-`uv` が使えること。`lint.py` は形態素解析に sudachipy を使い、依存は `uv run` がスクリプト先頭の宣言から解決する。`uv` が無い環境では hooks は検査を諦めて何もせず、スキルは手動チェックリスト(`references/inspection.md` 8.)で代替する。
+`uv` が使えること。`lint.py` は形態素解析に sudachipy を使い、依存は `uv run` がスクリプト先頭の宣言から解決する。`uv` が無い環境では hooks は検査を諦めて何もせず、スキルは規範に沿って目視で点検する。
 
 `semantic.py` だけは torch と sentence-transformers に依存する重量級の opt-in 検出器であり、hooks からは呼ばない。
 
@@ -79,7 +79,7 @@ hooks はセッション開始時に読み込まれる。有効化した後は�
 
 重大カテゴリの既定は `forbidden_phrase`(severity warn 以上)と `antithesis_repetition`(critical のみ)である。Stop のブロックは既定 3 回で打ち切り、解消しない検出で作業が封鎖され続ける事態を避ける。
 
-設定の正本は `hooks/inspection.config.json` である。利用側の変更は `.claude/japanese-writing-inspection.json` に同じキーで書く(浅い上書き。プラグインを更新しても残る)。キーの一覧は `skills/japanese-writing/references/inspection.md` 2.5 にある。
+設定の正本は `hooks/inspection.config.json` である。利用側の変更は `.claude/japanese-writing-inspection.json` に同じキーで書く(浅い上書き。プラグインを更新しても残る)。キーの一覧は `skills/japanese-writing/references/inspection.md` 3. にある。
 
 次のいずれかに当たると、hooks は書き込みと完了を止めずに素通しする。
 
