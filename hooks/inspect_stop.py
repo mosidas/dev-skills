@@ -72,7 +72,7 @@ def main() -> None:
     max_blocks = int(config.get("stop_max_blocks", 3))
     if state["stop_blocks"] >= max_blocks:
         print(
-            f"japanese-writing 検査: 重大カテゴリの検出が残るがブロック上限({max_blocks} 回)に"
+            f"write-doc 検査: 重大カテゴリの検出が残るがブロック上限({max_blocks} 回)に"
             "達したため完了を許可する",
             file=sys.stderr,
         )

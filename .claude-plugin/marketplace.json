@@ -1,12 +1,14 @@
 {
   "$schema": "https://www.schemastore.org/claude-code-marketplace.json",
-  "name": "japanese-writing",
-  "description": "日本語の技術文書の作成規範と検査 hooks を配る Claude Code プラグイン。",
-  "owner": { "name": "mosidas" },
+  "name": "mosidas",
+  "description": "mosidas のプラグインを配るマーケットプレイス。",
+  "owner": {
+    "name": "mosidas"
+  },
   "plugins": [
     {
-      "name": "japanese-writing",
-      "description": "日本語の開発ドキュメント・技術文書の作成規範(スキル)と検査 hooks。",
+      "name": "dev-skills",
+      "description": "開発作業のスキル集(日本語の技術文書の作成規範 write-doc)と検査 hooks。",
       "source": "./",
       "category": "productivity"
     }

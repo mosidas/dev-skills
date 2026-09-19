@@ -1,12 +1,12 @@
-# japanese-writing
+# dev-skills
 
-日本語の技術文書を書くための規範スキルと、その検査を自動で走らせる hooks を配る Claude Code プラグイン。
+開発作業のスキルと、日本語文書の検査を自動で走らせる hooks を配る Claude Code プラグイン。プラグイン名は `dev-skills`、マーケットプレイス名は `mosidas` で、スキルは `/dev-skills:<スキル名>` で呼ぶ。
 
 ## 1. 概要
 
 配るものは 2 つある。
 
-- **スキル `japanese-writing`**: 仕様書・手順書・調査レポート・議事録・記事などの日本語文書を書く・推敲する・リライトするときの規範。読み手・表記・文・段落の規約と、検査スクリプト(`lint.py` ほか)を持つ。
+- **スキル `write-doc`**: 仕様書・手順書・調査レポート・議事録・記事などの日本語文書を書く・推敲する・リライトするときの規範。読み手・表記・文・段落の規約と、検査スクリプト(`lint.py` ほか)を持つ。
 - **検査 hooks**: 日本語 Markdown の書き込み直後に `lint.py` を実行して書き直しを促し、セッション完了時に再検査して重大カテゴリの検出が残るあいだ完了を差し戻す。
 
 スキルは Claude が必要と判断したときに読み込まれる。hooks はプラグインを有効にしたセッションで決定論的に発火する。
@@ -17,7 +17,7 @@
 .claude-plugin/
 ├── plugin.json            # プラグインのマニフェスト
 └── marketplace.json       # このリポジトリ自身をマーケットプレイスとして宣言する
-skills/japanese-writing/
+skills/write-doc/
 ├── SKILL.md               # 規範の入口(工程と参照ファイル)
 ├── references/            # 読み手・表記・文・段落・検査の規範
 └── scripts/               # lint.py・outline.py・terms.py・semantic.py と NG/OK カタログ
@@ -35,7 +35,7 @@ tests/                     # カタログと hooks の単体テスト
 
 ```console
 $ claude plugin marketplace add mosidas/dev-skills
-$ claude plugin install japanese-writing@japanese-writing
+$ claude plugin install dev-skills@mosidas
 ```
 
 設定ファイルで宣言することもできる。プロジェクト単位の有効化は `.claude/settings.json` に書く。
@@ -43,7 +43,7 @@ $ claude plugin install japanese-writing@japanese-writing
 ```json
 {
   "enabledPlugins": {
-    "japanese-writing@japanese-writing": true
+    "dev-skills@mosidas": true
   }
 }
 ```
@@ -53,7 +53,7 @@ $ claude plugin install japanese-writing@japanese-writing
 ```json
 {
   "extraKnownMarketplaces": {
-    "japanese-writing": {
+    "mosidas": {
       "source": { "source": "github", "repo": "mosidas/dev-skills" }
     }
   }
@@ -79,7 +79,7 @@ hooks はセッション開始時に読み込まれる。有効化した後は�
 
 重大カテゴリの既定は `forbidden_phrase`(severity warn 以上)と `antithesis_repetition`(critical のみ)である。Stop のブロックは既定 3 回で打ち切り、解消しない検出で作業が封鎖され続ける事態を避ける。
 
-設定の正本は `hooks/inspection.config.json` である。利用側の変更は `.claude/japanese-writing-inspection.json` に同じキーで書く(浅い上書き。プラグインを更新しても残る)。キーの一覧は `skills/japanese-writing/references/inspection.md` 3. にある。
+設定の正本は `hooks/inspection.config.json` である。利用側の変更は `.claude/write-doc-inspection.json` に同じキーで書く(浅い上書き。プラグインを更新しても残る)。キーの一覧は `skills/write-doc/references/inspection.md` 3. にある。
 
 次のいずれかに当たると、hooks は書き込みと完了を止めずに素通しする。
 

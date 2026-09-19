@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """日本語 Markdown の書き込み直後に検査を発火させる PostToolUse hook(Write / Edit / MultiEdit / NotebookEdit)。
 
-書き込まれたファイルが日本語の Markdown なら、プラグイン同梱の japanese-writing スキルの
-lint.py(`skills/japanese-writing/scripts/lint.py`)を `--json` で実行し、検出があれば
+書き込まれたファイルが日本語の Markdown なら、プラグイン同梱の write-doc スキルの
+lint.py(`skills/write-doc/scripts/lint.py`)を `--json` で実行し、検出があれば
 警告(該当文を丸ごと書き直す指示・カテゴリ別の言い換え指針・機械検出に出ない不自然さの
 自己判定の指示)をエージェントへ返す。書き込み自体は成立済みであり、処理は止めない。
 書き直しの結果には再びこの hook がかかる。

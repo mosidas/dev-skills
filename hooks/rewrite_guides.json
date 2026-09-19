@@ -1,5 +1,5 @@
 {
-  "_comment": "lint.py の検出カテゴリごとの書き直し指針と言い換え例。hook の警告に同梱される。規範の正本は japanese-writing スキルの references/(sentence.md・paragraph.md・format.md・inspection.md)にあり、本ファイルは警告へ添える要約に留まる。",
+  "_comment": "lint.py の検出カテゴリごとの書き直し指針と言い換え例。hook の警告に同梱される。規範の正本は write-doc スキルの references/(sentence.md・paragraph.md・format.md・inspection.md)にあり、本ファイルは警告へ添える要約に留まる。",
   "forbidden_phrase": {
     "instruction": "何がどうなるかが一意に定まらない動詞、または話し言葉・外来語の動詞。事象を名指しする動詞か漢語の操作語へ置き換える(sentence.md 3.)。",
     "example": { "before": "仕様に落とし込む。", "after": "仕様に反映する。" }
