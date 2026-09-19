@@ -1,7 +1,7 @@
 {
   "name": "dev-skills",
   "description": "開発作業のスキル集。日本語の技術文書の作成規範(write-doc)とスライド構成の規範(write-slide)、書き込み直後の lint・完了時の再検査を行う hooks。",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "author": {
     "name": "mosidas"
   },

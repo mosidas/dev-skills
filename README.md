@@ -100,6 +100,8 @@ tests/                     # カタログと hooks の単体テスト
 $ python3 -m unittest discover -s tests -t tests
 ```
 
+プラグインの内容を変更したら、`.claude-plugin/plugin.json` の `version` を上げる。`claude plugin update` は version が同じだと最新と判定し、変更を取り込まない。
+
 マニフェストの検査は次のコマンドで行う。
 
 ```console
