@@ -7,10 +7,11 @@ Claude Code のプラグインである。開発作業で使うスキルと、�
 | 構成要素 | 種別 | 役割 |
 | :-- | :-- | :-- |
 | `write-doc` | スキル | 仕様書・手順書・調査レポート・議事録・記事などの日本語文書を書く・推敲する・リライトするときの規範。読み手・表記・文・段落・検査の規範と、検査スクリプト(`lint.py` ほか)を持つ |
+| `write-slide` | スキル | プレゼン資料・説明資料のスライド構成を作る・点検するときの規範。型の選択、メッセージライン、ページの役割分担、文体と強調を定める |
 | `hooks/inspect_write.py` | hook(PostToolUse) | 日本語 Markdown の書き込み直後に `lint.py` を実行し、検出があれば書き直しを促す警告を返す |
 | `hooks/inspect_stop.py` | hook(Stop) | セッション完了時に再検査し、重大カテゴリの検出が残るあいだ完了を差し戻す |
 
-スキルは、Claude が日本語文書の作成・推敲と判断したときに自動で読み込まれる。`/dev-skills:write-doc` で明示的に呼んでもよい。hooks に呼び出しの操作はない。プラグインを有効にしたセッションで自動で発火する。
+スキルは Claude が用途を判断して自動で読み込む。`/dev-skills:write-doc`・`/dev-skills:write-slide` で明示的に呼んでもよい。hooks に呼び出しの操作はない。プラグインを有効にしたセッションで、日本語 Markdown の書き込みとセッション完了のたびに自動で発火する。
 
 ## 2. 前提
 
@@ -79,6 +80,8 @@ skills/write-doc/
 ├── SKILL.md               # 規範の入口(工程と参照ファイル)
 ├── references/            # 読み手・表記・文・段落・検査の規範
 └── scripts/               # lint.py・outline.py・terms.py・semantic.py と動詞の NG/OK カタログ
+skills/write-slide/
+└── SKILL.md               # スライド構成の規範
 hooks/
 ├── hooks.json             # PostToolUse と Stop の配線
 ├── inspect_write.py       # PostToolUse: 書き込み直後の検査と警告
