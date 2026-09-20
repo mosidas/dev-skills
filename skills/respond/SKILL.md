@@ -127,4 +127,4 @@ description: 会話の応答の形を定める規範。読み手を ADHD と想�
 
 ## 6. 出典
 
-本規則は i-have-adhd(MIT ライセンス、Ayoub Ghriss、https://github.com/ayghri/i-have-adhd)の規則を元にする。3.11〜3.13 は workspace の `AGENTS.md` の原則を反映する。
+本規則は i-have-adhd(MIT ライセンス、Copyright (c) 2026 Ayoub Ghriss、https://github.com/ayghri/i-have-adhd)の規則を元にする。3.11〜3.13 は workspace の `AGENTS.md` の原則を反映する。

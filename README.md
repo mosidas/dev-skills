@@ -121,6 +121,7 @@ PostToolUse と Stop は日本語文書の検査を行う。発火するのは�
 .codex-plugin/
 └── plugin.json            # Codex CLI 向けのマニフェスト
 plugin.json                # Antigravity CLI 向けのマニフェスト
+lefthook.yml                # git hook(pre-commit: plugin validate、pre-push: unittest)
 agents/
 ├── planner.md             # 計画(opus、Write/Edit 不可)
 ├── implementer.md         # 実装とコミット(sonnet)
