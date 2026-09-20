@@ -6,7 +6,7 @@ Claude Code・Codex CLI・Antigravity CLI のプラグインである。開発�
 
 | 構成要素 | 種別 | 役割 |
 | :-- | :-- | :-- |
-| `develop` | スキル | 実装タスクを計画から PR まで進める統括の手順。Backlog.md のタスク、GitHub flow、git hook(lefthook・husky)、planner・implementer・reviewer による実装と点検のループ、push 後の CI 確認を定める |
+| `develop` | スキル | 実装タスクを要件の確認から PR まで進める統括の手順。要件(目的・完了条件・対象外)の壁打ち、Backlog.md のタスク、GitHub flow、git hook(lefthook・husky)、planner・implementer・reviewer による実装と点検のループ、push 後の CI 確認を定める |
 | `planner`・`implementer`・`reviewer` | サブエージェント(`agents/`) | develop が起動する 3 つの役割。planner は計画(Write/Edit 不可)、implementer はステップ 1 つ分の実装とコミット、reviewer は適合・テスト・欠陥・簡潔さの点検(Write/Edit 不可) |
 | `write-doc` | スキル | 仕様書・手順書・調査レポート・議事録・記事などの日本語文書を書く・推敲する・リライトするときの規範。読み手・表記・文・段落・検査の規範と、検査スクリプト(`lint.py` ほか)を持つ |
 | `write-slide` | スキル | プレゼン資料・説明資料のスライド構成を作る・点検するときの規範。型の選択、メッセージライン、ページの役割分担、文体と強調を定める |
@@ -122,7 +122,7 @@ agents/
 ├── implementer.md         # 実装とコミット(sonnet)
 └── reviewer.md            # 点検と判定(opus、Write/Edit 不可)
 skills/develop/
-├── SKILL.md               # 統括の工程(タスク・ブランチ・計画・実装と点検のループ・PR・完了)
+├── SKILL.md               # 統括の工程(要件・タスク・ブランチ・計画・実装と点検のループ・PR・完了)
 └── references/            # git-flow.md(ブランチ・PR・CI・マージ)、hooks.md(lefthook・husky)
 skills/write-doc/
 ├── SKILL.md               # 規範の入口(工程と参照ファイル)
