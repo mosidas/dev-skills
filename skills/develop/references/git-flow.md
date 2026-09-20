@@ -5,7 +5,8 @@
 ## 1. ブランチ
 
 ```sh
-git switch main && git pull --ff-only
+git switch main
+git pull --ff-only                        # サンドボックスでは複合コマンドの内側の git 通信が拒否されるため 1 行ずつ実行する
 git switch -c <type>/<TASK-id>-<slug>     # 例: feat/TASK-021-export-csv。タスクが無いときは feat/export-csv
 ```
 
@@ -18,15 +19,15 @@ git switch -c <type>/<TASK-id>-<slug>     # 例: feat/TASK-021-export-csv。タ�
 
 ```sh
 git push -u origin <ブランチ名>
-gh pr create --fill --base main          # タイトルと本文を手で書くときは --title と --body
+gh pr create --base main --title "<type>: <変更内容>" --body "<本文>"   # 本文が長いときは --body-file
 ```
 
-PR 本文には、目的、変更の要点、検証したこと(テスト・手動確認)を書く。
+PR 本文には、目的、変更の要点、検証したこと(テスト・手動確認)を書く。`--fill` はコミットメッセージを流し込むだけなので使わない。
 
 ## 4. CI の確認
 
 ```sh
-gh pr checks --watch --fail-fast         # すべて終わるまで待ち、失敗があれば即座に終了する
+gh pr checks --watch --fail-fast         # すべて終わるまで待ち、失敗があれば即座に終了する。バックグラウンドで実行し完了通知を待つ(ツールのタイムアウトより CI が長いことがある)
 gh run list --branch <ブランチ名> --limit 3
 gh run view <run-id> --log-failed        # 失敗したステップのログだけを見る
 ```
@@ -39,7 +40,8 @@ gh run view <run-id> --log-failed        # 失敗したステップのログだ�
 ユーザーの指示を得てから実行する。
 
 ```sh
-gh pr merge <番号> --merge --delete-branch
-git switch main && git pull --ff-only
+gh pr merge <番号> --merge --delete-branch   # 承認が必須で自己承認できないリポジトリでは --admin を足す
+git switch main
+git pull --ff-only
 git branch -D <ブランチ名>               # ローカルに残ったとき
 ```
