@@ -8,7 +8,7 @@
   "plugins": [
     {
       "name": "dev-skills",
-      "description": "開発作業のスキル集(日本語の技術文書の作成規範 write-doc とスライド構成 write-slide)と検査 hooks。",
+      "description": "開発作業のスキル集(実装タスクの手順 develop とサブエージェント、日本語の技術文書の作成規範 write-doc、スライド構成 write-slide)と検査 hooks。",
       "source": "./",
       "category": "productivity"
     }
