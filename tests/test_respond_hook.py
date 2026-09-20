@@ -34,20 +34,50 @@ class StripFrontmatterTest(unittest.TestCase):
 
 
 class HookProcessTest(helpers.TempDirTestCase):
-    def run_hook(self) -> subprocess.CompletedProcess:
+    def copy_hook(self) -> Path:
+        """`inject_respond.py` を一時ディレクトリの `hooks/` 配下へ複製する。
+
+        hook は自身の 1 つ上の階層に `skills/respond/SKILL.md` を探すため、
+        実物の SKILL.md の見出しに依存させないよう、対応する `skills/respond/SKILL.md`
+        は呼び出し側が合成して置く。
+        """
+        script = self.tmp / "hooks" / "inject_respond.py"
+        script.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy(INJECT_RESPOND, script)
+        return script
+
+    def run_hook(self, script: Path) -> subprocess.CompletedProcess:
         return subprocess.run(
-            [sys.executable, str(INJECT_RESPOND)],
+            [sys.executable, str(script)],
             input="{}",
             capture_output=True,
             text=True,
         )
 
     def test_スキルの本文を標準出力へ書く(self) -> None:
-        proc = self.run_hook()
+        script = self.copy_hook()
+        self.write(
+            "skills/respond/SKILL.md",
+            "---\nname: respond\ndescription: x\n---\n\n# 合成した見出し\n\n合成した本文\n",
+        )
+        proc = self.run_hook(script)
         self.assertEqual(proc.returncode, 0, proc.stderr)
-        self.assertIn("# 応答の形", proc.stdout)
+        self.assertIn("# 合成した見出し", proc.stdout)
         self.assertIn(hook.PREFACE, proc.stdout)
         self.assertNotIn("name: respond", proc.stdout)
+
+    def test_CRLFの本文でも先頭にCRを残さない(self) -> None:
+        script = self.copy_hook()
+        self.write(
+            "skills/respond/SKILL.md",
+            "---\r\nname: respond\r\ndescription: x\r\n---\r\n\r\n# 合成した見出し\r\n\r\n合成した本文\r\n",
+        )
+        proc = self.run_hook(script)
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        body_start = proc.stdout.index("# 合成した見出し")
+        self.assertNotEqual(body_start, 0)
+        self.assertFalse(proc.stdout[: body_start].endswith("\r"))
+        self.assertTrue(proc.stdout.startswith(hook.PREFACE))
 
     def test_スキルが見つからなくても失敗しない(self) -> None:
         script = self.tmp / "inject_respond.py"

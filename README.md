@@ -93,7 +93,7 @@ $ agy plugin install <クローンのパス>
 
 | hook | 発火 | 動作 |
 | :-- | :-- | :-- |
-| SessionStart(startup / resume / clear / compact) | セッション開始時 | `skills/respond/SKILL.md` の本文を frontmatter を除いて注入する |
+| SessionStart(すべての source) | セッション開始時 | `skills/respond/SKILL.md` の本文を frontmatter を除いて注入する |
 | PostToolUse(Write / Edit / MultiEdit / NotebookEdit) | 日本語 Markdown の書き込み直後 | `lint.py` を `--json` で実行し、検出があれば警告を返す。書き込みは取り消さない |
 | Stop | セッション完了時 | そのセッションで検査したファイルを再検査し、重大カテゴリの検出が残るあいだ完了をブロックする |
 
