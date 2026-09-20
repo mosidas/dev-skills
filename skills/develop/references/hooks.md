@@ -50,5 +50,5 @@ npm test
 
 ## 4. 確認
 
-- 意図的に lint が失敗する変更でコミットを試み、hook が止めることを確かめる。確かめたら変更を戻す。
+- hook を直接実行し、lint とテストが動くことを確かめる。lefthook は `lefthook run pre-commit` と `lefthook run pre-push`、husky は `sh .husky/pre-commit` と `sh .husky/pre-push`。
 - hook を入れたコミットは、計画の最初のステップとは別のコミットにする(`chore: git hook を導入する`)。
