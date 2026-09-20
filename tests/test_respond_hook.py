@@ -32,6 +32,10 @@ class StripFrontmatterTest(unittest.TestCase):
         text = "# 見出し\n\n上\n\n---\n\n下\n"
         self.assertEqual(hook.strip_frontmatter(text), text.rstrip("\n"))
 
+    def test_CRLFのfrontmatterでも前後にCRを残さない(self) -> None:
+        text = "---\r\nname: respond\r\ndescription: x\r\n---\r\n\r\n# 応答の形\r\n\r\n本文\r\n"
+        self.assertEqual(hook.strip_frontmatter(text), "# 応答の形\r\n\r\n本文")
+
 
 class HookProcessTest(helpers.TempDirTestCase):
     def copy_hook(self) -> Path:
@@ -63,31 +67,12 @@ class HookProcessTest(helpers.TempDirTestCase):
         proc = self.run_hook(script)
         self.assertEqual(proc.returncode, 0, proc.stderr)
         self.assertIn("# 合成した見出し", proc.stdout)
-        self.assertIn(hook.PREFACE, proc.stdout)
+        self.assertTrue(proc.stdout.startswith(hook.PREFACE))
         self.assertNotIn("name: respond", proc.stdout)
 
-    def test_CRLFの本文でも先頭にCRを残さない(self) -> None:
-        script = self.copy_hook()
-        self.write(
-            "skills/respond/SKILL.md",
-            "---\r\nname: respond\r\ndescription: x\r\n---\r\n\r\n# 合成した見出し\r\n\r\n合成した本文\r\n",
-        )
-        proc = self.run_hook(script)
-        self.assertEqual(proc.returncode, 0, proc.stderr)
-        body_start = proc.stdout.index("# 合成した見出し")
-        self.assertNotEqual(body_start, 0)
-        self.assertFalse(proc.stdout[: body_start].endswith("\r"))
-        self.assertTrue(proc.stdout.startswith(hook.PREFACE))
-
     def test_スキルが見つからなくても失敗しない(self) -> None:
-        script = self.tmp / "inject_respond.py"
-        shutil.copy(INJECT_RESPOND, script)
-        proc = subprocess.run(
-            [sys.executable, str(script)],
-            input="{}",
-            capture_output=True,
-            text=True,
-        )
+        script = self.copy_hook()
+        proc = self.run_hook(script)
         self.assertEqual(proc.returncode, 0, proc.stderr)
         self.assertEqual(proc.stdout, "")
 

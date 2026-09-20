@@ -25,7 +25,10 @@ PREFACE = "respond(常時適用): 以下の規範をこのセッションのす�
 
 
 def strip_frontmatter(text: str) -> str:
-    """先頭 frontmatter を取り除き、前後の空行(CRLF 含む)を落とす(本文中の `---` は残す)。"""
+    """先頭 frontmatter を取り除き、前後の空行を落とす(本文中の `---` は残す)。
+
+    CRLF の扱いは、この関数を直接呼ぶ場合に限り効く(`read_text` 経由では届かない)。
+    """
     return FRONTMATTER_RE.sub("", text, count=1).strip("\r\n")
 
 
