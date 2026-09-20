@@ -1,0 +1,8 @@
+pre-commit:
+  commands:
+    validate:
+      run: claude plugin validate . --strict
+pre-push:
+  commands:
+    test:
+      run: python3 -m unittest discover -s tests -t tests
