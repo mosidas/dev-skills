@@ -34,7 +34,7 @@ backlog task create "<タイトル>" -l <area> -d "<目的と完了条件>"
 
 ## 3. ブランチを切る
 
-- `main` を最新にし、`<type>/<TASK-id>-<slug>` の名前でブランチを切る(`type` は `feat`・`fix`・`refactor`・`chore`)。
+- `main` を最新にし、`<type>/<TASK-id>-<slug>` の名前でブランチを切る(`type` は `feat`・`fix`・`refactor`・`chore`。タスクが無いときは `<type>/<slug>`)。
 - git hook が無ければ入れる(`references/hooks.md`)。pre-commit で lint、pre-push でテストを実行する。hook は implementer の「テストが通った」という報告を機械的に裏づける。
 - 手順の詳細は `references/git-flow.md` に従う。
 

@@ -6,7 +6,7 @@
 
 ```sh
 git switch main && git pull --ff-only
-git switch -c <type>/<TASK-id>-<slug>     # 例: feat/TASK-021-export-csv
+git switch -c <type>/<TASK-id>-<slug>     # 例: feat/TASK-021-export-csv。タスクが無いときは feat/export-csv
 ```
 
 ## 2. コミット
