@@ -24,6 +24,7 @@ python3 -m unittest discover -s tests -t tests -p test_phrase_catalog.py
 | `test_phrase_catalog.py` | `skills/write-doc/scripts/forbidden_phrases.json` | 動詞カタログの整合(型が 3 つ・重複・包含・OK 例の必須・severity 方針)と lint.py の検出語・severity の導出 |
 | `test_inspection_hooks.py` | `hooks/` | 検査対象の判定・重大カテゴリの絞り込み・設定の上書き・警告文・完了ブロックと上限、検査できない環境での素通し |
 | `test_respond_hook.py` | `hooks/inject_respond.py` | frontmatter の除去(CRLF・本文中の区切り線を含む)・本文の出力・スキルが無い環境での素通し |
+| `test_render.py` | `skills/draw-diagram/scripts/render.py` | `.mmd` と SVG の id・辺の対応照合、禁止要素(`script`・`foreignObject`・外部参照)・整形式の検査、`classDiagram`/`erDiagram` の照合対象外扱い |
 
 lint.py の実行は環境変数 `WRITING_INSPECTION_LINT_CMD` でスタブへ差し替える。テストは `uv` と sudachipy に依存しない。
 
