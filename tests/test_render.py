@@ -288,6 +288,8 @@ class ScreenshotTimeoutTest(helpers.TempDirTestCase):
     """Chrome が終了しなくても PNG の出現で撮影を早く終える検査。"""
 
     def _write_png_then_sleep(self, seconds: int) -> "Path":
+        # IEND チャンクまで書き終えた完成品の PNG として扱われるよう、末尾に
+        # 正しい IEND チャンクを持たせる(シグネチャ8バイト + 任意の内容 + IEND 12バイト)。
         return self.write(
             "dummy-chrome.sh",
             "#!/bin/sh\n"
@@ -296,7 +298,22 @@ class ScreenshotTimeoutTest(helpers.TempDirTestCase):
             "    --screenshot=*) png=\"${arg#--screenshot=}\" ;;\n"
             "  esac\n"
             "done\n"
-            'echo dummy > "$png"\n'
+            'printf \'\\x89PNG\\x0d\\x0a\\x1a\\x0a\' > "$png"\n'
+            'printf \'\\x00\\x00\\x00\\x00IEND\\xae\\x42\\x60\\x82\' >> "$png"\n'
+            f"sleep {seconds}\n",
+        )
+
+    def _write_incomplete_png_then_sleep(self, seconds: int) -> "Path":
+        # PNG シグネチャだけを書き、IEND を書かないまま眠る(撮影途中を模す)。
+        return self.write(
+            "dummy-chrome-incomplete.sh",
+            "#!/bin/sh\n"
+            'for arg in "$@"; do\n'
+            '  case "$arg" in\n'
+            "    --screenshot=*) png=\"${arg#--screenshot=}\" ;;\n"
+            "  esac\n"
+            "done\n"
+            'printf \'\\x89PNG\\x0d\\x0a\\x1a\\x0a\' > "$png"\n'
             f"sleep {seconds}\n",
         )
 
@@ -338,6 +355,60 @@ class ScreenshotTimeoutTest(helpers.TempDirTestCase):
             errors = render.screenshot(str(svg_path), str(png_path), timeout=1)
 
         self.assertTrue(any("タイムアウト" in e for e in errors))
+
+    def test_IENDを持たない不完全なPNGは完成と判定されずタイムアウトになる(self) -> None:
+        dummy_chrome = self._write_incomplete_png_then_sleep(30)
+        dummy_chrome.chmod(0o755)
+        svg_path = self.write("d.svg", _svg_text(["A"], []))
+        png_path = self.tmp / "out.png"
+
+        with unittest.mock.patch.dict(os.environ, {"CHROME_BIN": str(dummy_chrome)}):
+            errors = render.screenshot(str(svg_path), str(png_path), timeout=1)
+
+        self.assertTrue(any("タイムアウト" in e for e in errors))
+
+    def test_stderrを大量に出しても撮影を妨げない(self) -> None:
+        # PIPE のまま誰も読まないと、stderr がパイプのバッファ(64KB)を埋めた時点で
+        # Chrome の書き込みがブロックし、撮影(PNG 書き出し)に到達できなくなる。
+        dummy_chrome = self.write(
+            "dummy-chrome-noisy.sh",
+            "#!/bin/sh\n"
+            'for arg in "$@"; do\n'
+            '  case "$arg" in\n'
+            "    --screenshot=*) png=\"${arg#--screenshot=}\" ;;\n"
+            "  esac\n"
+            "done\n"
+            "head -c 262144 /dev/urandom 1>&2\n"
+            'printf \'\\x89PNG\\x0d\\x0a\\x1a\\x0a\' > "$png"\n'
+            'printf \'\\x00\\x00\\x00\\x00IEND\\xae\\x42\\x60\\x82\' >> "$png"\n'
+            "exit 0\n",
+        )
+        dummy_chrome.chmod(0o755)
+        svg_path = self.write("d.svg", _svg_text(["A"], []))
+        png_path = self.tmp / "out.png"
+
+        with unittest.mock.patch.dict(os.environ, {"CHROME_BIN": str(dummy_chrome)}):
+            started = time.monotonic()
+            errors = render.screenshot(str(svg_path), str(png_path), timeout=8)
+            elapsed = time.monotonic() - started
+
+        self.assertEqual(errors, [])
+        self.assertTrue(png_path.exists())
+        self.assertLess(elapsed, 3)
+
+    def test_非ゼロ終了時はstderrの内容がメッセージに載る(self) -> None:
+        dummy_chrome = self.write(
+            "dummy-chrome-fail.sh",
+            "#!/bin/sh\necho '想定外のエラーです' 1>&2\nexit 1\n",
+        )
+        dummy_chrome.chmod(0o755)
+        svg_path = self.write("d.svg", _svg_text(["A"], []))
+        png_path = self.tmp / "out.png"
+
+        with unittest.mock.patch.dict(os.environ, {"CHROME_BIN": str(dummy_chrome)}):
+            errors = render.screenshot(str(svg_path), str(png_path), timeout=5)
+
+        self.assertTrue(any("想定外のエラーです" in e for e in errors))
 
 
 class ScreenshotTimeoutEnvTest(helpers.TempDirTestCase):

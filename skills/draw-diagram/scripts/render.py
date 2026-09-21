@@ -264,6 +264,8 @@ def compare(
 DEFAULT_CHROME = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
 DEFAULT_CHROME_TIMEOUT_SECONDS = 60.0
 _PNG_POLL_INTERVAL_SECONDS = 0.5
+_PNG_IEND_CHUNK = b"\x00\x00\x00\x00IEND\xaeB\x60\x82"
+_STDERR_TAIL_LINES = 20
 
 
 def _default_chrome_timeout() -> float:
@@ -284,6 +286,27 @@ def _svg_viewbox_size(svg_path: str) -> tuple[int, int]:
     except (ET.ParseError, OSError, ValueError):
         pass
     return 1200, 800
+
+
+def _png_ready(png_abs: str) -> bool:
+    """PNG が IEND チャンクまで書き終わっているかを見る(書き込み途中の誤認を防ぐ)。"""
+    try:
+        if os.path.getsize(png_abs) < len(_PNG_IEND_CHUNK):
+            return False
+        with open(png_abs, "rb") as f:
+            f.seek(-len(_PNG_IEND_CHUNK), os.SEEK_END)
+            return f.read() == _PNG_IEND_CHUNK
+    except OSError:
+        return False
+
+
+def _read_stderr_tail(path: str) -> str:
+    try:
+        with open(path, encoding="utf-8", errors="replace") as f:
+            lines = f.readlines()
+        return "".join(lines[-_STDERR_TAIL_LINES:]).strip()
+    except OSError:
+        return ""
 
 
 def screenshot(
@@ -312,64 +335,58 @@ def screenshot(
     png_abs = os.path.abspath(png)
     Path(png_abs).unlink(missing_ok=True)
 
-    def _png_ready() -> bool:
-        return os.path.exists(png_abs) and os.path.getsize(png_abs) > 0
-
     # ponytail: サンドボックス内では Chrome が「Failed to create socket directory」で
     # 起動できないことがある。--user-data-dir を一時ディレクトリに固定しても解決しない
     # 場合は、サンドボックス外(または CI の専用コンテナ)で実行する必要がある。
     with tempfile.TemporaryDirectory() as user_data_dir:
-        try:
-            proc = subprocess.Popen(
-                [
-                    chrome,
-                    "--headless=new",
-                    "--disable-gpu",
-                    "--disable-crash-reporter",
-                    "--hide-scrollbars",
-                    f"--user-data-dir={user_data_dir}",
-                    f"--window-size={width},{height}",
-                    f"--screenshot={png_abs}",
-                    f"file://{svg_abs}",
-                ],
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                text=True,
-            )
-        except OSError as e:
-            return [f"Chrome の起動に失敗した: {e}"]
+        stderr_path = os.path.join(user_data_dir, "chrome-stderr.log")
+        # stdout/stderr を PIPE のまま誰も読まないと、Chrome がパイプのバッファを
+        # 埋めた時点で書き込みがブロックし撮影に到達できなくなるため、stdout は
+        # 読み捨て、stderr は一時ディレクトリ内のファイルへ逃がす。
+        with open(stderr_path, "wb") as stderr_file:
+            try:
+                proc = subprocess.Popen(
+                    [
+                        chrome,
+                        "--headless=new",
+                        "--disable-gpu",
+                        "--disable-crash-reporter",
+                        "--hide-scrollbars",
+                        f"--user-data-dir={user_data_dir}",
+                        f"--window-size={width},{height}",
+                        f"--screenshot={png_abs}",
+                        f"file://{svg_abs}",
+                    ],
+                    stdout=subprocess.DEVNULL,
+                    stderr=stderr_file,
+                )
+            except OSError as e:
+                return [f"Chrome の起動に失敗した: {e}"]
 
-        deadline = time.monotonic() + timeout
-        while True:
-            returncode = proc.poll()
-            if _png_ready():
-                if returncode is None:
-                    # PNG が出現した子プロセス(の子孫)がパイプの書き込み端を
-                    # 握ったままだと communicate() が読み切れず止まるため、
-                    # 直接の子だけ kill・wait し、パイプは読まずに閉じる。
+            deadline = time.monotonic() + timeout
+            while True:
+                returncode = proc.poll()
+                if _png_ready(png_abs):
+                    if returncode is None:
+                        proc.kill()
+                        proc.wait()
+                    break
+                if returncode is not None:
+                    if not _png_ready(png_abs):
+                        return [
+                            f"Chrome の実行に失敗した(exit={returncode}): "
+                            f"{_read_stderr_tail(stderr_path)}"
+                        ]
+                    break
+                if time.monotonic() >= deadline:
                     proc.kill()
                     proc.wait()
-                    proc.stdout.close()
-                    proc.stderr.close()
-                break
-            if returncode is not None:
-                _, stderr = proc.communicate()
-                if not _png_ready():
-                    return [
-                        f"Chrome の実行に失敗した(exit={returncode}): {stderr.strip()}"
-                    ]
-                break
-            if time.monotonic() >= deadline:
-                proc.kill()
-                proc.wait()
-                proc.stdout.close()
-                proc.stderr.close()
-                if not _png_ready():
-                    return [f"Chrome の起動がタイムアウトした({timeout:.0f}秒)"]
-                break
-            time.sleep(_PNG_POLL_INTERVAL_SECONDS)
+                    if not _png_ready(png_abs):
+                        return [f"Chrome の起動がタイムアウトした({timeout:.0f}秒)"]
+                    break
+                time.sleep(_PNG_POLL_INTERVAL_SECONDS)
 
-    if not _png_ready():
+    if not _png_ready(png_abs):
         return [f"PNG が生成されなかった: {png_abs}"]
     return []
 
