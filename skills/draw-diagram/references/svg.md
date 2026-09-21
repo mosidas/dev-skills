@@ -9,15 +9,31 @@
 色トークンは `<style>` 内の `:root` に定義し、`prefers-color-scheme: dark` の内側で上書きする。
 
 ```css
-:root { --fg: #1f2328; --bg: #ffffff; --accent: #0969da; --muted: #6e7781; }
+:root { --fg: #1f2328; --bg: #ffffff; --accent: #0969da; --muted: #6e7781; --panel: #f6f8fa; --hot-bg: #ddf4ff; --old-bg: #e7ebef; }
 @media (prefers-color-scheme: dark) {
-  :root { --fg: #e6edf3; --bg: #0d1117; --accent: #58a6ff; --muted: #8b949e; }
+  :root { --fg: #e6edf3; --bg: #0d1117; --accent: #58a6ff; --muted: #8b949e; --panel: #161b22; --hot-bg: #0f2a4d; --old-bg: #2a2f36; }
 }
 ```
 
 フォントは `system-ui, "Hiragino Sans", "Noto Sans JP", sans-serif` を指定する。文字サイズは本文が 11〜13px の範囲に収まるようにする。
 
-## 3. 矢印マーカー
+## 3. 塗り分け
+
+要素の区別は枠線の色でなく塗りで付ける。枠線の色だけを変える区別はしない。
+
+塗りは 3 種までにする。
+
+- 既定(`--bg`)。説明の対象。
+- 強調(`--hot-bg`)。図の主張が指す要素。枠線は `--accent` にする。
+- 退役・外部(`--old-bg`)。置き換え対象や図の外側にある要素。文字も `--muted` にする。
+
+グループ枠(`subgraph` に対応する枠)は `--panel` の薄い塗りに点線の枠、または塗り無しの点線にする。グループが並ぶ・入れ子になるときは、片方を塗り無しにして区別する。
+
+塗りを使ったら、凡例に塗りの意味を書く。塗りの見本の小さな `rect` と 1 文を付記する。
+
+意味の無い塗り(飾り)は使わない。
+
+## 4. 矢印マーカー
 
 矢印の先端は `marker` 要素で定義し、`fill="context-stroke"` を指定して辺の線色を継承させる。
 
@@ -31,11 +47,11 @@
 
 辺の要素には `marker-end: url(#arrow)` を指定する。
 
-## 4. アクセシビリティ
+## 5. アクセシビリティ
 
 ルートの `<svg>` に `role="img"` と `aria-label`(図が伝える内容を 1 文で要約したもの)を指定する。
 
-## 5. 禁止事項
+## 6. 禁止事項
 
 次を `render.py` が検出する。検出されると exit code が 1 になる。
 
@@ -45,7 +61,7 @@
 - `href`・`xlink:href` 属性の外部参照(`http://`・`https://`)
 - `style` 属性・`<style>` 要素内の `url(http://...)`・`url(https://...)`
 
-## 6. 照合のための属性
+## 7. 照合のための属性
 
 `.mmd` と対応させるため、次の 2 種類の属性を指定する。
 
@@ -55,7 +71,7 @@
 
 `render.py` はこの 2 種類の属性を `.mmd` から抽出した id・辺の集合と突き合わせ、過不足を報告する。
 
-## 7. HTML 閲覧ページ
+## 8. HTML 閲覧ページ
 
 次のいずれかに当てはまるときだけ、SVG を内包した HTML 閲覧ページを作る。図そのものは、照合済みの SVG をそのまま使う。
 

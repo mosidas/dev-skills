@@ -1,12 +1,12 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 560 200" width="560" height="200" role="img" aria-label="クライアントがキャッシュ経由で DB を読む流れ">
   <style>
-    :root { --fg: #1f2328; --bg: #ffffff; --accent: #0969da; --muted: #6e7781; }
-    @media (prefers-color-scheme: dark) { :root { --fg: #e6edf3; --bg: #0d1117; --accent: #58a6ff; --muted: #8b949e; } }
+    :root { --fg: #1f2328; --bg: #ffffff; --accent: #0969da; --muted: #6e7781; --panel: #f6f8fa; --hot-bg: #ddf4ff; --old-bg: #e7ebef; }
+    @media (prefers-color-scheme: dark) { :root { --fg: #e6edf3; --bg: #0d1117; --accent: #58a6ff; --muted: #8b949e; --panel: #161b22; --hot-bg: #0f2a4d; --old-bg: #2a2f36; } }
     svg { background: var(--bg); }
     text { font-family: system-ui, "Hiragino Sans", "Noto Sans JP", sans-serif; font-size: 13px; fill: var(--fg); }
     .box { fill: var(--bg); stroke: var(--fg); stroke-width: 1.5; }
     .edge { stroke: var(--fg); stroke-width: 1.5; fill: none; marker-end: url(#arrow); }
-    .hot { stroke: var(--accent); }
+    .hot { fill: var(--hot-bg); stroke: var(--accent); }
     .label { font-size: 11px; fill: var(--muted); }
   </style>
   <defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="context-stroke"/></marker></defs>
