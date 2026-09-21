@@ -19,7 +19,7 @@ flowchart LR
     Cache -->|ミス時のみ| DB[DB]
 ```
 
-矢印は `-->`・`---`・`==>`・`-.->`・`-.-` のいずれかを使う。ラベルは `-->|ラベル|` の形で辺に付ける。
+矢印は `-->`・`---`・`==>`・`-.->`・`-.-` のいずれかを使う。ラベルは `-->|ラベル|` の形で辺に付ける。複数のノードから同じ辺を引くときは `A & B --> C` の並列記法を使う。
 
 ### sequenceDiagram
 
@@ -35,13 +35,17 @@ sequenceDiagram
 
 ### stateDiagram-v2
 
-状態遷移は `A --> B` の形で書き、遷移条件は `A --> B: 条件` のようにコロンの後に記述する。
+状態遷移は `A --> B` の形で書き、遷移条件は `A --> B: 条件` のようにコロンの後に記述する。開始・終了の擬似状態は `[*]` で書く。
 
 ```
 stateDiagram-v2
+    [*] --> Idle
     Idle --> Running: 開始
     Running --> Done: 完了
+    Done --> [*]
 ```
+
+`render.py` は `[*]` を、左端(遷移元)なら id `_start`、右端(遷移先)なら id `_end` として扱う。対応する SVG 側は `data-id="_start"`・`data-id="_end"` を指定する(`svg.md` の「照合のための属性」参照)。
 
 ### classDiagram・erDiagram
 
@@ -70,6 +74,8 @@ flowchart LR
 
 ## 5. render.py が拾う記法の範囲
 
-- ノード宣言: `id[...]`・`id(...)`・`id{...}`・`id([...])`(`participant id as ラベル` は sequenceDiagram のみ)。
-- 辺: flowchart は `-->`・`---`・`==>`・`-.->`・`-.-`(途中の `|ラベル|` は無視して両端の id だけを見る)。stateDiagram-v2 と sequenceDiagram は `-->`・`->`・`->>`・`-->>` のあとのコロン区切りラベルを含めて見る。
+- ノード宣言: `id[...]`・`id(...)`・`id{...}`・`id([...])`(`participant id as ラベル`・`actor id as ラベル` は sequenceDiagram のみ)。sequenceDiagram では `participant`・`actor` 行以外の角括弧(メッセージ本文の `A->>B: fetch data[1]` など)はノード宣言として扱わない。
+- 辺: flowchart は `-->`・`---`・`==>`・`-.->`・`-.-`(途中の `|ラベル|` は無視して両端の id だけを見る)。stateDiagram-v2 と sequenceDiagram は `-->`・`->`・`->>`・`-->>` のあとのコロン区切りラベルを含めて見る。1 行に `A --> B --> C` のように辺が連なるときは、そのすべてを辺として拾う。
+- flowchart の `A & B --> C`(または `A --> B & C`)の並列記法は、`&` で結ばれた各ノードと反対側のノードとの直積を辺として拾う。
+- stateDiagram-v2 の `[*]` は、遷移元なら id `_start`、遷移先なら id `_end` として辺・ノードに登録する。
 - `flowchart`・`graph`・`stateDiagram-v2`・`subgraph`・`end`・`direction` で始まる行と `%%` のコメント行は、ノード宣言・辺の抽出の対象から外れる(図の種類の判定と読み飛ばしにだけ使う)。

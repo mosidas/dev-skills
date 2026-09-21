@@ -29,17 +29,25 @@ from pathlib import Path
 
 NODE_ID = r"[A-Za-z0-9_]+"
 _SHAPE_ALT = r"\(\[.*?\]\)|\[.*?\]|\(.*?\)|\{.*?\}"
+_NODE_ATOM = rf"{NODE_ID}(?:{_SHAPE_ALT})?"
+# flowchart の `A & B --> C` 並列記法用: `&` 区切りのノード列をひとまとめに捕捉する。
+_NODE_GROUP = rf"{_NODE_ATOM}(?:\s*&\s*{_NODE_ATOM})*"
+# stateDiagram-v2 の開始・終了擬似状態 `[*]` を通常のノード id と並べて捕捉する。
+_STATE_NODE = rf"(?:{NODE_ID}|\[\*\])"
+START_STATE_ID = "_start"
+END_STATE_ID = "_end"
 
 NODE_DECL_RE = re.compile(rf"({NODE_ID})({_SHAPE_ALT})")
-PARTICIPANT_RE = re.compile(rf"^participant\s+({NODE_ID})(?:\s+as\s+(.*))?\s*$")
+PARTICIPANT_RE = re.compile(rf"^(?:participant|actor)\s+({NODE_ID})")
+EDGE_LABEL_RE = re.compile(r"\|[^|]*\|")
 
 FLOW_EDGE_RE = re.compile(
-    rf"({NODE_ID})(?:{_SHAPE_ALT})?"
+    rf"({_NODE_GROUP})"
     r"\s*(?:-\.->|-->|---|==>|===|-\.-)\s*"
     r"(?:\|[^|]*\|\s*)?"
-    rf"({NODE_ID})(?:{_SHAPE_ALT})?"
+    rf"({_NODE_GROUP})"
 )
-STATE_EDGE_RE = re.compile(rf"({NODE_ID})\s*-->\s*({NODE_ID})\s*(?::\s*(.*))?")
+STATE_EDGE_RE = re.compile(rf"({_STATE_NODE})\s*-->\s*({_STATE_NODE})\s*(?::\s*(.*))?")
 SEQ_EDGE_RE = re.compile(rf"({NODE_ID})\s*(?:-->>|->>|-->|->)\s*({NODE_ID})\s*:\s*(.*)")
 
 _SKIP_FIRST_WORDS = {
@@ -56,31 +64,44 @@ _SKIP_FIRST_WORDS = {
 UNSUPPORTED_DIAGRAM_TYPES = {"classDiagram", "erDiagram"}
 
 
-def _strip_shape(shape: str) -> str:
-    if shape.startswith("([") and shape.endswith("])"):
-        return shape[2:-2].strip()
-    if shape[0] in "[({" and shape[-1] in "])}":
-        return shape[1:-1].strip()
-    return shape.strip()
-
-
-def _register_node_decls(line: str, nodes: dict[str, str], diagram_type: str) -> None:
+def _register_node_decls(line: str, nodes: set[str], diagram_type: str) -> None:
     if diagram_type == "sequenceDiagram":
+        # sequenceDiagram はメッセージ本文の角括弧(例: `A->>B: fetch data[1]`)を
+        # ノード宣言と誤読しないよう、participant/actor 行だけを見る。
         m = PARTICIPANT_RE.match(line)
         if m:
-            node_id = m.group(1)
-            label = (m.group(2) or node_id).strip()
-            nodes[node_id] = label
-            return
-    for m in NODE_DECL_RE.finditer(line):
-        node_id, shape = m.group(1), m.group(2)
-        nodes[node_id] = _strip_shape(shape)
+            nodes.add(m.group(1))
+        return
+    # 辺ラベル `|...|` の中身にある角括弧をノード宣言と誤読しないよう、先に除去する。
+    line_wo_labels = EDGE_LABEL_RE.sub("", line)
+    for m in NODE_DECL_RE.finditer(line_wo_labels):
+        nodes.add(m.group(1))
+
+
+def _side_ids(text: str) -> list[str]:
+    """flowchart の `A[A] & B[B]` のような `&` 区切りの片側からノード id を取り出す。"""
+    ids = []
+    for part in text.split("&"):
+        m = re.match(NODE_ID, part.strip())
+        if m:
+            ids.append(m.group(0))
+    return ids
+
+
+def _edge_pairs(diagram_type: str, raw_src: str, raw_dst: str) -> list[tuple[str, str]]:
+    if diagram_type == "flowchart":
+        return [(s, d) for s in _side_ids(raw_src) for d in _side_ids(raw_dst)]
+    if diagram_type == "stateDiagram-v2":
+        src = START_STATE_ID if raw_src == "[*]" else raw_src
+        dst = END_STATE_ID if raw_dst == "[*]" else raw_dst
+        return [(src, dst)]
+    return [(raw_src, raw_dst)]
 
 
 def _parse_lines(
     lines: list[str], diagram_type: str, edge_re: re.Pattern
-) -> tuple[dict[str, str], set[tuple[str, str]]]:
-    nodes: dict[str, str] = {}
+) -> tuple[set[str], set[tuple[str, str]]]:
+    nodes: set[str] = set()
     edges: set[tuple[str, str]] = set()
     for raw in lines:
         line = raw.strip()
@@ -90,17 +111,21 @@ def _parse_lines(
         if first_word in _SKIP_FIRST_WORDS:
             continue
         _register_node_decls(line, nodes, diagram_type)
-        m = edge_re.search(line)
-        if m:
-            src, dst = m.group(1), m.group(2)
-            edges.add((src, dst))
-            nodes.setdefault(src, "")
-            nodes.setdefault(dst, "")
+        pos = 0
+        while True:
+            m = edge_re.search(line, pos)
+            if not m:
+                break
+            for src, dst in _edge_pairs(diagram_type, m.group(1), m.group(2)):
+                edges.add((src, dst))
+                nodes.add(src)
+                nodes.add(dst)
+            pos = m.start(2)
     return nodes, edges
 
 
-def parse_mmd(text: str) -> tuple[str, dict[str, str] | None, set[tuple[str, str]] | None]:
-    """.mmd を解析し、(図の種類, ノード id→ラベル, 辺の集合) を返す。
+def parse_mmd(text: str) -> tuple[str, set[str] | None, set[tuple[str, str]] | None]:
+    """.mmd を解析し、(図の種類, ノード id の集合, 辺の集合) を返す。
 
     classDiagram・erDiagram は照合対象外を示すため nodes・edges に None を返す。
     """
@@ -136,7 +161,7 @@ def parse_mmd(text: str) -> tuple[str, dict[str, str] | None, set[tuple[str, str
 
 XLINK_HREF = "{http://www.w3.org/1999/xlink}href"
 FORBIDDEN_TAGS = {"script", "foreignObject", "image"}
-EXTERNAL_URL_RE = re.compile(r"https?://")
+EXTERNAL_URL_RE = re.compile(r"^\s*(?:https?:)?//")
 CSS_URL_RE = re.compile(r"url\(\s*['\"]?(https?://[^'\")]+)")
 MALFORMED_PREFIX = "SVG が整形式でない"
 
@@ -149,7 +174,7 @@ def parse_svg(path: str | Path) -> tuple[set[str], set[tuple[str, str]], list[st
     """SVG を解析し、(data-id の集合, data-edge の集合, 禁止事項の一覧) を返す。"""
     try:
         tree = ET.parse(path)
-    except ET.ParseError as e:
+    except (ET.ParseError, OSError) as e:
         return set(), set(), [f"{MALFORMED_PREFIX}: {e}"]
 
     ids: set[str] = set()
@@ -198,7 +223,7 @@ def parse_svg(path: str | Path) -> tuple[set[str], set[tuple[str, str]], list[st
 
 
 def compare(
-    mmd: tuple[str, dict[str, str] | None, set[tuple[str, str]] | None],
+    mmd: tuple[str, set[str] | None, set[tuple[str, str]] | None],
     svg: tuple[set[str], set[tuple[str, str]], list[str]],
 ) -> list[str]:
     """.mmd と SVG の id・辺の集合の食い違いを日本語で列挙する。"""
@@ -207,7 +232,7 @@ def compare(
     if nodes is None or edges is None:
         return []
 
-    mmd_ids = set(nodes.keys())
+    mmd_ids = nodes
     missing_nodes = mmd_ids - svg_ids
     extra_nodes = svg_ids - mmd_ids
     missing_edges = edges - svg_edges
@@ -234,6 +259,7 @@ def compare(
 # ---------------------------------------------------------------------------
 
 DEFAULT_CHROME = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
+DEFAULT_CHROME_TIMEOUT = float(os.environ.get("DRAW_DIAGRAM_CHROME_TIMEOUT", "60"))
 
 
 def _svg_viewbox_size(svg_path: str) -> tuple[int, int]:
@@ -250,10 +276,15 @@ def _svg_viewbox_size(svg_path: str) -> tuple[int, int]:
 
 
 def screenshot(
-    svg: str, png: str, width: int | None = None, height: int | None = None
+    svg: str,
+    png: str,
+    width: int | None = None,
+    height: int | None = None,
+    timeout: float | None = None,
 ) -> list[str]:
     """Chrome のヘッドレスモードで SVG を PNG に撮る。失敗理由の一覧を返す(空なら成功)。"""
     chrome = os.environ.get("CHROME_BIN", DEFAULT_CHROME)
+    timeout = DEFAULT_CHROME_TIMEOUT if timeout is None else timeout
     if not os.path.exists(chrome):
         return [f"Chrome の実行ファイルが見つからない: {chrome}"]
 
@@ -284,10 +315,15 @@ def screenshot(
                 ],
                 capture_output=True,
                 text=True,
-                timeout=60,
+                timeout=timeout,
             )
         except subprocess.TimeoutExpired:
-            return ["Chrome の起動がタイムアウトした(60秒)"]
+            # subprocess.run はタイムアウト時に子プロセスを kill して待ち合わせ済み。
+            # PNG がタイムアウト前に書き出されていれば、Chrome が終了しないだけで
+            # 撮影自体は成功しているとみなす。
+            if os.path.exists(png_abs) and os.path.getsize(png_abs) > 0:
+                return []
+            return [f"Chrome の起動がタイムアウトした({timeout:.0f}秒)"]
         except OSError as e:
             return [f"Chrome の起動に失敗した: {e}"]
 
@@ -310,6 +346,11 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--png", type=Path, help="指定すると Chrome で PNG を撮る")
     parser.add_argument("--width", type=int, help="スクリーンショットの幅")
     parser.add_argument("--height", type=int, help="スクリーンショットの高さ")
+    parser.add_argument(
+        "--timeout",
+        type=float,
+        help="Chrome の起動タイムアウト秒数(既定は DRAW_DIAGRAM_CHROME_TIMEOUT 環境変数または60秒)",
+    )
     args = parser.parse_args(argv)
 
     try:
@@ -342,7 +383,7 @@ def main(argv: list[str] | None = None) -> int:
         return 1
 
     if args.png:
-        errors = screenshot(str(args.svg), str(args.png), args.width, args.height)
+        errors = screenshot(str(args.svg), str(args.png), args.width, args.height, args.timeout)
         if errors:
             for e in errors:
                 print(e, file=sys.stderr)

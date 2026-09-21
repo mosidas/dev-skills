@@ -7,8 +7,10 @@ Chrome を起動するテスト(screenshot・--png)は書かない。
 
 from __future__ import annotations
 
+import os
 import sys
 import unittest
+import unittest.mock
 
 import helpers
 
@@ -39,10 +41,32 @@ class ParseMmdFlowchartTest(unittest.TestCase):
         )
         diagram_type, nodes, edges = render.parse_mmd(text)
         self.assertEqual(diagram_type, "flowchart")
-        self.assertEqual(set(nodes.keys()), {"A", "B", "C", "D"})
-        self.assertEqual(nodes["A"], "Start")
-        self.assertEqual(nodes["D"], "Inner")
+        self.assertEqual(nodes, {"A", "B", "C", "D"})
         self.assertEqual(edges, {("A", "B"), ("B", "C"), ("C", "D")})
+
+    def test_1行に連なる辺を取りこぼさない(self) -> None:
+        text = "flowchart LR\n    A[Start] --> B[Mid] --> C[End]\n"
+        _diagram_type, nodes, edges = render.parse_mmd(text)
+        self.assertEqual(nodes, {"A", "B", "C"})
+        self.assertEqual(edges, {("A", "B"), ("B", "C")})
+
+    def test_単独の辺は連鎖の影響を受けない(self) -> None:
+        text = "flowchart LR\n    A[Start] --> B[End]\n"
+        _diagram_type, nodes, edges = render.parse_mmd(text)
+        self.assertEqual(nodes, {"A", "B"})
+        self.assertEqual(edges, {("A", "B")})
+
+    def test_並列記法_左側の_を展開する(self) -> None:
+        text = "flowchart LR\n    A[A] & B[B] --> C[C]\n"
+        _diagram_type, nodes, edges = render.parse_mmd(text)
+        self.assertEqual(nodes, {"A", "B", "C"})
+        self.assertEqual(edges, {("A", "C"), ("B", "C")})
+
+    def test_通常の単一ノードの辺は並列記法の影響を受けない(self) -> None:
+        text = "flowchart LR\n    A[A] --> C[C]\n"
+        _diagram_type, nodes, edges = render.parse_mmd(text)
+        self.assertEqual(nodes, {"A", "C"})
+        self.assertEqual(edges, {("A", "C")})
 
 
 class ParseMmdSequenceTest(unittest.TestCase):
@@ -56,8 +80,57 @@ class ParseMmdSequenceTest(unittest.TestCase):
         )
         diagram_type, nodes, edges = render.parse_mmd(text)
         self.assertEqual(diagram_type, "sequenceDiagram")
-        self.assertEqual(nodes, {"A": "Alice", "B": "Bob"})
+        self.assertEqual(nodes, {"A", "B"})
         self.assertEqual(edges, {("A", "B"), ("B", "A")})
+
+    def test_メッセージ本文の角括弧をノード宣言と誤読しない(self) -> None:
+        text = (
+            "sequenceDiagram\n"
+            "    participant A as Alice\n"
+            "    participant B as Bob\n"
+            "    A->>B: fetch data[1]\n"
+        )
+        _diagram_type, nodes, edges = render.parse_mmd(text)
+        self.assertEqual(nodes, {"A", "B"})
+        self.assertNotIn("data", nodes)
+        self.assertEqual(edges, {("A", "B")})
+
+    def test_actor宣言のノードを抽出できる(self) -> None:
+        text = (
+            "sequenceDiagram\n"
+            "    actor A as Alice\n"
+            "    participant B as Bob\n"
+            "    A->>B: Hello\n"
+        )
+        _diagram_type, nodes, edges = render.parse_mmd(text)
+        self.assertEqual(nodes, {"A", "B"})
+        self.assertEqual(edges, {("A", "B")})
+
+
+class ParseMmdStateTest(unittest.TestCase):
+    def test_開始と終了の擬似状態を_start_と_endに変換する(self) -> None:
+        text = (
+            "stateDiagram-v2\n"
+            "    [*] --> Idle\n"
+            "    Idle --> Running: 開始\n"
+            "    Running --> [*]\n"
+        )
+        _diagram_type, nodes, edges = render.parse_mmd(text)
+        self.assertEqual(nodes, {render.START_STATE_ID, "Idle", "Running", render.END_STATE_ID})
+        self.assertEqual(
+            edges,
+            {
+                (render.START_STATE_ID, "Idle"),
+                ("Idle", "Running"),
+                ("Running", render.END_STATE_ID),
+            },
+        )
+
+    def test_擬似状態を含まない遷移は通常どおり抽出する(self) -> None:
+        text = "stateDiagram-v2\n    Idle --> Running: 開始\n"
+        _diagram_type, nodes, edges = render.parse_mmd(text)
+        self.assertEqual(nodes, {"Idle", "Running"})
+        self.assertEqual(edges, {("Idle", "Running")})
 
 
 class ParseSvgTest(helpers.TempDirTestCase):
@@ -81,17 +154,35 @@ class ParseSvgTest(helpers.TempDirTestCase):
         self.assertEqual(edges, set())
         self.assertTrue(any(v.startswith(render.MALFORMED_PREFIX) for v in violations))
 
+    def test_SVGファイルが存在しないときも日本語メッセージで検出する(self) -> None:
+        ids, edges, violations = render.parse_svg(self.tmp / "not-exist.svg")
+        self.assertEqual(ids, set())
+        self.assertEqual(edges, set())
+        self.assertTrue(any(v.startswith(render.MALFORMED_PREFIX) for v in violations))
+
+    def test_プロトコル相対URLの外部参照を検出する(self) -> None:
+        content = _svg_text(["A"], [], extra='<a href="//example.com/x"/>')
+        path = self.write("d.svg", content)
+        _ids, _edges, violations = render.parse_svg(path)
+        self.assertTrue(any("外部参照" in v for v in violations))
+
+    def test_ローカルなhref参照は検出しない(self) -> None:
+        content = _svg_text(["A"], [], extra='<a href="#A"/>')
+        path = self.write("d.svg", content)
+        _ids, _edges, violations = render.parse_svg(path)
+        self.assertFalse(any("外部参照" in v for v in violations))
+
 
 class CompareTest(unittest.TestCase):
     def test_欠けたノードと辺を検出する(self) -> None:
-        mmd = ("flowchart", {"A": "", "B": ""}, {("A", "B")})
+        mmd = ("flowchart", {"A", "B"}, {("A", "B")})
         svg = ({"A"}, set(), [])
         findings = render.compare(mmd, svg)
         self.assertTrue(any("ノード" in f for f in findings))
         self.assertTrue(any("辺" in f for f in findings))
 
     def test_一致する対では何も検出しない(self) -> None:
-        mmd = ("flowchart", {"A": "", "B": ""}, {("A", "B")})
+        mmd = ("flowchart", {"A", "B"}, {("A", "B")})
         svg = ({"A", "B"}, {("A", "B")}, [])
         self.assertEqual(render.compare(mmd, svg), [])
 
@@ -135,6 +226,94 @@ class CliTest(helpers.TempDirTestCase):
         proc = helpers.run_script(SCRIPT, mmd_path, svg_path)
         self.assertEqual(proc.returncode, 0)
         self.assertAnyContains([proc.stdout], "照合対象外")
+
+    def test_連鎖する辺を正しく拾ったSVGはexit_0になる(self) -> None:
+        mmd_path = self.write(
+            "d.mmd", "flowchart LR\n    A[Start] --> B[Mid] --> C[End]\n"
+        )
+        svg_path = self.write(
+            "d.svg", _svg_text(["A", "B", "C"], [("A", "B"), ("B", "C")])
+        )
+        proc = helpers.run_script(SCRIPT, mmd_path, svg_path)
+        self.assertEqual(proc.returncode, 0)
+        self.assertEqual(proc.stderr.strip(), "")
+
+    def test_並列記法を正しく拾ったSVGはexit_0になる(self) -> None:
+        mmd_path = self.write("d.mmd", "flowchart LR\n    A[A] & B[B] --> C[C]\n")
+        svg_path = self.write(
+            "d.svg", _svg_text(["A", "B", "C"], [("A", "C"), ("B", "C")])
+        )
+        proc = helpers.run_script(SCRIPT, mmd_path, svg_path)
+        self.assertEqual(proc.returncode, 0)
+        self.assertEqual(proc.stderr.strip(), "")
+
+    def test_擬似状態を正しく拾ったSVGはexit_0になる(self) -> None:
+        mmd_path = self.write(
+            "d.mmd", "stateDiagram-v2\n    [*] --> Idle\n    Idle --> [*]\n"
+        )
+        svg_path = self.write(
+            "d.svg",
+            _svg_text(
+                [render.START_STATE_ID, "Idle", render.END_STATE_ID],
+                [(render.START_STATE_ID, "Idle"), ("Idle", render.END_STATE_ID)],
+            ),
+        )
+        proc = helpers.run_script(SCRIPT, mmd_path, svg_path)
+        self.assertEqual(proc.returncode, 0)
+        self.assertEqual(proc.stderr.strip(), "")
+
+    def test_メッセージ内角括弧を含むsequenceDiagramはexit_0になる(self) -> None:
+        mmd_path = self.write(
+            "d.mmd",
+            "sequenceDiagram\n"
+            "    participant A as Alice\n"
+            "    participant B as Bob\n"
+            "    A->>B: fetch data[1]\n",
+        )
+        svg_path = self.write("d.svg", _svg_text(["A", "B"], [("A", "B")]))
+        proc = helpers.run_script(SCRIPT, mmd_path, svg_path)
+        self.assertEqual(proc.returncode, 0)
+        self.assertEqual(proc.stderr.strip(), "")
+
+
+class ScreenshotTimeoutTest(helpers.TempDirTestCase):
+    """Chrome が終了しなくても PNG が既に書き出されていれば成功扱いにする検査。"""
+
+    def test_タイムアウトしてもPNGが書けていれば成功扱いになる(self) -> None:
+        dummy_chrome = self.write(
+            "dummy-chrome.sh",
+            "#!/bin/sh\n"
+            'for arg in "$@"; do\n'
+            '  case "$arg" in\n'
+            "    --screenshot=*) png=\"${arg#--screenshot=}\" ;;\n"
+            "  esac\n"
+            "done\n"
+            'echo dummy > "$png"\n'
+            "sleep 5\n",
+        )
+        dummy_chrome.chmod(0o755)
+        svg_path = self.write("d.svg", _svg_text(["A"], []))
+        png_path = self.tmp / "out.png"
+
+        with unittest.mock.patch.dict(os.environ, {"CHROME_BIN": str(dummy_chrome)}):
+            errors = render.screenshot(str(svg_path), str(png_path), timeout=0.5)
+
+        self.assertEqual(errors, [])
+        self.assertTrue(png_path.exists())
+        self.assertGreater(png_path.stat().st_size, 0)
+
+    def test_PNGが書けないままタイムアウトすると失敗になる(self) -> None:
+        dummy_chrome = self.write(
+            "dummy-chrome-noop.sh", "#!/bin/sh\nsleep 5\n"
+        )
+        dummy_chrome.chmod(0o755)
+        svg_path = self.write("d.svg", _svg_text(["A"], []))
+        png_path = self.tmp / "out.png"
+
+        with unittest.mock.patch.dict(os.environ, {"CHROME_BIN": str(dummy_chrome)}):
+            errors = render.screenshot(str(svg_path), str(png_path), timeout=0.5)
+
+        self.assertTrue(any("タイムアウト" in e for e in errors))
 
 
 if __name__ == "__main__":

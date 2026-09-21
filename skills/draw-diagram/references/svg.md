@@ -51,6 +51,7 @@
 
 - ノードの図形要素に `data-id="<.mmd のノード id>"` を指定する(`<rect>`・`<circle>` など、ノードを表す図形 1 つにつき 1 つ)。
 - 辺を表す要素(通常は `<path>`)に `data-edge="<src>-><dst>"` を指定する。`src`・`dst` は `.mmd` のノード id と一致させる。
+- stateDiagram-v2 の開始・終了の擬似状態 `[*]` は、`data-id="_start"`(遷移元の `[*]`)・`data-id="_end"`(遷移先の `[*]`)を指定する図形で表す。辺の `data-edge` も同じ id を使う(例: `data-edge="_start->Idle"`)。
 
 `render.py` はこの 2 種類の属性を `.mmd` から抽出した id・辺の集合と突き合わせ、過不足を報告する。
 
