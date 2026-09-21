@@ -11,13 +11,13 @@
 
 ### flowchart
 
-流れは左から右へ書く。`flowchart LR` を使う。処理の段階が複数あるときは、同じ段の要素を縦にそろえる。例は `references/examples/cache-read.mmd` を参照する。
+流れは左から右へ書く。`flowchart LR` を使う。処理の段階が複数あるときは、同じ段の要素を縦にそろえる。例は `examples/cache-read.mmd` を参照する。
 
 矢印は `-->`・`---`・`==>`・`===`・`-.->`・`-.-` のいずれかを使う。ラベルは `-->|ラベル|` の形で辺に付ける。複数のノードから同じ辺を引くときは `A & B --> C` の並列記法を使う。
 
 ### sequenceDiagram
 
-参加者を `participant id as ラベル` で宣言し、メッセージを `A->>B: ラベル` の形で書く。矢印は `->`・`-->`・`->>`・`-->>` の 4 種を使う。`: ラベル` は必須で、無いと `render.py` は辺として拾わない。
+参加者を `participant id as ラベル` で宣言し、メッセージを `A->>B: ラベル` の形で書く。`as ラベル` は省略できる。矢印は `->`・`-->`・`->>`・`-->>` の 4 種を使う。`: ラベル` は必須で、無いと `render.py` は辺として拾わない。
 
 ```
 sequenceDiagram
@@ -68,7 +68,7 @@ flowchart LR
 
 ## 5. render.py が拾う記法の範囲
 
-- ノード宣言: `id[...]`・`id(...)`・`id{...}`・`id([...])`・`id[(...)]`(`participant id as ラベル`・`actor id as ラベル` は sequenceDiagram のみ)。sequenceDiagram では `participant`・`actor` 行以外の角括弧(メッセージ本文の `A->>B: fetch data[1]` など)はノード宣言として扱わない。
+- ノード宣言: `id[...]`・`id(...)`・`id{...}`・`id([...])`・`id[(...)]`(`participant id as ラベル`・`actor id as ラベル` は sequenceDiagram のみ。`as ラベル` は省略できる)。sequenceDiagram では `participant`・`actor` 行以外の角括弧(メッセージ本文の `A->>B: fetch data[1]` など)はノード宣言として扱わない。
 - 辺: flowchart は `-->`・`---`・`==>`・`===`・`-.->`・`-.-`(途中の `|ラベル|` は無視して両端の id だけを見る)。1 行に `A --> B --> C` のように辺が連なるときは、そのすべてを辺として拾う。
 - stateDiagram-v2 の辺は `-->` だけを拾う。`: ラベル` は付けても付けなくてもよい。
 - sequenceDiagram の辺は `->`・`-->`・`->>`・`-->>` の 4 種を拾う。`: ラベル` は必須で、無い行は辺として拾わない。
