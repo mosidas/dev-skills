@@ -11,20 +11,22 @@ description: 図・フローチャート・シーケンス図・状態遷移図�
 
 ## 2. 工程
 
-- 構造を `.mmd` に書く。ノードと辺だけを決め、配置と装飾は決めない。
 - 種類と構図を決める(`references/mermaid.md`)。
+- 構造を `.mmd` に書く。ノードと辺だけを決め、配置と装飾は決めない。
 - SVG を書く(`references/svg.md`)。
 - `render.py` で `.mmd` と SVG の対応を照合し、禁止事項を検査する。
 - `--png` で PNG にして画像として目視する。サンドボックス内では Chrome が起動できないため、サンドボックス外で実行する。
-- 埋め込む(`![](x.svg)`)。
+- 埋め込む(`![図の要約](x.svg)`)。alt には図が伝える主張を書く。
 
 `.mmd` と SVG は同じ basename で対にして残す(`references/examples/cache-read.mmd` と `cache-read.svg` が対応例)。PNG は生成物であり、リポジトリに残さず一時ディレクトリへ出す。
 
 `render.py` の呼び方。
 
 ```
-python3 skills/draw-diagram/scripts/render.py <x.mmd> <x.svg> [--png OUT]
+python3 <スキルのディレクトリ>/scripts/render.py <x.mmd> <x.svg> [--png OUT]
 ```
+
+`<スキルのディレクトリ>` には CLI がスキル読み込み時に示す絶対パスを入れる。
 
 ## 3. 参照ファイル
 
@@ -43,4 +45,4 @@ python3 skills/draw-diagram/scripts/render.py <x.mmd> <x.svg> [--png OUT]
 ## 5. 優先規則
 
 - `render.py` の照合(`references/mermaid.md` に定める記法の範囲)を、図の見た目より優先する。照合が通らない書き方は、通る書き方に描き直す。
-- 日本語のラベル・キャプションは write-doc の規範(`skills/write-doc/SKILL.md` と references)に従う。
+- 日本語のラベル・キャプションは write-doc の規範(`../write-doc/SKILL.md` と references)に従う。
