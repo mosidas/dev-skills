@@ -1,0 +1,3 @@
+flowchart LR
+    Client[クライアント] -->|読み取り| Cache[キャッシュ]
+    Cache -->|ミス時のみ| DB[DB]
