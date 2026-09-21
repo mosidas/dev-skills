@@ -8,7 +8,9 @@ Chrome を起動するテスト(screenshot・--png)は書かない。
 from __future__ import annotations
 
 import os
+import subprocess
 import sys
+import time
 import unittest
 import unittest.mock
 
@@ -67,6 +69,12 @@ class ParseMmdFlowchartTest(unittest.TestCase):
         _diagram_type, nodes, edges = render.parse_mmd(text)
         self.assertEqual(nodes, {"A", "C"})
         self.assertEqual(edges, {("A", "C")})
+
+    def test_ラベル内の_をノード区切りと誤読しない(self) -> None:
+        text = "flowchart LR\n    A[Auth & Session] --> B[DB]\n"
+        _diagram_type, nodes, edges = render.parse_mmd(text)
+        self.assertEqual(nodes, {"A", "B"})
+        self.assertEqual(edges, {("A", "B")})
 
 
 class ParseMmdSequenceTest(unittest.TestCase):
@@ -277,10 +285,10 @@ class CliTest(helpers.TempDirTestCase):
 
 
 class ScreenshotTimeoutTest(helpers.TempDirTestCase):
-    """Chrome が終了しなくても PNG が既に書き出されていれば成功扱いにする検査。"""
+    """Chrome が終了しなくても PNG の出現で撮影を早く終える検査。"""
 
-    def test_タイムアウトしてもPNGが書けていれば成功扱いになる(self) -> None:
-        dummy_chrome = self.write(
+    def _write_png_then_sleep(self, seconds: int) -> "Path":
+        return self.write(
             "dummy-chrome.sh",
             "#!/bin/sh\n"
             'for arg in "$@"; do\n'
@@ -289,31 +297,63 @@ class ScreenshotTimeoutTest(helpers.TempDirTestCase):
             "  esac\n"
             "done\n"
             'echo dummy > "$png"\n'
-            "sleep 5\n",
+            f"sleep {seconds}\n",
         )
+
+    def test_PNGの出現でタイムアウトを待たずに終了する(self) -> None:
+        dummy_chrome = self._write_png_then_sleep(30)
         dummy_chrome.chmod(0o755)
         svg_path = self.write("d.svg", _svg_text(["A"], []))
         png_path = self.tmp / "out.png"
 
         with unittest.mock.patch.dict(os.environ, {"CHROME_BIN": str(dummy_chrome)}):
-            errors = render.screenshot(str(svg_path), str(png_path), timeout=0.5)
+            started = time.monotonic()
+            errors = render.screenshot(str(svg_path), str(png_path), timeout=10)
+            elapsed = time.monotonic() - started
 
         self.assertEqual(errors, [])
         self.assertTrue(png_path.exists())
         self.assertGreater(png_path.stat().st_size, 0)
+        self.assertLess(elapsed, 5)
 
-    def test_PNGが書けないままタイムアウトすると失敗になる(self) -> None:
-        dummy_chrome = self.write(
-            "dummy-chrome-noop.sh", "#!/bin/sh\nsleep 5\n"
-        )
+    def test_PNGが書けないダミーはタイムアウトで失敗になる(self) -> None:
+        dummy_chrome = self.write("dummy-chrome-noop.sh", "#!/bin/sh\nsleep 5\n")
         dummy_chrome.chmod(0o755)
         svg_path = self.write("d.svg", _svg_text(["A"], []))
         png_path = self.tmp / "out.png"
 
         with unittest.mock.patch.dict(os.environ, {"CHROME_BIN": str(dummy_chrome)}):
-            errors = render.screenshot(str(svg_path), str(png_path), timeout=0.5)
+            errors = render.screenshot(str(svg_path), str(png_path), timeout=1)
 
         self.assertTrue(any("タイムアウト" in e for e in errors))
+
+    def test_古いPNGをPNGを書かないダミーの成果と誤認しない(self) -> None:
+        dummy_chrome = self.write("dummy-chrome-noop.sh", "#!/bin/sh\nsleep 5\n")
+        dummy_chrome.chmod(0o755)
+        svg_path = self.write("d.svg", _svg_text(["A"], []))
+        png_path = self.tmp / "out.png"
+        png_path.write_text("古いPNG", encoding="utf-8")
+
+        with unittest.mock.patch.dict(os.environ, {"CHROME_BIN": str(dummy_chrome)}):
+            errors = render.screenshot(str(svg_path), str(png_path), timeout=1)
+
+        self.assertTrue(any("タイムアウト" in e for e in errors))
+
+
+class ScreenshotTimeoutEnvTest(helpers.TempDirTestCase):
+    """DRAW_DIAGRAM_CHROME_TIMEOUT が不正値でも照合だけの実行は落ちない検査。"""
+
+    def test_不正な環境変数でも_png無しの照合はexit_0になる(self) -> None:
+        mmd_path = self.write("d.mmd", "flowchart TD\n    A[Start] --> B[End]\n")
+        svg_path = self.write("d.svg", _svg_text(["A", "B"], [("A", "B")]))
+        env = dict(os.environ, DRAW_DIAGRAM_CHROME_TIMEOUT="abc")
+        proc = subprocess.run(
+            [sys.executable, str(SCRIPT), str(mmd_path), str(svg_path)],
+            capture_output=True,
+            text=True,
+            env=env,
+        )
+        self.assertEqual(proc.returncode, 0)
 
 
 if __name__ == "__main__":

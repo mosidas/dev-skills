@@ -20,6 +20,7 @@ import re
 import subprocess
 import sys
 import tempfile
+import time
 import xml.etree.ElementTree as ET
 from pathlib import Path
 
@@ -78,14 +79,16 @@ def _register_node_decls(line: str, nodes: set[str], diagram_type: str) -> None:
         nodes.add(m.group(1))
 
 
+_SIDE_ATOM_RE = re.compile(rf"({NODE_ID})(?:{_SHAPE_ALT})?")
+
+
 def _side_ids(text: str) -> list[str]:
-    """flowchart の `A[A] & B[B]` のような `&` 区切りの片側からノード id を取り出す。"""
-    ids = []
-    for part in text.split("&"):
-        m = re.match(NODE_ID, part.strip())
-        if m:
-            ids.append(m.group(0))
-    return ids
+    """flowchart の `A[A] & B[B]` のような `&` 区切りの片側からノード id を取り出す。
+
+    `text.split("&")` で割ると `A[fetch & store]` のようなラベル本文の `&` を
+    並列の区切りと誤読するため、片側のテキストからノード原子を順に拾う。
+    """
+    return [m.group(1) for m in _SIDE_ATOM_RE.finditer(text)]
 
 
 def _edge_pairs(diagram_type: str, raw_src: str, raw_dst: str) -> list[tuple[str, str]]:
@@ -259,7 +262,15 @@ def compare(
 # ---------------------------------------------------------------------------
 
 DEFAULT_CHROME = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
-DEFAULT_CHROME_TIMEOUT = float(os.environ.get("DRAW_DIAGRAM_CHROME_TIMEOUT", "60"))
+DEFAULT_CHROME_TIMEOUT_SECONDS = 60.0
+_PNG_POLL_INTERVAL_SECONDS = 0.5
+
+
+def _default_chrome_timeout() -> float:
+    try:
+        return float(os.environ.get("DRAW_DIAGRAM_CHROME_TIMEOUT", str(DEFAULT_CHROME_TIMEOUT_SECONDS)))
+    except ValueError:
+        return DEFAULT_CHROME_TIMEOUT_SECONDS
 
 
 def _svg_viewbox_size(svg_path: str) -> tuple[int, int]:
@@ -282,9 +293,13 @@ def screenshot(
     height: int | None = None,
     timeout: float | None = None,
 ) -> list[str]:
-    """Chrome のヘッドレスモードで SVG を PNG に撮る。失敗理由の一覧を返す(空なら成功)。"""
+    """Chrome のヘッドレスモードで SVG を PNG に撮る。失敗理由の一覧を返す(空なら成功)。
+
+    Chrome は PNG を書き出した後も終了しないため、プロセスの自然終了を待たず
+    0.5 秒おきに PNG の出現を監視し、出現したら即座に kill して成功とみなす。
+    """
     chrome = os.environ.get("CHROME_BIN", DEFAULT_CHROME)
-    timeout = DEFAULT_CHROME_TIMEOUT if timeout is None else timeout
+    timeout = _default_chrome_timeout() if timeout is None else timeout
     if not os.path.exists(chrome):
         return [f"Chrome の実行ファイルが見つからない: {chrome}"]
 
@@ -295,13 +310,17 @@ def screenshot(
 
     svg_abs = os.path.abspath(svg)
     png_abs = os.path.abspath(png)
+    Path(png_abs).unlink(missing_ok=True)
+
+    def _png_ready() -> bool:
+        return os.path.exists(png_abs) and os.path.getsize(png_abs) > 0
 
     # ponytail: サンドボックス内では Chrome が「Failed to create socket directory」で
     # 起動できないことがある。--user-data-dir を一時ディレクトリに固定しても解決しない
     # 場合は、サンドボックス外(または CI の専用コンテナ)で実行する必要がある。
     with tempfile.TemporaryDirectory() as user_data_dir:
         try:
-            result = subprocess.run(
+            proc = subprocess.Popen(
                 [
                     chrome,
                     "--headless=new",
@@ -313,23 +332,44 @@ def screenshot(
                     f"--screenshot={png_abs}",
                     f"file://{svg_abs}",
                 ],
-                capture_output=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
                 text=True,
-                timeout=timeout,
             )
-        except subprocess.TimeoutExpired:
-            # subprocess.run はタイムアウト時に子プロセスを kill して待ち合わせ済み。
-            # PNG がタイムアウト前に書き出されていれば、Chrome が終了しないだけで
-            # 撮影自体は成功しているとみなす。
-            if os.path.exists(png_abs) and os.path.getsize(png_abs) > 0:
-                return []
-            return [f"Chrome の起動がタイムアウトした({timeout:.0f}秒)"]
         except OSError as e:
             return [f"Chrome の起動に失敗した: {e}"]
 
-    if result.returncode != 0:
-        return [f"Chrome の実行に失敗した(exit={result.returncode}): {result.stderr.strip()}"]
-    if not os.path.exists(png_abs):
+        deadline = time.monotonic() + timeout
+        while True:
+            returncode = proc.poll()
+            if _png_ready():
+                if returncode is None:
+                    # PNG が出現した子プロセス(の子孫)がパイプの書き込み端を
+                    # 握ったままだと communicate() が読み切れず止まるため、
+                    # 直接の子だけ kill・wait し、パイプは読まずに閉じる。
+                    proc.kill()
+                    proc.wait()
+                    proc.stdout.close()
+                    proc.stderr.close()
+                break
+            if returncode is not None:
+                _, stderr = proc.communicate()
+                if not _png_ready():
+                    return [
+                        f"Chrome の実行に失敗した(exit={returncode}): {stderr.strip()}"
+                    ]
+                break
+            if time.monotonic() >= deadline:
+                proc.kill()
+                proc.wait()
+                proc.stdout.close()
+                proc.stderr.close()
+                if not _png_ready():
+                    return [f"Chrome の起動がタイムアウトした({timeout:.0f}秒)"]
+                break
+            time.sleep(_PNG_POLL_INTERVAL_SECONDS)
+
+    if not _png_ready():
         return [f"PNG が生成されなかった: {png_abs}"]
     return []
 
