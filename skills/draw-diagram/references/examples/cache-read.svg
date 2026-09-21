@@ -1,11 +1,12 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 560 200" width="560" height="200" role="img" aria-label="クライアントがキャッシュ経由で DB を読む流れ">
   <style>
-    :root { --fg: #1f2328; --bg: #ffffff; --accent: #0969da; --muted: #6e7781; }
-    @media (prefers-color-scheme: dark) { :root { --fg: #e6edf3; --bg: #0d1117; --accent: #58a6ff; --muted: #8b949e; } }
+    :root { --fg: #1f2328; --bg: #ffffff; --accent: #0969da; --muted: #6e7781; --panel: #f6f8fa; --hot-bg: #ddf4ff; --old-bg: #e7ebef; }
+    @media (prefers-color-scheme: dark) { :root { --fg: #e6edf3; --bg: #0d1117; --accent: #58a6ff; --muted: #8b949e; --panel: #161b22; --hot-bg: #0f2a4d; --old-bg: #2a2f36; } }
     svg { background: var(--bg); }
     text { font-family: system-ui, "Hiragino Sans", "Noto Sans JP", sans-serif; font-size: 13px; fill: var(--fg); }
     .box { fill: var(--bg); stroke: var(--fg); stroke-width: 1.5; }
     .edge { stroke: var(--fg); stroke-width: 1.5; fill: none; marker-end: url(#arrow); }
+    .box.hot { fill: var(--hot-bg); }
     .hot { stroke: var(--accent); }
     .label { font-size: 11px; fill: var(--muted); }
   </style>
@@ -15,4 +16,5 @@
   <rect class="box" data-id="DB" x="420" y="60" width="120" height="60" rx="6"/><text x="480" y="95" text-anchor="middle">DB</text>
   <path class="edge" data-edge="Client->Cache" d="M140,90 L218,90"/><text class="label" x="180" y="80" text-anchor="middle">読み取り</text>
   <path class="edge hot" data-edge="Cache->DB" d="M340,90 L418,90"/><text class="label" x="380" y="80" text-anchor="middle">ミス時のみ</text>
+  <rect class="box hot" x="20" y="150" width="14" height="14" rx="3"/><text class="label" x="42" y="161">塗り: 読み取りがここで完結する要素</text>
 </svg>
