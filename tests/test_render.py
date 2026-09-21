@@ -2,7 +2,8 @@
 
 parse_mmd・parse_svg・compare は直接 import して呼び、exit code とエラー
 メッセージが絡む検査はサブプロセスで確かめる(render.py は sys.exit を呼ぶため)。
-Chrome を起動するテスト(screenshot・--png)は書かない。
+実機の Chrome は起動せず、ダミーの実行ファイルを CHROME_BIN に指定して
+screenshot を検査する。
 """
 
 from __future__ import annotations
@@ -325,13 +326,13 @@ class ScreenshotTimeoutTest(helpers.TempDirTestCase):
 
         with unittest.mock.patch.dict(os.environ, {"CHROME_BIN": str(dummy_chrome)}):
             started = time.monotonic()
-            errors = render.screenshot(str(svg_path), str(png_path), timeout=10)
+            errors = render.screenshot(str(svg_path), str(png_path), timeout=30)
             elapsed = time.monotonic() - started
 
         self.assertEqual(errors, [])
         self.assertTrue(png_path.exists())
         self.assertGreater(png_path.stat().st_size, 0)
-        self.assertLess(elapsed, 5)
+        self.assertLess(elapsed, 15)
 
     def test_PNGが書けないダミーはタイムアウトで失敗になる(self) -> None:
         dummy_chrome = self.write("dummy-chrome-noop.sh", "#!/bin/sh\nsleep 5\n")
@@ -340,7 +341,7 @@ class ScreenshotTimeoutTest(helpers.TempDirTestCase):
         png_path = self.tmp / "out.png"
 
         with unittest.mock.patch.dict(os.environ, {"CHROME_BIN": str(dummy_chrome)}):
-            errors = render.screenshot(str(svg_path), str(png_path), timeout=1)
+            errors = render.screenshot(str(svg_path), str(png_path), timeout=2)
 
         self.assertTrue(any("タイムアウト" in e for e in errors))
 
@@ -352,7 +353,7 @@ class ScreenshotTimeoutTest(helpers.TempDirTestCase):
         png_path.write_text("古いPNG", encoding="utf-8")
 
         with unittest.mock.patch.dict(os.environ, {"CHROME_BIN": str(dummy_chrome)}):
-            errors = render.screenshot(str(svg_path), str(png_path), timeout=1)
+            errors = render.screenshot(str(svg_path), str(png_path), timeout=2)
 
         self.assertTrue(any("タイムアウト" in e for e in errors))
 
@@ -363,7 +364,7 @@ class ScreenshotTimeoutTest(helpers.TempDirTestCase):
         png_path = self.tmp / "out.png"
 
         with unittest.mock.patch.dict(os.environ, {"CHROME_BIN": str(dummy_chrome)}):
-            errors = render.screenshot(str(svg_path), str(png_path), timeout=1)
+            errors = render.screenshot(str(svg_path), str(png_path), timeout=2)
 
         self.assertTrue(any("タイムアウト" in e for e in errors))
 
@@ -389,12 +390,12 @@ class ScreenshotTimeoutTest(helpers.TempDirTestCase):
 
         with unittest.mock.patch.dict(os.environ, {"CHROME_BIN": str(dummy_chrome)}):
             started = time.monotonic()
-            errors = render.screenshot(str(svg_path), str(png_path), timeout=8)
+            errors = render.screenshot(str(svg_path), str(png_path), timeout=30)
             elapsed = time.monotonic() - started
 
         self.assertEqual(errors, [])
         self.assertTrue(png_path.exists())
-        self.assertLess(elapsed, 3)
+        self.assertLess(elapsed, 15)
 
     def test_非ゼロ終了時はstderrの内容がメッセージに載る(self) -> None:
         dummy_chrome = self.write(

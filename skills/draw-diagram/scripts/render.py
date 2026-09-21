@@ -6,7 +6,7 @@ LLM が .mmd を元に SVG を直接書く運用を前提に、SVG 側の書式�
 SVG の属性の集合を突き合わせる。標準ライブラリのみで動く(python3 で実行)。
 
 使い方:
-    python3 render.py <diagram.mmd> <diagram.svg> [--png OUT] [--width W] [--height H]
+    python3 render.py <diagram.mmd> <diagram.svg> [--png OUT] [--width W] [--height H] [--timeout SEC]
 
 対応する記法: flowchart/graph, stateDiagram-v2, sequenceDiagram。
 classDiagram・erDiagram は照合対象外(整形式検査と禁止要素の検査のみ)。
