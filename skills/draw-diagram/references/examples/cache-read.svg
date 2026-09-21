@@ -6,7 +6,8 @@
     text { font-family: system-ui, "Hiragino Sans", "Noto Sans JP", sans-serif; font-size: 13px; fill: var(--fg); }
     .box { fill: var(--bg); stroke: var(--fg); stroke-width: 1.5; }
     .edge { stroke: var(--fg); stroke-width: 1.5; fill: none; marker-end: url(#arrow); }
-    .hot { fill: var(--hot-bg); stroke: var(--accent); }
+    .box.hot { fill: var(--hot-bg); }
+    .hot { stroke: var(--accent); }
     .label { font-size: 11px; fill: var(--muted); }
   </style>
   <defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="context-stroke"/></marker></defs>
@@ -15,4 +16,5 @@
   <rect class="box" data-id="DB" x="420" y="60" width="120" height="60" rx="6"/><text x="480" y="95" text-anchor="middle">DB</text>
   <path class="edge" data-edge="Client->Cache" d="M140,90 L218,90"/><text class="label" x="180" y="80" text-anchor="middle">読み取り</text>
   <path class="edge hot" data-edge="Cache->DB" d="M340,90 L418,90"/><text class="label" x="380" y="80" text-anchor="middle">ミス時のみ</text>
+  <rect class="box hot" x="20" y="150" width="14" height="14" rx="3"/><text class="label" x="42" y="161">塗り: 読み取りがここで完結する要素</text>
 </svg>
