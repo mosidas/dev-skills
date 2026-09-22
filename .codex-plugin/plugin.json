@@ -1,7 +1,7 @@
 {
   "name": "dev-skills",
   "version": "1.7.0",
-  "description": "開発作業のスキル集。実装タスクの手順(develop)と planner・implementer・reviewer のサブエージェント、コードを最小に保つ規範(ponytail)、日本語の技術文書の作成規範(write-doc)とスライド構成の規範(write-slide)、会話の応答の形を定める規範(respond)、`.mmd` から人間が見やすい SVG を描く作図の規範(draw-diagram)、Web UI の設計規範(design-ui)。",
+  "description": "開発作業のスキル集。実装タスクの手順(develop)と planner・implementer・reviewer のサブエージェント、コードを最小に保つ規範(ponytail)、日本語の技術文書の作成規範(write-doc)とスライド構成の規範(write-slide)、会話の応答の形を定める規範(respond)、`.mmd` から人間が見やすい SVG を描く作図の規範(draw-diagram)、画面の設計規範(design-ui)。",
   "author": {
     "name": "mosidas"
   },
@@ -10,7 +10,7 @@
   "interface": {
     "displayName": "dev-skills",
     "shortDescription": "実装タスクの手順と、最小のコード・日本語の技術文書・スライド構成・応答の形・作図・UI 設計の規範",
-    "longDescription": "開発作業のスキル集。実装タスクの手順(develop)と planner・implementer・reviewer のサブエージェント、コードを最小に保つ規範(ponytail)、日本語の技術文書の作成規範(write-doc)とスライド構成の規範(write-slide)、会話の応答の形を定める規範(respond)、`.mmd` から人間が見やすい SVG を描く作図の規範(draw-diagram)、Web UI の設計規範(design-ui)。",
+    "longDescription": "開発作業のスキル集。実装タスクの手順(develop)と planner・implementer・reviewer のサブエージェント、コードを最小に保つ規範(ponytail)、日本語の技術文書の作成規範(write-doc)とスライド構成の規範(write-slide)、会話の応答の形を定める規範(respond)、`.mmd` から人間が見やすい SVG を描く作図の規範(draw-diagram)、画面の設計規範(design-ui)。",
     "developerName": "mosidas",
     "category": "Productivity",
     "capabilities": [],
