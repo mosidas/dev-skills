@@ -8,7 +8,7 @@ description: Web UI(画面・コンポーネント・ページ)を設計・実�
 ## 1. 適用範囲
 
 - 適用範囲は Web の画面・コンポーネント・ページの設計と実装。セーフエリアや OS のジェスチャーなど、ネイティブアプリに固有のガイドラインは対象外とする。
-- 作図は対象外。ポンチ絵や構造図は draw-diagram が扱い、データの可視化は dataviz が扱う。
+- 作図は対象外。ポンチ絵や構造図は draw-diagram が扱う。データの可視化(グラフ・チャート)は対象外とする。
 - 優先順位は次のとおりとする。上位が下位に優先する。
   1. ユーザーの言葉。配色・書体・見た目を名指しで指定されたら、本スキルの既定より従う。
   2. プロジェクトに既にあるデザインシステム・トークン・コンポーネント集。
@@ -16,7 +16,7 @@ description: Web UI(画面・コンポーネント・ページ)を設計・実�
 
 ## 2. モードの選択
 
-モードは全 4 種。実装の前に、そのうちの 1 つを選択する。基準は製品の種類ではなく画面の役割であり、同じツールでも、ランディングページと資料集のトップページとでは、次の表から選択するモードが異なってくる。前者は説得。後者は閲読。
+モードは 4 つある。先に 1 つを選択する。基準は画面の役割である。製品の種類ではない。同じツールでも、ランディングページは説得、資料集のトップページは閲読になるというように、画面の役割によって適切なモードは変わる。
 
 | モード | 訪問者の成功 | 例 |
 | :-- | :-- | :-- |
@@ -30,7 +30,7 @@ description: Web UI(画面・コンポーネント・ページ)を設計・実�
 ## 3. 工程
 
 1. 題材と画面の仕事を決める。何を扱う画面か、誰が何のために見るかを、依頼から具体化する。依頼に実体が無ければ、こちらで具体案を 1 つ立て、ユーザーに確認する。
-2. トークン案を書く。色 4〜6 色(名前と HSL 値)、書体 2 役割(見出しと本文。同じ書体を 2 役割に使ってもよい)、間隔スケール(`references/checklist.md` のスケールから選ぶ)を短く書く。
+2. トークン案を書く。色 4〜6 色(名前と HSL 値)、書体 2 役割(見出しと本文。同じ書体を 2 役割に使ってもよい)、間隔スケール(本ファイル 4. のスケールから選ぶ)を短く書く。
 3. トークン案と画面構成を「どの類似案件でも出る既定か」に照らして書き直す。`references/anti-ai.md` の一覧と一致する箇所を洗い出し、その箇所だけを描き直す。ユーザーがその見た目を名指しで求めていたら描き直さない。
 4. 実装する。文言の配置と分量は `references/text.md` に、アクセシビリティ・フォーカス・フォーム・モーション・状態など実装の品質床は `references/checklist.md` に、それぞれ従う。
 5. 有限回の検証で止める。1 巡のスクリーンショット確認 → 見つかった欠陥の一括修正 → 確認の 1 巡で終える。際限のない自己レビューを続けない。
@@ -39,7 +39,7 @@ description: Web UI(画面・コンポーネント・ページ)を設計・実�
 
 値は次の段階から選ぶ。新しい値を都度作らない。出典は Refactoring UI(Wathan & Schoger)。
 
-- 間隔: `4 8 12 16 24 32 48 64 96 128 192 256`(px)。隣接する値どうしの差を約 25% 以上空ける。
+- 間隔: `4 8 12 16 24 32 48 64 96 128 192 256 384 512 640 768`(px)。隣接する値どうしの差を約 25% 以上空ける。
 - 文字サイズ: `12 14 16 18 20 24 30 36 48 60 72`(px または rem。em は使わない)。
 - 太さ: 本文は 400 か 500、強調は 600 か 700 の 2 段階だけを使う。400 未満は使わない。
 - 色: グレー 8〜10 階調、主色 5〜10 階調、用途別のアクセント(破壊的操作の赤、警告の黄、肯定の緑など)ごとに 5〜10 階調。HSL で定義し、実行時に `lighten()` 等で生成しない。
@@ -53,7 +53,7 @@ description: Web UI(画面・コンポーネント・ページ)を設計・実�
 
 ## 6. 構造は情報
 
-カード・番号(01/02/03)・見出し上のラベルは構造的装飾である。意味を運ぶときだけに使う。番号付けは、内容が本当に手順や時系列の連なりであるときに限って使い、そうでない一覧に付けた番号や見出しのないラベルは、内容の理解を助けない。すべてのカードを同じ大きさ・角丸・影にそろえるだけの整列も、同じく意味の無い構造である。
+カード・番号(01/02/03)・見出し上のラベルは構造を示す装置である。意味を運ぶときだけに使う。番号付けは、内容が本当に手順や時系列の連なりであるときに限って使い、そうでない一覧に付けた番号や見出しのないラベルは、内容の理解を助けない。
 
 ## 7. 参照ファイル
 
@@ -67,13 +67,13 @@ description: Web UI(画面・コンポーネント・ページ)を設計・実�
 
 - コード自体の最小化は ponytail に従う。依存の選定・抽象化の要否も含む。
 - 図・ポンチ絵を作るときは draw-diagram に従う。
-- 画面内の日本語の文言(語彙・文体)は write-doc の `references/sentence.md` に従う。本スキルは文言の配置と分量だけを定める。
+- 画面内の日本語の文言(語彙・文体)は `../write-doc/references/sentence.md` に従う。本スキルは文言の配置と分量だけを定める。
 
 ## 9. 出典
 
 - [anthropics/skills frontend-design](https://github.com/anthropics/skills/tree/main/skills/frontend-design)(Apache-2.0)
 - [pbakaus/impeccable](https://github.com/pbakaus/impeccable)(Apache-2.0)
 - [nextlevelbuilder/ui-ux-pro-max-skill](https://github.com/nextlevelbuilder/ui-ux-pro-max-skill)(MIT)
-- [vercel-labs/agent-skills web-design-guidelines](https://github.com/vercel-labs/agent-skills/tree/main/skills/web-design-guidelines)(MIT)
+- [vercel-labs/web-interface-guidelines](https://github.com/vercel-labs/web-interface-guidelines)(MIT。`vercel-labs/agent-skills` の `skills/web-design-guidelines` 経由)
 - [s0xDk/refactoring-ui-skill](https://github.com/s0xDk/refactoring-ui-skill)(MIT。原典 Wathan & Schoger, *Refactoring UI*)
 - [NN/g](https://www.nngroup.com/articles/)、[Apple Human Interface Guidelines](https://developer.apple.com/design/human-interface-guidelines/)、[Material Design 3](https://m3.material.io/)

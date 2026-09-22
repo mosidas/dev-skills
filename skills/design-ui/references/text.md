@@ -30,7 +30,7 @@
 
 空状態は、初回利用・検索結果なし・絞り込み中・権限なし・失敗を区別し、それぞれに応じた次の行動を示す招待にする。「データがありません」だけで終えない。
 
-読み込み中の表示は、待つ理由が分かる操作名を書く。進捗を測れるときは実際の割合を出し、測れない進捗を演出で装わない。成功の通知は完結にとどめ、次の行動が変わるときだけその内容を書く。
+読み込み中の表示は、待つ理由が分かる操作名を書く。進捗を測れるときは実際の割合を出し、測れない進捗を演出で装わない。成功の通知は簡潔にとどめ、次の行動が変わるときだけその内容を書く。
 
 ## 6. 語彙
 
@@ -42,7 +42,7 @@
 
 ## 8. 日本語の文言
 
-日本語で UI テキストを書くときの語の選び方・文体は、write-doc の `../write-doc/references/sentence.md` に従う。本ファイルが定めるのは、UI 内での文字の配置と分量であり、文体そのものではない。
+日本語で UI テキストを書くときの語の選び方・文体は、write-doc の `../../write-doc/references/sentence.md` に従う。本ファイルが定めるのは、UI 内での文字の配置と分量であり、文体そのものではない。
 
 ## 9. 出典
 
@@ -51,6 +51,6 @@
 - [NN/g: Progressive Disclosure](https://www.nngroup.com/articles/progressive-disclosure/)
 - [Apple Human Interface Guidelines: Offering help](https://developer.apple.com/design/human-interface-guidelines/offering-help)
 - [Material Design 3: Tooltips](https://m3.material.io/components/tooltips)
-- [pbakaus/impeccable](https://github.com/pbakaus/impeccable)(Apache-2.0)、`reference/clarify.md`
+- [pbakaus/impeccable](https://github.com/pbakaus/impeccable)(Apache-2.0)、`skill/reference/clarify.md`
 - [s0xDk/refactoring-ui-skill](https://github.com/s0xDk/refactoring-ui-skill)(MIT。原典 Wathan & Schoger, *Refactoring UI*)
 - [anthropics/skills frontend-design](https://github.com/anthropics/skills/tree/main/skills/frontend-design)(Apache-2.0)
