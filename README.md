@@ -13,7 +13,7 @@ Claude Code・Codex CLI・Antigravity CLI のプラグインである。開発�
 | `write-slide` | スキル | プレゼン資料・説明資料のスライド構成を作る・点検するときの規範。型の選択、メッセージライン、ページの役割分担、文体と強調を定める |
 | `respond` | スキル | 会話の応答の形を定める規範。読み手を ADHD と想定し、次の行動から書く・複数手順に番号を振る・状態を毎回書き直す・調べた事実に根拠となるソースを示すなどの規則を定める |
 | `draw-diagram` | スキル | `.mmd` で構造を固めてから人間が見やすい SVG を描く作図の規範。`render.py` で `.mmd` と SVG の対応照合・禁止要素の検査・Chrome headless の PNG 出力を行う |
-| `design-ui` | スキル | Web UI(画面・コンポーネント・ページ)を設計・実装するときの規範。題材からトークン案を書き、汎用の既定と照合してから実装し、有限回の検証で止める工程を定める |
+| `design-ui` | スキル | Web・iOS・Android・デスクトップの画面・コンポーネント・ページを設計・実装するときの規範。題材からトークン案を書き、汎用の既定と照合してから実装し、有限回の検証で止める工程を定める |
 | `hooks/inject_respond.py` | hook(SessionStart、Claude Code のみ) | セッション開始時に `skills/respond/SKILL.md` の本文を注入する |
 | `hooks/inspect_write.py` | hook(PostToolUse、Claude Code のみ) | 日本語 Markdown の書き込み直後に `lint.py` を実行し、検出があれば書き直しを促す警告を返す |
 | `hooks/inspect_stop.py` | hook(Stop、Claude Code のみ) | セッション完了時に再検査し、重大カテゴリの検出が残るあいだ完了を差し戻す |
@@ -150,7 +150,7 @@ skills/draw-diagram/
 └── scripts/render.py      # `.mmd` と SVG の対応照合・禁止要素の検査・Chrome headless の PNG 出力
 skills/design-ui/
 ├── SKILL.md               # UI 設計規範の入口(モードの選択・工程・スケール)
-└── references/            # anti-ai.md・text.md・checklist.md(汎用の既定の一覧・文言の規範・実装の品質床)
+└── references/            # anti-ai.md・text.md・checklist.md・native.md(汎用の既定の一覧・文言の規範・実装の品質床・ネイティブアプリ固有の規範)
 hooks/
 ├── hooks.json             # SessionStart・PostToolUse・Stop の配線
 ├── inject_respond.py      # SessionStart: respond スキルの本文を注入する
