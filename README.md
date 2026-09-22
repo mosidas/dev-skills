@@ -150,7 +150,7 @@ skills/draw-diagram/
 └── scripts/render.py      # `.mmd` と SVG の対応照合・禁止要素の検査・Chrome headless の PNG 出力
 skills/design-ui/
 ├── SKILL.md               # UI 設計規範の入口(モードの選択・工程・スケール)
-└── references/            # anti-ai.md・checklist.md・text.md(汎用の既定の一覧・実装の品質床・文言の規範)
+└── references/            # anti-ai.md・text.md・checklist.md(汎用の既定の一覧・文言の規範・実装の品質床)
 hooks/
 ├── hooks.json             # SessionStart・PostToolUse・Stop の配線
 ├── inject_respond.py      # SessionStart: respond スキルの本文を注入する
