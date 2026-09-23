@@ -104,7 +104,7 @@ description: 会話の応答の形を定める規範。読み手を ADHD と想�
 
 利用者やシステムが行う操作・処理は、動作を名指しする動詞で書く。個別の語の言い換え先は `../write-doc/references/sentence.md` の 3. に従う。
 
-### 3.14. 識別子には名前を添える
+### 3.14. 識別子には名前を並記する
 
 タスク id・PR 番号・issue 番号・コミット SHA・ファイル id など、それだけでは中身が分からない識別子を書くときは、名前(タイトル・件名・要約)を並記する。読み手は識別子を覚えていない前提で書く。同じ応答の中で 2 回目以降に出すときは、識別子だけでよい。
 
@@ -134,4 +134,4 @@ description: 会話の応答の形を定める規範。読み手を ADHD と想�
 
 ## 6. 出典
 
-本規則は i-have-adhd(MIT ライセンス、Copyright (c) 2026 Ayoub Ghriss、https://github.com/ayghri/i-have-adhd)の規則を元にする。3.11〜3.13 は workspace の `AGENTS.md` の原則を反映する。
+本規則は i-have-adhd(MIT ライセンス、Copyright (c) 2026 Ayoub Ghriss、https://github.com/ayghri/i-have-adhd)の規則を元にする。3.11〜3.13 は workspace の `AGENTS.md` の原則を、3.14 は workspace の運用で得た指摘を反映する。
