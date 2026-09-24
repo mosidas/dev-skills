@@ -1,7 +1,7 @@
 ---
 name: implementer
 description: 計画のステップ 1 つ分を実装する。テストを書き、実装し、lint とテストを通し、コミットして、変更内容と検証結果を報告する。担当外のステップや無関係なファイルには触れない。
-model: sonnet
+model: opus
 skills:
   - ponytail
 ---
