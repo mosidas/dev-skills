@@ -128,7 +128,7 @@ plugin.json                # Antigravity CLI 向けのマニフェスト
 lefthook.yml                # git hook(pre-commit: plugin validate、pre-push: unittest)
 agents/
 ├── planner.md             # 計画(opus、Write/Edit 不可、ponytail 読み込み)
-├── implementer.md         # 実装とコミット(sonnet、ponytail 読み込み)
+├── implementer.md         # 実装とコミット(opus、ponytail 読み込み)
 ├── reviewer.md            # ステップの点検と判定(opus、Write/Edit 不可、ponytail 読み込み)
 └── gate-reviewer.md       # push 前のブランチ全体の点検(opus、Write/Edit 不可)
 skills/develop/
