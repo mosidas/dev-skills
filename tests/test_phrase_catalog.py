@@ -1,4 +1,4 @@
-"""write-doc の動詞カタログ(forbidden_phrases.json)の整合テスト。
+"""write-doc の動詞・名詞のカタログ(forbidden_phrases.json)の整合テスト。
 
 カタログはデータであり、破損・重複・包含(同一行での二重検出の原因)を機械検査で塞ぐ。
 lint.py がカタログから検出語と severity を正しく導出することも確かめる。
@@ -83,9 +83,12 @@ class PhraseCatalogTest(unittest.TestCase):
         for ng in ("落とし込む", "を選ぶ", "チェックする"):
             self.assertIn(ng, lint.FORBIDDEN_PHRASES_WEAK_SIGNAL, ng)
 
-    def test_型が_3_つで全エントリがその型を持つ(self) -> None:
-        """カタログは動詞に絞る。型は imprecise・colloquial・loanword の 3 つだけとする。"""
-        self.assertEqual(set(self.catalog["types"]), {"imprecise", "colloquial", "loanword"})
+    def test_型が_4_つで全エントリがその型を持つ(self) -> None:
+        """型は imprecise・colloquial・loanword・pseudo_concrete の 4 つだけとする。"""
+        self.assertEqual(
+            set(self.catalog["types"]),
+            {"imprecise", "colloquial", "loanword", "pseudo_concrete"},
+        )
         for entry in self.phrases:
             self.assertIn(entry["type"], self.catalog["types"], entry["ng"])
 
@@ -97,6 +100,35 @@ class PhraseCatalogTest(unittest.TestCase):
         warn_findings = lint.detect_forbidden_phrases([(1, "原因を掘り下げる。")])
         self.assertEqual(len(warn_findings), 1)
         self.assertEqual(warn_findings[0].severity, "warn")
+
+    def test_yomiyasu_由来の語を検出する(self) -> None:
+        """yomiyasu 由来の 14 語は、ng か forms を含む例文で info として 1 件だけ検出される。"""
+        sentences = [
+            "画面の手触りを確かめた。",
+            "現場の肌感では遅い。",
+            "顧客との温度感を合わせる。",
+            "チームの熱量が高い。",
+            "血の通った設計にする。",
+            "泥臭く手作業で直した。",
+            "要件の解像度を上げた。",
+            "説明に腹落ちした。",
+            "残さない側に倒した。",
+            "調査で時間を溶かした。",
+            "警告を 1 つずつ潰していく。",
+            "設定が静かに壊れる。",
+            "不正な行は黙って捨てられる。",
+            "議論はその案に収斂した。",
+        ]
+        yomiyasu = [p for p in self.phrases if "yomiyasu" in p.get("note", "")]
+        self.assertEqual(len(yomiyasu), len(sentences))
+        variants = {v for p in yomiyasu for v in [p["ng"], *p.get("forms", [])]}
+        for sentence in sentences:
+            with self.subTest(sentence=sentence):
+                findings = lint.detect_forbidden_phrases([(1, sentence)])
+                self.assertEqual(len(findings), 1)
+                self.assertEqual(findings[0].category, "forbidden_phrase")
+                self.assertEqual(findings[0].severity, "info")
+                self.assertIn(findings[0].detail.split("「")[1].split("」")[0], variants)
 
     def test_severity_が_info_か_warn_に限られる(self) -> None:
         for entry in self.phrases:

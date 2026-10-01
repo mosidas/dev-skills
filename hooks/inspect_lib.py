@@ -247,7 +247,7 @@ def load_guides(hook_dir: Path) -> dict:
     return guides if isinstance(guides, dict) else {}
 
 
-# 検出の detail から語を取り出すパターン(lint.py の「不正確・話し言葉の動詞ヒット: 「…」」形式)。
+# 検出の detail から語を取り出すパターン(lint.py の「NG/OK カタログの語ヒット: 「…」」形式)。
 _DETAIL_PHRASE_RE = re.compile(r"「(.+?)」")
 
 
