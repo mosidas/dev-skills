@@ -114,7 +114,7 @@ PostToolUse と Stop は日本語文書の検査を行う。発火するのは�
 - 検査対象の条件(拡張子・日本語文字数・除外パターン・文書種別)を満たさない。
 - `skills/respond/SKILL.md` が読めない(SessionStart は何も注入しない)。
 
-検査が発火しているかは、カタログに登録した動詞を含む Markdown を書いて警告が返ることで確かめる。
+検査が発火しているかは、カタログに登録した語を含む Markdown を書いて警告が返ることで確かめる。
 
 ## 5. 構成
 
@@ -137,7 +137,7 @@ skills/develop/
 skills/write-doc/
 ├── SKILL.md               # 規範の入口(工程と参照ファイル)
 ├── references/            # 読み手・表記・文・段落・検査の規範
-└── scripts/               # lint.py・outline.py・terms.py・semantic.py と動詞の NG/OK カタログ
+└── scripts/               # lint.py・outline.py・terms.py・semantic.py と動詞・名詞の NG/OK カタログ
 skills/write-slide/
 └── SKILL.md               # スライド構成の規範
 skills/respond/
@@ -159,7 +159,7 @@ hooks/
 ├── inspect_lib.py         # 共通処理(設定・対象判定・lint 実行・警告文・状態)
 ├── inspection.config.json # 検査設定の正本
 └── rewrite_guides.json    # カテゴリごとの書き直し指針・言い換え例
-tests/                     # カタログと hooks の単体テスト、test_render.py(draw-diagram の render.py)
+tests/                     # カタログと hooks の単体テスト、test_render.py(draw-diagram の render.py)、corpus/(境界値コーパス)
 evals/                     # claude plugin eval のケース(prompt.md と graders/)。結果の出力先 results/ は git 管理外
 ```
 
