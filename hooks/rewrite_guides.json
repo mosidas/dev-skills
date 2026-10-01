@@ -1,7 +1,7 @@
 {
   "_comment": "lint.py の検出カテゴリごとの書き直し指針と言い換え例。hook の警告に同梱される。規範の正本は write-doc スキルの references/(sentence.md・paragraph.md・format.md・inspection.md)にあり、本ファイルは警告へ添える要約に留まる。",
   "forbidden_phrase": {
-    "instruction": "何がどうなるかが一意に定まらない動詞、または話し言葉・外来語の動詞。事象を名指しする動詞か漢語の操作語へ置き換える(sentence.md 3.)。",
+    "instruction": "何がどうなるかが一意に定まらない動詞、話し言葉・外来語の動詞、または質感・認知を装う名詞(肌感・解像度を上げる等)。事象を名指しする動詞か漢語の操作語へ置き換え、疑似具体語は操作した手順・実測値・調査した範囲へ置き換える(sentence.md 3.)。",
     "example": { "before": "仕様に落とし込む。", "after": "仕様に反映する。" }
   },
   "translationese": {
@@ -51,6 +51,10 @@
   "english_syntax_cleft_because": {
     "instruction": "「それは〜である。なぜなら〜だ」の 2 文構成(cleft 構文の直訳)。理由を 1 文にまとめるか、理由から先に語る(sentence.md 5.)。",
     "example": { "before": "それは単純な話ではない。なぜなら、利害が絡み合っているからだ。", "after": "利害が絡み合っていて、単純な話ではない。" }
+  },
+  "filler_phrase": {
+    "instruction": "前置きのフィラー(重要なのは・結論から言うと等)または定型の締め(いかがでしたでしょうか・参考になれば幸いです等)。前置きは削って要点の文から書き始め、締めは削って本文の結びで終える(paragraph.md 3.)。",
+    "example": { "before": "重要なのは、キャッシュを無効化することだ。", "after": "キャッシュを無効化する。" }
   },
   "low_specificity": {
     "instruction": "固有名詞・数値・実例が乏しい一般論の段落。言い回しでなく素材の問題であり、集め直してから書き直す(paragraph.md 4.)。"

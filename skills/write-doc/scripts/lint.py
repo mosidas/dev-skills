@@ -59,11 +59,14 @@ from textcore import (
 )
 
 # ---------------------------------------------------------------------------
-# 辞書: 動詞のカタログ
+# 辞書: 動詞と名詞・形容語のカタログ
 # 正本は同ディレクトリの forbidden_phrases.json(NG/OK 対のカタログ)。不正確・
 # 文脈依存の動詞(imprecise)、話し言葉の和語の動詞(colloquial)、訳語が定着して
-# いる外来語の動詞(loanword)を収める。語ごとに type・severity・ok(言い換え例)を
-# 持ち、本スクリプトは ng と severity を、検査 hook は ok を読む。語の追加はカタログへ行う。
+# いる外来語の動詞(loanword)、質感・認知を装う名詞・形容語(pseudo_concrete)を
+# 収める。語ごとに type・severity・ok(言い換え例)を持ち、本スクリプトは ng と
+# severity を、検査 hook は ok を読む。語の追加はカタログへ行う。2026-10-01 に
+# yomiyasu の slop-catalog.md(MIT)から疑似具体語と比喩動詞(共起形)を足した
+# (note に「yomiyasu」を含む)。
 #
 # severity は、正当な用法があり文脈判断を要する語を info、空虚な動詞(掘り下げる・
 # 深掘りする・言語化する・を探求する)を warn とする。2026-07 のコーパス校正
@@ -114,6 +117,21 @@ TRANSLATIONESE_PATTERNS: list[str] = [
     r"することによって",
     r"であることは間違いない",
     r"に他ならない",
+]
+
+# 前置フィラーと定型クロージング（要素は (正規表現, ラベル)）。
+# 出典: yomiyasu の references/slop-catalog.md 6. と scripts/yomiyasu_lint.py の
+# FILLER_PATTERNS（MIT ライセンス）。前置フィラーは文頭に限って照合する。
+# lex_lines は箇条書き・見出し・引用の行頭記号を残すため、記号と強調記号を文頭側で読み飛ばす。
+FILLER_PATTERNS: list[tuple[str, str]] = [
+    (
+        r"(?:^|(?<=[。！？]))[\s>#*_+\-]*(?:\d+[.)]\s*[*_]*)?(?:(?:まず|ここで)、?[*_]*)?"
+        r"(?:重要なのは|結論から言うと|正直に言うと|避けたいのは|注目すべきは)",
+        "前置フィラー",
+    ),
+    (r"いかがでした(?:でしょうか|か)", "定型クロージング"),
+    (r"ぜひ[^。！？]{0,20}?(?:てみて|にして)ください", "定型クロージング"),
+    (r"参考になれば幸い", "定型クロージング"),
 ]
 
 # 段落頭に来ると「AI が構成を接続詞で誤魔化しがち」な語
@@ -555,7 +573,7 @@ def detect_forbidden_phrases(
                 excerpt = raw_line[start:end] if len(raw_line) >= end else line[start:end]
                 is_weak_signal = dict_form in FORBIDDEN_PHRASES_WEAK_SIGNAL
                 severity = "info" if is_weak_signal else "warn"
-                detail = f"不正確・話し言葉の動詞ヒット: 「{phrase}」"
+                detail = f"NG/OK カタログの語ヒット: 「{phrase}」"
                 if phrase != dict_form:
                     detail += f"（辞書形「{dict_form}」の活用形）"
                 if is_weak_signal and dict_form in PHRASE_NOTES:
@@ -590,6 +608,34 @@ def detect_translationese(
                         excerpt=excerpt.strip(),
                         severity="info",
                         detail=f"翻訳調パターン: /{pat}/ に一致",
+                    )
+                )
+    return findings
+
+
+def _strip_line_marker(text: str) -> str:
+    """一致文字列の先頭に付いた箇条書き・見出し・引用・強調の記号を除く（detail の表示用）。"""
+    return re.sub(r"^[\s>#*_+\-]*(?:\d+[.)]\s*[*_]*)?", "", text).strip()
+
+
+def detect_filler_phrases(
+    lines: list[tuple[int, str]], raw_lines_by_no: dict[int, str] | None = None
+) -> list[Finding]:
+    findings = []
+    for no, line in lines:
+        raw_line = _raw_or_masked(raw_lines_by_no, no, line)
+        for pat, label in FILLER_PATTERNS:
+            for m in re.finditer(pat, line):
+                start = max(0, m.start() - 10)
+                end = m.end() + 10
+                excerpt = raw_line[start:end] if len(raw_line) >= end else line[start:end]
+                findings.append(
+                    Finding(
+                        line=no,
+                        category="filler_phrase",
+                        excerpt=excerpt.strip(),
+                        severity="info",
+                        detail=f"{label}: 「{_strip_line_marker(m.group())}」",
                     )
                 )
     return findings
@@ -1689,6 +1735,7 @@ def run_lint(
     # --- 表層（正規表現）ベースの検出器 ---
     findings += detect_forbidden_phrases(lex_lines, raw_lines_by_no)
     findings += detect_translationese(lex_lines, raw_lines_by_no)
+    findings += detect_filler_phrases(lex_lines, raw_lines_by_no)
     findings += detect_antithesis_repetition(
         lines,
         raw_lines_by_no,

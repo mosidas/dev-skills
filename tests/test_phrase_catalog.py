@@ -1,4 +1,4 @@
-"""write-doc の動詞カタログ(forbidden_phrases.json)の整合テスト。
+"""write-doc の動詞・名詞のカタログ(forbidden_phrases.json)の整合テスト。
 
 カタログはデータであり、破損・重複・包含(同一行での二重検出の原因)を機械検査で塞ぐ。
 lint.py がカタログから検出語と severity を正しく導出することも確かめる。
@@ -83,9 +83,12 @@ class PhraseCatalogTest(unittest.TestCase):
         for ng in ("落とし込む", "を選ぶ", "チェックする"):
             self.assertIn(ng, lint.FORBIDDEN_PHRASES_WEAK_SIGNAL, ng)
 
-    def test_型が_3_つで全エントリがその型を持つ(self) -> None:
-        """カタログは動詞に絞る。型は imprecise・colloquial・loanword の 3 つだけとする。"""
-        self.assertEqual(set(self.catalog["types"]), {"imprecise", "colloquial", "loanword"})
+    def test_型が_4_つで全エントリがその型を持つ(self) -> None:
+        """型は imprecise・colloquial・loanword・pseudo_concrete の 4 つだけとする。"""
+        self.assertEqual(
+            set(self.catalog["types"]),
+            {"imprecise", "colloquial", "loanword", "pseudo_concrete"},
+        )
         for entry in self.phrases:
             self.assertIn(entry["type"], self.catalog["types"], entry["ng"])
 
@@ -98,9 +101,79 @@ class PhraseCatalogTest(unittest.TestCase):
         self.assertEqual(len(warn_findings), 1)
         self.assertEqual(warn_findings[0].severity, "warn")
 
+    def test_yomiyasu_由来の語を検出する(self) -> None:
+        """yomiyasu 由来の 14 語は、ng か forms を含む例文で info として 1 件だけ検出される。"""
+        sentences = [
+            "画面の手触りを確かめた。",
+            "現場の肌感では遅い。",
+            "顧客との温度感を合わせる。",
+            "チームの熱量が高い。",
+            "血の通った設計にする。",
+            "泥臭く手作業で直した。",
+            "要件の解像度を上げた。",
+            "説明に腹落ちした。",
+            "残さない側に倒した。",
+            "調査で時間を溶かした。",
+            "警告を 1 つずつ潰していく。",
+            "設定が静かに壊れる。",
+            "不正な行は黙って捨てられる。",
+            "議論はその案に収斂した。",
+        ]
+        yomiyasu = [p for p in self.phrases if "yomiyasu" in p.get("note", "")]
+        self.assertEqual(len(yomiyasu), len(sentences))
+        variants = {v for p in yomiyasu for v in [p["ng"], *p.get("forms", [])]}
+        for sentence in sentences:
+            with self.subTest(sentence=sentence):
+                findings = lint.detect_forbidden_phrases([(1, sentence)])
+                self.assertEqual(len(findings), 1)
+                self.assertEqual(findings[0].category, "forbidden_phrase")
+                self.assertEqual(findings[0].severity, "info")
+                self.assertIn(findings[0].detail.split("「")[1].split("」")[0], variants)
+
+    def test_温度感知を巻き込まない(self) -> None:
+        self.assertEqual(lint.detect_forbidden_phrases([(1, "温度感知センサーで計測する。")]), [])
+
     def test_severity_が_info_か_warn_に限られる(self) -> None:
         for entry in self.phrases:
             self.assertIn(entry["severity"], ("info", "warn"), entry["ng"])
+
+
+class FillerPhraseTest(unittest.TestCase):
+    def test_前置フィラーと定型クロージングを検出する(self) -> None:
+        sentences = [
+            "重要なのは、速度である。",
+            "前置き。結論から言うと、不要だ。",
+            "いかがでしたでしょうか。",
+            "ぜひ試してみてください。",
+            "ぜひ参考にしてみてください。",
+            "本記事が参考になれば幸いです。",
+            "**重要なのは**、速度である。",
+            "ここで**重要なのは、速度である。",
+            "ここで、重要なのは速度だ。",
+        ]
+        for sentence in sentences:
+            with self.subTest(sentence=sentence):
+                findings = lint.detect_filler_phrases([(1, sentence)])
+                self.assertGreaterEqual(len(findings), 1)
+                self.assertTrue(all(f.category == "filler_phrase" for f in findings))
+
+    def test_文中の重要なのはと通常の依頼文は検出しない(self) -> None:
+        for sentence in [
+            "この設定で重要なのは、タイムアウトだ。",
+            "ボタンを押してください。",
+            "**この設定で重要なのは**、速度だ。",
+        ]:
+            with self.subTest(sentence=sentence):
+                self.assertEqual(lint.detect_filler_phrases([(1, sentence)]), [])
+
+    def test_箇条書きと見出しの行頭の前置フィラーを検出する(self) -> None:
+        """lint.py が lex_lines を作る前処理を通しても、行頭記号を読み飛ばして検出する。"""
+        for text in ["- 重要なのは、速度である。", "1. **重要なのは**、速度である。", "## 結論から言うと"]:
+            with self.subTest(text=text):
+                lex_lines = lint.iter_lines_with_no(lint.mask_markdown_structure(text, keep_structure_text=True))
+                findings = lint.detect_filler_phrases(lex_lines)
+                self.assertEqual([f.category for f in findings], ["filler_phrase"])
+                self.assertNotRegex(findings[0].detail, r"「[-#*\d]")
 
 
 if __name__ == "__main__":
