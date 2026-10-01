@@ -122,13 +122,15 @@ TRANSLATIONESE_PATTERNS: list[str] = [
 # 前置フィラーと定型クロージング（要素は (正規表現, ラベル)）。
 # 出典: yomiyasu の references/slop-catalog.md 6. と scripts/yomiyasu_lint.py の
 # FILLER_PATTERNS（MIT ライセンス）。前置フィラーは文頭に限って照合する。
+# lex_lines は箇条書き・見出し・引用の行頭記号を残すため、記号と強調記号を文頭側で読み飛ばす。
 FILLER_PATTERNS: list[tuple[str, str]] = [
     (
-        r"(?:^|(?<=[。！？]))\s*(?:まず、?|ここで)?(?:重要なのは|結論から言うと|正直に言うと|避けたいのは|注目すべきは)",
+        r"(?:^|(?<=[。！？]))[\s>#*_+\-]*(?:\d+[.)]\s*[*_]*)?(?:(?:まず|ここで)、?[*_]*)?"
+        r"(?:重要なのは|結論から言うと|正直に言うと|避けたいのは|注目すべきは)",
         "前置フィラー",
     ),
     (r"いかがでした(?:でしょうか|か)", "定型クロージング"),
-    (r"ぜひ[^。！？]*?(?:てみて|にして)ください", "定型クロージング"),
+    (r"ぜひ[^。！？]{0,20}?(?:てみて|にして)ください", "定型クロージング"),
     (r"参考になれば幸い", "定型クロージング"),
 ]
 
@@ -611,6 +613,11 @@ def detect_translationese(
     return findings
 
 
+def _strip_line_marker(text: str) -> str:
+    """一致文字列の先頭に付いた箇条書き・見出し・引用・強調の記号を除く（detail の表示用）。"""
+    return re.sub(r"^[\s>#*_+\-]*(?:\d+[.)]\s*[*_]*)?", "", text).strip()
+
+
 def detect_filler_phrases(
     lines: list[tuple[int, str]], raw_lines_by_no: dict[int, str] | None = None
 ) -> list[Finding]:
@@ -628,7 +635,7 @@ def detect_filler_phrases(
                         category="filler_phrase",
                         excerpt=excerpt.strip(),
                         severity="info",
-                        detail=f"{label}: 「{m.group().strip()}」",
+                        detail=f"{label}: 「{_strip_line_marker(m.group())}」",
                     )
                 )
     return findings
@@ -1728,6 +1735,7 @@ def run_lint(
     # --- 表層（正規表現）ベースの検出器 ---
     findings += detect_forbidden_phrases(lex_lines, raw_lines_by_no)
     findings += detect_translationese(lex_lines, raw_lines_by_no)
+    findings += detect_filler_phrases(lex_lines, raw_lines_by_no)
     findings += detect_antithesis_repetition(
         lines,
         raw_lines_by_no,
@@ -1735,7 +1743,6 @@ def run_lint(
     )
     findings += detect_low_sentence_length_variance(sentences)
     findings += detect_english_syntax_smell(lines, raw_lines_by_no)
-    findings += detect_filler_phrases(lines, raw_lines_by_no)
 
     # --- 形態素解析ベースの検出器（拡張: 品詞列・活用形マッチ） ---
     nominal_and_conj_findings, morph_stats = detect_nominal_ending_and_paragraph_conjunctions(

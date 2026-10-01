@@ -138,7 +138,6 @@ class PhraseCatalogTest(unittest.TestCase):
             self.assertIn(entry["severity"], ("info", "warn"), entry["ng"])
 
 
-
 class FillerPhraseTest(unittest.TestCase):
     def test_前置フィラーと定型クロージングを検出する(self) -> None:
         sentences = [
@@ -146,7 +145,11 @@ class FillerPhraseTest(unittest.TestCase):
             "前置き。結論から言うと、不要だ。",
             "いかがでしたでしょうか。",
             "ぜひ試してみてください。",
+            "ぜひ参考にしてみてください。",
             "本記事が参考になれば幸いです。",
+            "**重要なのは**、速度である。",
+            "ここで**重要なのは、速度である。",
+            "ここで、重要なのは速度だ。",
         ]
         for sentence in sentences:
             with self.subTest(sentence=sentence):
@@ -155,9 +158,22 @@ class FillerPhraseTest(unittest.TestCase):
                 self.assertTrue(all(f.category == "filler_phrase" for f in findings))
 
     def test_文中の重要なのはと通常の依頼文は検出しない(self) -> None:
-        for sentence in ["この設定で重要なのは、タイムアウトだ。", "ボタンを押してください。"]:
+        for sentence in [
+            "この設定で重要なのは、タイムアウトだ。",
+            "ボタンを押してください。",
+            "**この設定で重要なのは**、速度だ。",
+        ]:
             with self.subTest(sentence=sentence):
                 self.assertEqual(lint.detect_filler_phrases([(1, sentence)]), [])
+
+    def test_箇条書きと見出しの行頭の前置フィラーを検出する(self) -> None:
+        """lint.py が lex_lines を作る前処理を通しても、行頭記号を読み飛ばして検出する。"""
+        for text in ["- 重要なのは、速度である。", "1. **重要なのは**、速度である。", "## 結論から言うと"]:
+            with self.subTest(text=text):
+                lex_lines = lint.iter_lines_with_no(lint.mask_markdown_structure(text, keep_structure_text=True))
+                findings = lint.detect_filler_phrases(lex_lines)
+                self.assertEqual([f.category for f in findings], ["filler_phrase"])
+                self.assertNotRegex(findings[0].detail, r"「[-#*\d]")
 
 
 if __name__ == "__main__":
