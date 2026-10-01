@@ -394,13 +394,19 @@
       "note": "2026-10-01 追加(yomiyasu slop-catalog.md 5. 質感を装う疑似具体語)。「肌感覚」も部分一致で拾う"
     },
     {
-      "ng": "温度感",
+      "ng": "温度感を",
+      "forms": [
+        "温度感が",
+        "温度感の",
+        "温度感で",
+        "温度感は"
+      ],
       "type": "pseudo_concrete",
       "severity": "info",
       "ok": [
         "優先度・期限・関係者の具体的な要求を書く"
       ],
-      "note": "2026-10-01 追加(yomiyasu slop-catalog.md 5. 質感を装う疑似具体語)"
+      "note": "2026-10-01 追加(yomiyasu slop-catalog.md 5. 質感を装う疑似具体語)。「温度感知」「温度感度」を巻き込まないよう助詞つきで限定する"
     },
     {
       "ng": "熱量",
@@ -434,10 +440,8 @@
       "note": "2026-10-01 追加(yomiyasu slop-catalog.md 5. 質感を装う疑似具体語)"
     },
     {
-      "ng": "解像度を上げる",
+      "ng": "解像度を上げ",
       "forms": [
-        "解像度を上げた",
-        "解像度を上げて",
         "解像度が上が"
       ],
       "type": "pseudo_concrete",
@@ -467,12 +471,12 @@
       "ok": [
         "〜を原則とする・除外する・〜を採用する"
       ],
-      "note": "2026-10-01 追加(yomiyasu slop-catalog.md 1. 比喩動詞)"
+      "note": "2026-10-01 追加(yomiyasu slop-catalog.md 1. 比喩動詞)。レバー等の物理操作の用法は目視で残す判断をしてよい"
     },
     {
-      "ng": "時間を溶かす",
+      "ng": "時間を溶か",
       "forms": [
-        "時間を溶かし"
+        "時間が溶け"
       ],
       "type": "imprecise",
       "severity": "info",
@@ -494,11 +498,7 @@
       "note": "2026-10-01 追加(yomiyasu slop-catalog.md 1. 比喩動詞)。「1 つずつ」「一つずつ」「1 件ずつ」をまとめて拾う"
     },
     {
-      "ng": "静かに壊れる",
-      "forms": [
-        "静かに壊れた",
-        "静かに壊れて"
-      ],
+      "ng": "静かに壊れ",
       "type": "imprecise",
       "severity": "info",
       "ok": [
@@ -521,10 +521,7 @@
       "note": "2026-10-01 追加(yomiyasu slop-catalog.md 1. 比喩動詞)"
     },
     {
-      "ng": "収斂する",
-      "forms": [
-        "収斂し"
-      ],
+      "ng": "収斂",
       "type": "imprecise",
       "severity": "info",
       "ok": [

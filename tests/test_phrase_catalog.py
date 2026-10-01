@@ -130,6 +130,9 @@ class PhraseCatalogTest(unittest.TestCase):
                 self.assertEqual(findings[0].severity, "info")
                 self.assertIn(findings[0].detail.split("「")[1].split("」")[0], variants)
 
+    def test_温度感知を巻き込まない(self) -> None:
+        self.assertEqual(lint.detect_forbidden_phrases([(1, "温度感知センサーで計測する。")]), [])
+
     def test_severity_が_info_か_warn_に限られる(self) -> None:
         for entry in self.phrases:
             self.assertIn(entry["severity"], ("info", "warn"), entry["ng"])
