@@ -160,6 +160,7 @@ hooks/
 ├── inspection.config.json # 検査設定の正本
 └── rewrite_guides.json    # カテゴリごとの書き直し指針・言い換え例
 tests/                     # カタログと hooks の単体テスト、test_render.py(draw-diagram の render.py)
+evals/                     # claude plugin eval のケース(prompt.md と graders/)。結果の出力先 results/ は git 管理外
 ```
 
 ## 6. 開発
@@ -179,3 +180,26 @@ $ claude plugin validate . --strict
 $ uv run --with pyyaml python3 ~/.codex/skills/.system/plugin-creator/scripts/validate_plugin.py .
 $ agy plugin validate .
 ```
+
+## 7. 評価
+
+`evals/` には `claude plugin eval` のケースがある。各ケースはプラグインあり・なしの 2 アームで同じ依頼を実行し、`graders/` の採点結果の差(Δ)でスキルの効果を測る。
+
+| ケース | 測るもの |
+| :-- | :-- |
+| `respond-next-action` | 短い作業依頼に、前置きと締めの定型句を付けず、実行できる操作から答えるか(respond) |
+| `write-doc-report` | 調査レポートの依頼で write-doc が発火し、読み手の仮定を明示し、書き手の人称を使わないか |
+| `one-liner-control` | 1 文で済む質問に、スキルを呼ばず短く正しく答えるか(対照ケース) |
+
+リポジトリのルートで次のコマンドを実行する。1 ケースだけ回すときは `--case <name>` を付ける。Claude Code のサンドボックス内からは実行できないため、通常の端末で実行する。
+
+```console
+$ claude plugin eval . --trust-plugin --allow-tools Write Edit -j 4 --max-cost-usd 5 --no-publish
+$ claude plugin eval . --trust-plugin --allow-tools Write Edit -j 4 --max-cost-usd 5 --no-publish --case write-doc-report
+```
+
+結果は `evals/results/<timestamp>/` に `aggregate-result.json` と HTML レポートとして出力される。このディレクトリは git 管理外である。`evals/RESULTS.md` は eval が生成するファイルではなく、実行ごとに人が手で書く記録である。実行のたびに、`aggregate-result.json` と HTML レポートの値から RESULTS.md の表に 1 回分を書き足す。RESULTS.md の表は次の観点で読む。
+
+- スコアは、あり・なしの各アームの値と、その差(Δ)を見る。Δ が正で、回をまたいで再現するなら、プラグインが採点項目を改善していると判断できる。
+- `arm` を指定しない `tool_used: Skill` の grader(`write-doc-report` の `fired`)は、ありアームの発火指標であり、Δ には入らない。`arm: both` を付けた `one-liner-control` の `no-skill` はスコアに入る。
+- 1 ケースを 3 回しか実行しないため、Δ の小さな差は誤差の範囲にある。差は傾向として読む。
