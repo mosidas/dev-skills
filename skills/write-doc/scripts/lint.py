@@ -119,6 +119,19 @@ TRANSLATIONESE_PATTERNS: list[str] = [
     r"に他ならない",
 ]
 
+# 前置フィラーと定型クロージング（要素は (正規表現, ラベル)）。
+# 出典: yomiyasu の references/slop-catalog.md 6. と scripts/yomiyasu_lint.py の
+# FILLER_PATTERNS（MIT ライセンス）。前置フィラーは文頭に限って照合する。
+FILLER_PATTERNS: list[tuple[str, str]] = [
+    (
+        r"(?:^|(?<=[。！？]))\s*(?:まず、?|ここで)?(?:重要なのは|結論から言うと|正直に言うと|避けたいのは|注目すべきは)",
+        "前置フィラー",
+    ),
+    (r"いかがでした(?:でしょうか|か)", "定型クロージング"),
+    (r"ぜひ[^。！？]*?(?:てみて|にして)ください", "定型クロージング"),
+    (r"参考になれば幸い", "定型クロージング"),
+]
+
 # 段落頭に来ると「AI が構成を接続詞で誤魔化しがち」な語
 PARAGRAPH_CONJUNCTIONS: list[str] = [
     "しかし",
@@ -593,6 +606,29 @@ def detect_translationese(
                         excerpt=excerpt.strip(),
                         severity="info",
                         detail=f"翻訳調パターン: /{pat}/ に一致",
+                    )
+                )
+    return findings
+
+
+def detect_filler_phrases(
+    lines: list[tuple[int, str]], raw_lines_by_no: dict[int, str] | None = None
+) -> list[Finding]:
+    findings = []
+    for no, line in lines:
+        raw_line = _raw_or_masked(raw_lines_by_no, no, line)
+        for pat, label in FILLER_PATTERNS:
+            for m in re.finditer(pat, line):
+                start = max(0, m.start() - 10)
+                end = m.end() + 10
+                excerpt = raw_line[start:end] if len(raw_line) >= end else line[start:end]
+                findings.append(
+                    Finding(
+                        line=no,
+                        category="filler_phrase",
+                        excerpt=excerpt.strip(),
+                        severity="info",
+                        detail=f"{label}: 「{m.group().strip()}」",
                     )
                 )
     return findings
@@ -1699,6 +1735,7 @@ def run_lint(
     )
     findings += detect_low_sentence_length_variance(sentences)
     findings += detect_english_syntax_smell(lines, raw_lines_by_no)
+    findings += detect_filler_phrases(lines, raw_lines_by_no)
 
     # --- 形態素解析ベースの検出器（拡張: 品詞列・活用形マッチ） ---
     nominal_and_conj_findings, morph_stats = detect_nominal_ending_and_paragraph_conjunctions(

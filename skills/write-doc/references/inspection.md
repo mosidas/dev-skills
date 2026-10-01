@@ -13,7 +13,7 @@
 uv run <スキルのディレクトリ>/scripts/lint.py <file.md> [--json]
 ```
 
-禁止語・翻訳調・否定肯定対比の反復・文長の均質さ・体言止め率・語彙多様性・英語統語の疑い・段落の具体性を機械検出する。禁止語の正本は NG/OK カタログ(`../scripts/forbidden_phrases.json`)にある。
+禁止語・翻訳調・前置フィラー・定型クロージング・否定肯定対比の反復・文長の均質さ・体言止め率・語彙多様性・英語統語の疑い・段落の具体性を機械検出する。禁止語の正本は NG/OK カタログ(`../scripts/forbidden_phrases.json`)にある。
 
 - `--genre essay|tech|business`: コーパス校正済みの閾値プロファイルに切り替え、誤検知を減らす。
 - `--baseline <前回のjson>`: 今回の検出を resolved / new / persisting に仕分ける。台帳(4.)へ追記するのは new と persisting だけでよい。

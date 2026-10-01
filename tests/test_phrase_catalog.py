@@ -138,5 +138,27 @@ class PhraseCatalogTest(unittest.TestCase):
             self.assertIn(entry["severity"], ("info", "warn"), entry["ng"])
 
 
+
+class FillerPhraseTest(unittest.TestCase):
+    def test_前置フィラーと定型クロージングを検出する(self) -> None:
+        sentences = [
+            "重要なのは、速度である。",
+            "前置き。結論から言うと、不要だ。",
+            "いかがでしたでしょうか。",
+            "ぜひ試してみてください。",
+            "本記事が参考になれば幸いです。",
+        ]
+        for sentence in sentences:
+            with self.subTest(sentence=sentence):
+                findings = lint.detect_filler_phrases([(1, sentence)])
+                self.assertGreaterEqual(len(findings), 1)
+                self.assertTrue(all(f.category == "filler_phrase" for f in findings))
+
+    def test_文中の重要なのはと通常の依頼文は検出しない(self) -> None:
+        for sentence in ["この設定で重要なのは、タイムアウトだ。", "ボタンを押してください。"]:
+            with self.subTest(sentence=sentence):
+                self.assertEqual(lint.detect_filler_phrases([(1, sentence)]), [])
+
+
 if __name__ == "__main__":
     unittest.main()

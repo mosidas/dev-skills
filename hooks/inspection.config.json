@@ -21,7 +21,7 @@
       "name": "fiction",
       "paths": ["**fiction/**", "**novel/**"],
       "genre": "essay",
-      "disabled_categories": ["forbidden_phrase", "nominal_ending", "repeated_sentence_lead"],
+      "disabled_categories": ["forbidden_phrase", "filler_phrase", "nominal_ending", "repeated_sentence_lead"],
       "inspect": true
     }
   ],
