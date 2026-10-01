@@ -10,6 +10,7 @@ from __future__ import annotations
 import re
 import sys
 import unittest
+from pathlib import Path
 
 import helpers
 
@@ -21,7 +22,7 @@ sys.path.insert(0, str(SCRIPTS))
 import lint  # noqa: E402
 
 
-def _lex_lines(path) -> list[tuple[int, str]]:
+def _lex_lines(path: Path) -> list[tuple[int, str]]:
     """run_lint が語彙系の検出器へ渡す lex_lines と同じ前処理。"""
     text = path.read_text(encoding="utf-8")
     return lint.iter_lines_with_no(lint.mask_markdown_structure(text, keep_structure_text=True))
