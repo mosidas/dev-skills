@@ -14,17 +14,19 @@ Claude Code・Codex CLI・Antigravity CLI のプラグインである。開発�
 | `respond` | スキル | 会話の応答の形を定める規範。読み手を ADHD と想定し、次の行動から書く・複数手順に番号を振る・状態を毎回書き直す・調べた事実に根拠となるソースを示すなどの規則を定める |
 | `draw-diagram` | スキル | `.mmd` で構造を固めてから人間が見やすい SVG を描く作図の規範。`render.py` で `.mmd` と SVG の対応照合・禁止要素の検査・Chrome headless の PNG 出力を行う |
 | `design-ui` | スキル | Web・iOS・Android・デスクトップの画面・コンポーネント・ページを設計・実装するときの規範。題材からトークン案を書き、汎用の既定と照合してから実装し、有限回の検証で止める工程を定める |
+| `first-reader` | スキル | 模擬読者 2 人に下書きを 1 段落ずつ読ませ、斜め読みの関門・離脱点・翌日の想起・信頼の台帳を報告する。書き直しはしない。scripts は標準ライブラリだけで動く。Apache-2.0(`skills/first-reader/LICENSE`・`NOTICE`) |
 | `hooks/inject_respond.py` | hook(SessionStart、Claude Code のみ) | セッション開始時に `skills/respond/SKILL.md` の本文を注入する |
 | `hooks/inspect_write.py` | hook(PostToolUse、Claude Code のみ) | 日本語 Markdown の書き込み直後に `lint.py` を実行し、検出があれば書き直しを促す警告を返す |
 | `hooks/inspect_stop.py` | hook(Stop、Claude Code のみ) | セッション完了時に再検査し、重大カテゴリの検出が残るあいだ完了を差し戻す |
 
-スキルは各 CLI が用途を判断して自動で読み込む。Claude Code では `/dev-skills:develop`・`/dev-skills:ponytail`・`/dev-skills:write-doc`・`/dev-skills:write-slide`・`/dev-skills:draw-diagram`・`/dev-skills:design-ui`、Codex CLI では `$dev-skills:develop`、Antigravity CLI では `/develop` で明示的に呼んでもよい。サブエージェントは Claude Code では `dev-skills:planner` のように plugin 名つきで起動する。Codex CLI と Antigravity CLI はサブエージェントを起動しないため、develop では統括が 3 つの役割を順に担う。respond は Claude Code では SessionStart hook が常時適用し、Codex CLI・Antigravity CLI ではスキルとして読み込む。hooks に呼び出しの操作はない。プラグインを有効にした Claude Code のセッションで、セッション開始・日本語 Markdown の書き込み・セッション完了のたびに自動で発火する。hooks の stdin の形式は CLI ごとに異なるため、Codex CLI と Antigravity CLI では hooks を提供しない。
+スキルは各 CLI が用途を判断して自動で読み込む。Claude Code では `/dev-skills:develop`・`/dev-skills:ponytail`・`/dev-skills:write-doc`・`/dev-skills:write-slide`・`/dev-skills:draw-diagram`・`/dev-skills:design-ui`・`/dev-skills:first-reader`、Codex CLI では `$dev-skills:develop`、Antigravity CLI では `/develop` で明示的に呼んでもよい。サブエージェントは Claude Code では `dev-skills:planner` のように plugin 名つきで起動する。Codex CLI と Antigravity CLI はサブエージェントを起動しないため、develop では統括が 3 つの役割を順に担う。respond は Claude Code では SessionStart hook が常時適用し、Codex CLI・Antigravity CLI ではスキルとして読み込む。hooks に呼び出しの操作はない。プラグインを有効にした Claude Code のセッションで、セッション開始・日本語 Markdown の書き込み・セッション完了のたびに自動で発火する。hooks の stdin の形式は CLI ごとに異なるため、Codex CLI と Antigravity CLI では hooks を提供しない。
 
 ## 2. 前提
 
 - `uv` が使えること。`lint.py` は形態素解析に sudachipy を使い、依存は `uv run` がスクリプト先頭の宣言から解決する。`uv` が無い環境では hooks は検査を行わず、スキルは規範に沿って目視で点検する。
 - `semantic.py`(文埋め込みで話題の平板さを検出する opt-in の検出器)だけは torch と sentence-transformers に依存し、初回実行時にモデル約 1GB をダウンロードする。hooks からは呼ばない。
 - `draw-diagram` の `render.py` による PNG 出力は Google Chrome を必要とする(パスは環境変数 `CHROME_BIN` で変更できる)。Chrome が無い環境では `--png` を付けずに実行し、照合と検査だけを行う。Claude Code のサンドボックス内では Chrome が起動できないため、PNG 出力はサンドボックス外で実行する。
+- `first-reader` は `python3` とサブエージェントを使い、通読中は 127.0.0.1 でローカルの HTTP サーバーを起動する。
 
 ## 3. 導入
 
@@ -91,7 +93,7 @@ $ codex plugin add dev-skills@personal
 $ agy plugin install <クローンのパス>
 ```
 
-導入先は `~/.gemini/config/plugins/dev-skills/`(コピー)である。クローンを更新したら同じコマンドで導入し直す。スキルは `/develop`・`/ponytail`・`/write-doc`・`/write-slide`・`/respond`・`/draw-diagram`・`/design-ui` のスラッシュコマンドにもなる。
+導入先は `~/.gemini/config/plugins/dev-skills/`(コピー)である。クローンを更新したら同じコマンドで導入し直す。スキルは `/develop`・`/ponytail`・`/write-doc`・`/write-slide`・`/respond`・`/draw-diagram`・`/design-ui`・`/first-reader` のスラッシュコマンドにもなる。
 
 ## 4. hooks
 
@@ -151,6 +153,13 @@ skills/draw-diagram/
 skills/design-ui/
 ├── SKILL.md               # UI 設計規範の入口(モードの選択・工程・スケール)
 └── references/            # anti-ai.md・text.md・checklist.md・native.md(汎用の既定の一覧・文言の規範・実装の品質床・ネイティブアプリ固有の規範)
+skills/first-reader/
+├── SKILL.md               # 模擬読者による通読の工程(斜め読みの関門・通読・想起・信頼の台帳・報告)
+├── README.md              # スキルの概要
+├── references/            # personas.md・report.md・room.md・interview.md(読者の造形・報告の形式・読者のページ・書き手への聞き取り)
+├── scripts/               # feed.py・skim.py・recall.py・ask.py・room.py・signals.py(標準ライブラリのみ)
+├── LICENSE                # Apache-2.0
+└── NOTICE                 # 出典と変更点
 hooks/
 ├── hooks.json             # SessionStart・PostToolUse・Stop の配線
 ├── inject_respond.py      # SessionStart: respond スキルの本文を注入する
@@ -189,6 +198,7 @@ $ agy plugin validate .
 | :-- | :-- |
 | `respond-next-action` | 短い作業依頼に、前置きと締めの定型句を付けず、実行できる操作から答えるか(respond) |
 | `write-doc-report` | 調査レポートの依頼で write-doc が発火し、読み手の仮定を明示し、書き手の人称を使わないか |
+| `first-reader-no-rewrite` | 下書きのレビュー依頼で first-reader が発火し、下書きの具体的な箇所に結びつけて読み手の反応を報告し、書き直しや修正案のリストを出さないか |
 | `one-liner-control` | 1 文で済む質問に、スキルを呼ばず短く正しく答えるか(対照ケース) |
 
 リポジトリのルートで次のコマンドを実行する。1 ケースだけ回すときは `--case <name>` を付ける。Claude Code のサンドボックス内からは実行できないため、通常の端末で実行する。
@@ -201,5 +211,5 @@ $ claude plugin eval . --trust-plugin --allow-tools Write Edit -j 4 --max-cost-u
 結果は `evals/results/<timestamp>/` に `aggregate-result.json` と HTML レポートとして出力される。このディレクトリは git 管理外である。`evals/RESULTS.md` は eval が生成するファイルではなく、実行ごとに人が手で書く記録である。実行のたびに、`aggregate-result.json` と HTML レポートの値から RESULTS.md の表に 1 回分を書き足す。RESULTS.md の表は次の観点で読む。
 
 - スコアは、あり・なしの各アームの値と、その差(Δ)を見る。Δ が正で、回をまたいで再現するなら、プラグインが採点項目を改善していると判断できる。
-- `arm` を指定しない `tool_used: Skill` の grader(`write-doc-report` の `fired`)は、ありアームの発火指標であり、Δ には入らない。`arm: both` を付けた `one-liner-control` の `no-skill` はスコアに入る。
-- 1 ケースを 3 回しか実行しないため、Δ の小さな差は誤差の範囲にある。差は傾向として読む。
+- `arm` を指定しない `tool_used: Skill` の grader(`write-doc-report`・`first-reader-no-rewrite` の `fired`)は、ありアームの発火指標であり、Δ には入らない。`arm: both` を付けた `one-liner-control` の `no-skill` と `first-reader-no-rewrite` の `no-rewrite` はスコアに入る。
+- 1 ケースを 2〜3 回しか実行しないため、Δ の小さな差は誤差の範囲にある。差は傾向として読む。
