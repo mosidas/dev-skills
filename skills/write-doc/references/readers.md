@@ -8,9 +8,8 @@
 - **他者向け**: ユーザー以外が読む文書。読み手は文脈を知らず、持つ知識も様々である。
 - どちらに当たるかをユーザーに確認してから書き始める。
 - 確認できないとき(非対話の実行、回答が得られない)は、推測で分類して書き進め、次を守る。
-  - 読み手について「依頼文にあったこと」と「推測したこと」を分けて書き、推測には理由を添える。
+  - 読み手について依頼文にあったことと推測したことを、返答の冒頭で分けて示し、推測には理由を添える。文書の中にだけ書くと、ユーザーに届かない。
   - 依頼文にない読み手の属性(経歴・使っている道具・困りごと)を事実として書かない。
-  - 推測のまま書き進めたら、返答の冒頭で 2 つを分けて示す。文書の中にだけ書くと、ユーザーに届かない。
   - 依頼文の言い換えを、読み手本人の言葉のように書かない。「依頼文から、問いを『…』と推測した」のように書く。
 
 ## 2. 本人向け
@@ -33,4 +32,4 @@
 
 ## 5. 参考文献
 
-- [mizchi/explainer](https://github.com/mizchi/explainer)(MIT ライセンス): `skills/explainer/SKILL.md`・`references/persona.md` が、確認できないときに依頼文にあったことと推測したことを分けて書く規則の原典。explainer はこれを [HyperFrames](https://github.com/heygen-com/hyperframes)(Apache-2.0)の `brief-contract.md` を参考に書いた。本スキルの書式に合わせて再構成した。
+- [mizchi/explainer](https://github.com/mizchi/explainer)(MIT ライセンス): `skills/explainer/SKILL.md`・`skills/explainer/references/persona.md` が、確認できないときに依頼文にあったことと推測したことを分けて書く規則の原典。explainer はこれを [HyperFrames](https://github.com/heygen-com/hyperframes)(Apache-2.0)の `brief-contract.md` を参考に書いた。本スキルの書式に合わせて再構成した。
