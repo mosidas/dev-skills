@@ -1,0 +1,18 @@
+first-reader
+Copyright Shubham Saboo and contributors
+https://github.com/Shubhamsaboo/awesome-llm-apps/tree/main/agent_skills/first-reader
+(upstream commit f12ecedf337e4732bd5ec628a1ee5b666f0d1262), licensed under the Apache License 2.0 (see LICENSE).
+
+Changes in this copy (explainer project, 2026-09):
+- scripts/feed.py: CJK-aware word counting (nwords) and 。！？ sentence ends,
+  so Japanese drafts are chunked and paced like English ones.
+- Tests live in tests/first-reader/ of the explainer repository
+  (test_first_reader.py adjusted for the new path; test_cjk.py added).
+
+取り込み元(dev-skills):
+mizchi/explainer(https://github.com/mizchi/explainer)のコミット 6abf6fc の
+skills/first-reader/ を取り込んだ。
+
+このコピーでの変更(dev-skills、2026-10):
+- SKILL.md の frontmatter の description を日本語に訳した。
+- ほかのファイルは取り込み元から変えていない。
