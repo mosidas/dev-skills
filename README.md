@@ -157,7 +157,7 @@ skills/first-reader/
 ├── SKILL.md               # 模擬読者による通読の工程(斜め読みの関門・通読・想起・信頼の台帳・報告)
 ├── README.md              # スキルの概要
 ├── references/            # personas.md・report.md・room.md・interview.md(読者の造形・報告の形式・読者のページ・書き手への聞き取り)
-├── scripts/               # feed.py・skim.py・recall.py・ask.py・room.py・signals.py(標準ライブラリのみ)
+├── scripts/               # feed.py・skim.py・recall.py・ask.py・room.py・signals.py・room_template.html(スクリプトは標準ライブラリのみ)
 ├── LICENSE                # Apache-2.0
 └── NOTICE                 # 出典と変更点
 hooks/
@@ -201,11 +201,11 @@ $ agy plugin validate .
 | `first-reader-no-rewrite` | 下書きのレビュー依頼で first-reader が発火し、下書きの具体的な箇所に結びつけて読み手の反応を報告し、書き直しや修正案のリストを出さないか |
 | `one-liner-control` | 1 文で済む質問に、スキルを呼ばず短く正しく答えるか(対照ケース) |
 
-リポジトリのルートで次のコマンドを実行する。1 ケースだけ回すときは `--case <name>` を付ける。Claude Code のサンドボックス内からは実行できないため、通常の端末で実行する。
+リポジトリのルートで次のコマンドを実行する。1 ケースだけ回すときは `--case <name>` を付ける。Claude Code のサンドボックス内からは実行できないため、通常の端末で実行する。`first-reader-no-rewrite` はスクリプトを Bash で動かすため、`--allow-tools` に Bash を含める。`--max-cost-usd 5` は本ケースを加える前の実績($3.01)に基づく値であり、本ケースを含めると費用が増えて上限で打ち切られることがある。
 
 ```console
-$ claude plugin eval . --trust-plugin --allow-tools Write Edit -j 4 --max-cost-usd 5 --no-publish
-$ claude plugin eval . --trust-plugin --allow-tools Write Edit -j 4 --max-cost-usd 5 --no-publish --case write-doc-report
+$ claude plugin eval . --trust-plugin --allow-tools Bash Write Edit -j 4 --max-cost-usd 5 --no-publish
+$ claude plugin eval . --trust-plugin --allow-tools Bash Write Edit -j 4 --max-cost-usd 5 --no-publish --case write-doc-report
 ```
 
 結果は `evals/results/<timestamp>/` に `aggregate-result.json` と HTML レポートとして出力される。このディレクトリは git 管理外である。`evals/RESULTS.md` は eval が生成するファイルではなく、実行ごとに人が手で書く記録である。実行のたびに、`aggregate-result.json` と HTML レポートの値から RESULTS.md の表に 1 回分を書き足す。RESULTS.md の表は次の観点で読む。
