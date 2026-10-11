@@ -48,7 +48,39 @@ npm run lint
 npm test
 ```
 
-## 4. 確認
+## 4. シークレット検知と依存監査
+
+要件の品質がプロダクトのとき、hook にシークレット検知と依存監査を追加する。pre-commit で gitleaks、pre-push で osv-scanner を実行する。エコシステム標準の監査(`npm audit`・`cargo audit`・`pip-audit` など)が既に入っていればそれを使い、osv-scanner を重ねて入れない。依存のマニフェストもロックファイルも無いリポジトリでは osv-scanner を入れない。osv-scanner は監査の対象が無いと終了コード 128 で失敗し、push が止まる。オフラインでも API に届かず、終了コード 129 で止まる。
+
+```sh
+brew install gitleaks osv-scanner   # macOS。ほかは https://github.com/gitleaks/gitleaks と https://google.github.io/osv-scanner/installation/
+```
+
+lefthook では `lefthook.yml` の各 `commands:` に次のコマンドを追加する。
+
+```yaml
+pre-commit:
+  commands:
+    secrets:
+      run: gitleaks git --pre-commit --staged --redact
+pre-push:
+  commands:
+    audit:
+      run: osv-scanner scan source -r .
+```
+
+husky では `.husky/pre-commit` と `.husky/pre-push` の末尾に 1 行ずつ追加する。
+
+```sh
+# .husky/pre-commit
+gitleaks git --pre-commit --staged --redact
+
+# .husky/pre-push
+osv-scanner scan source -r .
+```
+
+## 5. 確認
 
 - hook を直接実行し、lint とテストが動くことを確かめる。lefthook は `lefthook run pre-commit` と `lefthook run pre-push`、husky は `sh .husky/pre-commit` と `sh .husky/pre-push`。
+- 4. を入れたときは、gitleaks と osv-scanner も hook から実行され、終了コード 0 で終わることを確かめる。
 - hook を入れたコミットは、計画の最初のステップとは別のコミットにする(`chore: git hook を導入する`)。
