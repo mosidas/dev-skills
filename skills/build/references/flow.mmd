@@ -4,7 +4,7 @@
 %% 内部の往復は develop スキルの図に委ねる。SVG(flow.svg)への描画は本構造を正とする。
 flowchart LR
   subgraph user["ユーザー"]
-    instruct["PRD を渡し、タスク一覧を承認する"]
+    instruct["PRD を渡し、承認する"]
     run["loop.py を起動する"]
     answer["要判断に回答する"]
   end
@@ -14,7 +14,7 @@ flowchart LR
   end
 
   subgraph outside["コンテキストの外"]
-    state["進捗ファイル・backlog"]
+    state[(進捗ファイル・backlog)]
   end
 
   subgraph loop["loop.py(スクリプト)"]
