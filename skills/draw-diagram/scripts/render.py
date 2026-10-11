@@ -335,9 +335,8 @@ def screenshot(
     png_abs = os.path.abspath(png)
     Path(png_abs).unlink(missing_ok=True)
 
-    # ponytail: サンドボックス内では Chrome が「Failed to create socket directory」で
-    # 起動できないことがある。--user-data-dir を一時ディレクトリに固定しても解決しない
-    # 場合は、サンドボックス外(または CI の専用コンテナ)で実行する必要がある。
+    # shortcut: サンドボックス内では Chrome が「Failed to create socket directory」で起動できず、--user-data-dir の固定でも直らないことがある,
+    # そのときはサンドボックス外(または CI の専用コンテナ)で実行する
     with tempfile.TemporaryDirectory() as user_data_dir:
         stderr_path = os.path.join(user_data_dir, "chrome-stderr.log")
         # stdout/stderr を PIPE のまま誰も読まないと、Chrome がパイプのバッファを
