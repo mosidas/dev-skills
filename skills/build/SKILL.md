@@ -53,7 +53,7 @@ description: 製品の要求一覧・PRD(製品要求仕様書)から起こし�
 - 記録の結果は `完了`・`失敗`・`要判断` のどれかにする。
 - 記録のタスク列は、`backlog task list --plain` が出す `TASK-12` の形で書く。loop.py はタスク列の文字列が完全一致する行を同じタスクとして数える。
 - 要判断の節には、反復が `- TASK-x: <質問>` の行を書き、ユーザーがその直下に `  - 回答: <回答>` を書く。
-- 置き場所は、backlog を初期化したリポジトリのルートにする。backlog はサブモジュールの中では動かない。既定のパスは `build/<slug>.md` である。
+- 置き場所は、backlog を初期化したリポジトリのルートにする。backlog はサブモジュールの中では動かない。既定のパスは `backlog/build/<slug>.md` である。
 - 進捗ファイルと backlog の変更は、反復ごとにコミットしない。ループが止まった後にユーザーがコミットする。
 
 ## 3. 分解する
@@ -70,6 +70,7 @@ backlog task create "<タイトル>" -l build-<slug> -d "<要件の 4 行>" --ac
 - タスクの一覧をユーザーに見せ、承認を得る。
 - 失敗の上限(既定 3)・マージの許可・進捗ファイルのパスをユーザーに聞き、2. の雛形から進捗ファイルを作る。
 - マージの許可を聞くのは、この 1 度だけである。反復は `- マージ:` の行を読むだけで、書き換えない。
+- `不許可` のときは依存先の PR が開いたまま残る。依存を持つタスクに来るたびに反復は要判断で止まり、ユーザーが PR をマージしてから再開する。
 - 最後に、反復を回すコマンド(6.)をユーザーに示す。
 
 ## 4. 反復する
@@ -119,7 +120,7 @@ backlog task create "<タイトル>" -l build-<slug> -d "<要件の 4 行>" --ac
 Claude Code では、loop.py が反復のたびに新しい `claude -p` のプロセスを起動する。backlog を初期化したリポジトリのルートで実行する。
 
 ```sh
-python3 <プラグインのパス>/skills/build/scripts/loop.py build/<slug>.md --max-iterations 20 -- --permission-mode auto --max-budget-usd 20
+python3 <プラグインのパス>/skills/build/scripts/loop.py backlog/build/<slug>.md --max-iterations 20 -- --permission-mode auto --max-budget-usd 20
 ```
 
 - `--` より後ろの引数は claude に渡す。
