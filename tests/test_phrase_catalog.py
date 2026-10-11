@@ -75,7 +75,7 @@ class PhraseCatalogTest(unittest.TestCase):
             {p["ng"] for p in self.phrases if p["severity"] == "info"},
         )
 
-    def test_空虚な動詞だけが_warn_を持つ(self) -> None:
+    def test_warn_は空虚な動詞と比喩語に限る(self) -> None:
         """severity の方針を固定する。正当な用法のある語は info、空虚な動詞と、
         システム開発の文書で字義どおりに使わない比喩語だけ warn。"""
         empty_verbs = {"掘り下げる", "深掘りする", "言語化する", "を探求する"}
