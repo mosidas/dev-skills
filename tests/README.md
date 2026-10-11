@@ -25,6 +25,7 @@ python3 -m unittest discover -s tests -t tests -p test_phrase_catalog.py
 | `test_inspection_hooks.py` | `hooks/` | 検査対象の判定・重大カテゴリの絞り込み・設定の上書き・警告文・完了ブロックと上限、検査できない環境での素通し |
 | `test_respond_hook.py` | `hooks/inject_respond.py` | frontmatter の除去(CRLF・本文中の区切り線を含む)・本文の出力・スキルが無い環境での素通し |
 | `test_render.py` | `skills/draw-diagram/scripts/render.py` | `.mmd` と SVG の id・辺の対応照合、禁止要素(`script`・`foreignObject`・`image`・外部参照)・整形式の検査、`classDiagram`/`erDiagram` の照合対象外扱い |
+| `test_build_loop.py` | `skills/build/scripts/loop.py` | 進捗ファイルの解析(見出し・区切りの行と `失敗(解決済み)` を数えない、停止の行と失敗の上限の検証)、停止の判定(全 Done で 0・要判断で起動しない・同一タスクの失敗が上限に達したら止まり別タスクの合計では止まらない)、進捗ファイルが更新されないとき・非 0 終了・反復の上限での停止、`--` より後ろの引数の受け渡し |
 | `test_yomiyasu_edge_cases.py` | `tests/corpus/yomiyasu_edge_cases/` | yomiyasu 由来の語と定型句(前置フィラー・定型クロージング)が、日常語の境界値 48 本のうち字義どおりの `壊れる` を含む 5 本では `壊れ` だけを検出し、残りの 43 本には発火しないこと |
 | `corpus/yomiyasu_edge_cases/` | — | 境界値コーパス 48 本(出典 nanaism/yomiyasu の `tests/corpus/edge_cases`、MIT、`LICENSE` 同梱) |
 
