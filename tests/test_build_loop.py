@@ -167,6 +167,30 @@ class LoopRunTest(helpers.TempDirTestCase):
         self.assertEqual(proc.returncode, 1)
         self.assertEqual(self.launches(), 2)
 
+    def test_最後の反復で全Doneになると0で終わる(self) -> None:
+        steps = [{"op": "stop", "value": "全 Done"}]
+        proc = self.run_loop(_progress(), steps, "--max-iterations", "1")
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        self.assertEqual(self.launches(), 1)
+
+    def test_反復の上限に0を渡すと2で終わる(self) -> None:
+        proc = self.run_loop(_progress(), [], "--max-iterations", "0")
+        self.assertEqual(proc.returncode, 2)
+        self.assertEqual(self.launches(), 0)
+
+    def test_起動するコマンドが無いと1で終わりトレースバックを出さない(self) -> None:
+        self.progress = self.write("progress.md", _progress())
+        env = dict(os.environ, BUILD_AGENT_CMD=str(self.tmp / "no-such-command"))
+        proc = subprocess.run(
+            [sys.executable, str(SCRIPT), str(self.progress)],
+            capture_output=True,
+            text=True,
+            env=env,
+        )
+        self.assertEqual(proc.returncode, 1)
+        self.assertIn("コマンドが見つからない", proc.stderr)
+        self.assertNotIn("Traceback", proc.stderr)
+
     def test_区切りより後ろの引数がプロンプトの後ろに順に渡る(self) -> None:
         steps = [{"op": "stop", "value": "全 Done"}]
         proc = self.run_loop(_progress(), steps, "--", "--model", "opus", "--verbose")

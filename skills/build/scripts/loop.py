@@ -84,6 +84,13 @@ def _read(path: Path) -> str | None:
         return None
 
 
+def _positive_int(value: str) -> int:
+    n = int(value)
+    if n <= 0:
+        raise argparse.ArgumentTypeError(f"正の整数でない: {value!r}")
+    return n
+
+
 def main(argv: list[str]) -> int:
     if "--" in argv:
         sep = argv.index("--")
@@ -92,7 +99,7 @@ def main(argv: list[str]) -> int:
         extra = []
     parser = argparse.ArgumentParser(description="build の反復を繰り返し起動する。")
     parser.add_argument("progress", type=Path, help="進捗ファイル")
-    parser.add_argument("--max-iterations", type=int, default=20, help="反復の上限(既定 20)")
+    parser.add_argument("--max-iterations", type=_positive_int, default=20, help="反復の上限(既定 20)")
     args = parser.parse_args(argv)
 
     path = args.progress.resolve()
@@ -118,7 +125,11 @@ def main(argv: list[str]) -> int:
             return 1
 
         print(f"反復 {i}: 起動", flush=True)
-        proc = subprocess.run(cmd)
+        try:
+            proc = subprocess.run(cmd)
+        except FileNotFoundError:
+            print(f"コマンドが見つからない: {cmd[0]}", file=sys.stderr)
+            return 1
         if proc.returncode != 0:
             print(f"反復 {i} が終了コード {proc.returncode} で終わった")
             return 1
@@ -128,7 +139,6 @@ def main(argv: list[str]) -> int:
         if after == before:
             print("進捗ファイルが更新されなかった")
             return 1
-    return 1  # --max-iterations が負のときだけ到達する
 
 
 if __name__ == "__main__":
