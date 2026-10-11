@@ -1,36 +1,24 @@
-flowchart LR
-    subgraph G_decompose ["分解する(統括、1 回)"]
-        Decompose[PRD をタスクに分ける]
-    end
-    subgraph G_loop ["loop.py(Claude Code)"]
-        ReadProg[進捗ファイルを読む]
-        Judge{停止条件を判定}
-        Launch[claude -p を起動]
-    end
-    subgraph G_iterate ["反復する(新しいプロセス、1 回 1 タスク)"]
-        Pick[タスクを 1 つ取る]
-        Develop[develop を回す]
-        Verify[受け入れ条件を検証]
-        Record[記録に 1 行書く]
-    end
+flowchart TB
+    User[ユーザー]
+    Decompose[AI セッション 分解]
+    Loop[loop.py]
+    Iterate[AI セッション 反復]
     Progress[(進捗ファイル)]
     Backlog[(backlog)]
-    User([ユーザー])
 
-    Decompose -->|書く| Progress
-    Decompose -->|タスクを書く| Backlog
-    Progress -->|読む| ReadProg
-    ReadProg -->|記録と停止| Judge
-    Judge -->|続ける| Launch
-    Judge -->|止まる| User
-    Launch -->|プロンプト| Pick
-    Launch -->|終了を待って繰り返す| ReadProg
-    Progress -->|停止と回答を読む| Pick
-    Backlog -->|タスクを読む| Pick
-    Pick -->|1 タスク| Develop
-    Develop -->|CI 通過| Verify
-    Verify -->|Done を書く| Backlog
-    Verify -->|結果| Record
-    Record -->|1 行と停止を書く| Progress
-    User -->|回答と停止を書く| Progress
-    User -->|再び起動| ReadProg
+    User -->|1 PRD を渡す| Decompose
+    Decompose -->|2 タスク案| User
+    User -->|3 承認・マージ許可・上限| Decompose
+    Decompose -->|4 タスクを書く| Backlog
+    Decompose -->|5 進捗ファイルを作る| Progress
+    User -->|6 loop.py を起動| Loop
+    Progress -->|7 停止と失敗回数を読む| Loop
+    Loop -->|8 claude -p で新しいプロセスを起動| Iterate
+    Backlog -->|9 タスクを読む| Iterate
+    Progress -->|10 停止と回答を読む| Iterate
+    Iterate -->|11 develop で PR まで| Iterate
+    Iterate -->|12 Done・Notes| Backlog
+    Iterate -->|13 記録 1 行・停止| Progress
+    Loop -->|14 止まる| User
+    User -->|15 回答・停止なし| Progress
+    User -->|16 再び起動| Loop

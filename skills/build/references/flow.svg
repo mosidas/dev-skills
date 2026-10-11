@@ -1,66 +1,49 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1240 740" width="1240" height="740" role="img" aria-label="build は、分解を 1 度行った後、loop.py が反復ごとに新しい claude -p のプロセスを起動し、状態は backlog と進捗ファイルだけを通して受け渡す">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1300 640" width="1300" height="640" role="img" aria-label="build は、ユーザー・分解の AI セッション・loop.py・反復の AI セッションが、進捗ファイルと backlog だけを通して状態を受け渡しながら、番号の順に動く">
   <style>
     :root { --fg: #1f2328; --bg: #ffffff; --accent: #0969da; --muted: #6e7781; --panel: #f6f8fa; --hot-bg: #ddf4ff; --old-bg: #e7ebef; }
     @media (prefers-color-scheme: dark) { :root { --fg: #e6edf3; --bg: #0d1117; --accent: #58a6ff; --muted: #8b949e; --panel: #161b22; --hot-bg: #0f2a4d; --old-bg: #2a2f36; } }
     svg { background: var(--bg); }
     text { font-family: system-ui, "Hiragino Sans", "Noto Sans JP", sans-serif; font-size: 13px; fill: var(--fg); }
-    .frame { fill: none; stroke: var(--muted); stroke-width: 1; stroke-dasharray: 4 4; }
-    .title { font-size: 12px; }
     .box { fill: var(--bg); stroke: var(--fg); stroke-width: 1.5; }
     .box.hot { fill: var(--hot-bg); stroke: var(--accent); }
-    .box.old { fill: var(--old-bg); }
     .edge { stroke: var(--fg); stroke-width: 1.5; fill: none; marker-end: url(#arrow); }
     .label { font-size: 11px; fill: var(--muted); }
   </style>
   <defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="context-stroke"/></marker></defs>
 
-  <!-- 分解する -->
-  <rect class="frame" x="20" y="20" width="220" height="160" rx="8"/>
-  <text class="title" x="36" y="40">分解する(統括、1 回)</text>
-  <rect class="box" data-id="Decompose" x="40" y="80" width="180" height="60" rx="6"/><text x="130" y="114" text-anchor="middle">PRD をタスクに分ける</text>
+  <!-- 動作主 -->
+  <rect class="box" data-id="User" x="40" y="40" width="340" height="120" rx="6"/><text x="210" y="104" text-anchor="middle">ユーザー</text>
+  <rect class="box" data-id="Loop" x="940" y="40" width="260" height="120" rx="6"/><text x="1070" y="94" text-anchor="middle">loop.py</text><text class="label" x="1070" y="114" text-anchor="middle">スクリプト、Claude Code</text>
+  <rect class="box" data-id="Decompose" x="40" y="300" width="340" height="80" rx="6"/><text x="210" y="334" text-anchor="middle">AI セッション(分解)</text><text class="label" x="210" y="354" text-anchor="middle">build スキル 3.、1 回だけ</text>
+  <rect class="box" data-id="Iterate" x="940" y="300" width="260" height="80" rx="6"/><text x="1070" y="334" text-anchor="middle">AI セッション(反復)</text><text class="label" x="1070" y="354" text-anchor="middle">build スキル 4.、1 タスク 1 プロセス</text>
 
-  <!-- loop.py -->
-  <rect class="frame" x="280" y="20" width="940" height="160" rx="8"/>
-  <text class="title" x="296" y="40">loop.py(Claude Code)</text>
-  <rect class="box" data-id="ReadProg" x="300" y="80" width="160" height="60" rx="6"/><text x="380" y="114" text-anchor="middle">進捗ファイルを読む</text>
-  <rect class="box" data-id="Judge" x="540" y="80" width="260" height="60" rx="6"/><text x="670" y="106" text-anchor="middle">停止条件を判定</text><text class="label" x="670" y="124" text-anchor="middle">停止の行・失敗・無更新・回数・終了コード</text>
-  <rect class="box" data-id="Launch" x="1020" y="80" width="180" height="60" rx="6"/><text x="1110" y="114" text-anchor="middle">claude -p を起動</text>
+  <!-- ファイル -->
+  <rect class="box hot" data-id="Progress" x="520" y="300" width="240" height="80" rx="6"/><text x="640" y="334" text-anchor="middle">進捗ファイル</text><text class="label" x="640" y="354" text-anchor="middle">停止・要判断・記録・マージ・失敗の上限</text>
+  <rect class="box hot" data-id="Backlog" x="520" y="460" width="240" height="80" rx="6"/><text x="640" y="494" text-anchor="middle">backlog</text><text class="label" x="640" y="514" text-anchor="middle">タスクの状態・受け入れ条件・Notes</text>
 
-  <!-- 状態を持つ 2 つ -->
-  <rect class="box hot" data-id="Progress" x="300" y="260" width="460" height="60" rx="6"/><text x="530" y="286" text-anchor="middle">進捗ファイル</text><text class="label" x="530" y="304" text-anchor="middle">停止・要判断・記録・マージ・失敗の上限</text>
-  <rect class="box hot" data-id="Backlog" x="540" y="600" width="660" height="60" rx="6"/><text x="870" y="626" text-anchor="middle">backlog</text><text class="label" x="870" y="644" text-anchor="middle">タスクの状態・受け入れ条件・Notes</text>
+  <!-- 分解 -->
+  <path class="edge" data-edge="User->Decompose" d="M100,160 L100,298"/><text class="label" x="108" y="236">1 PRD を渡す</text>
+  <path class="edge" data-edge="Decompose->User" d="M210,300 L210,162"/><text class="label" x="218" y="236">2 タスク案</text>
+  <path class="edge" data-edge="User->Decompose" d="M320,160 L320,298"/><text class="label" x="328" y="236">3 承認・マージ許可・上限</text>
+  <path class="edge" data-edge="Decompose->Backlog" d="M200,380 L200,500 L518,500"/><text class="label" x="359" y="492" text-anchor="middle">4 タスクを書く</text>
+  <path class="edge" data-edge="Decompose->Progress" d="M380,340 L518,340"/><text class="label" x="449" y="332" text-anchor="middle">5 進捗ファイルを作る</text>
 
-  <!-- ユーザー -->
-  <rect class="box old" data-id="User" x="880" y="260" width="140" height="60" rx="30"/><text x="950" y="294" text-anchor="middle">ユーザー</text>
+  <!-- ループの起動と停止 -->
+  <path class="edge" data-edge="User->Loop" d="M380,60 L938,60"/><text class="label" x="659" y="52" text-anchor="middle">6 loop.py を起動</text>
+  <path class="edge" data-edge="Loop->User" d="M940,90 L382,90"/><text class="label" x="659" y="82" text-anchor="middle">14 止まる(全 Done・要判断・失敗の上限)</text>
+  <path class="edge" data-edge="User->Loop" d="M380,120 L938,120"/><text class="label" x="659" y="112" text-anchor="middle">16 再び起動</text>
+  <path class="edge" data-edge="User->Progress" d="M380,150 L600,150 L600,298"/><text class="label" x="490" y="144" text-anchor="middle">15 回答・停止なし</text>
+  <path class="edge" data-edge="Progress->Loop" d="M700,300 L700,240 L1000,240 L1000,162"/><text class="label" x="850" y="234" text-anchor="middle">7 停止と失敗回数を読む</text>
+  <path class="edge" data-edge="Loop->Iterate" d="M1120,160 L1120,298"/><text class="label" x="1112" y="200" text-anchor="end">8 claude -p で新しいプロセスを起動</text>
 
-  <!-- 反復する -->
-  <rect class="frame" x="280" y="380" width="940" height="160" rx="8"/>
-  <text class="title" x="296" y="526">反復する(新しいプロセス、1 回 1 タスク)</text>
-  <rect class="box" data-id="Pick" x="1020" y="400" width="180" height="60" rx="6"/><text x="1110" y="426" text-anchor="middle">タスクを 1 つ取る</text><text class="label" x="1110" y="444" text-anchor="middle">In Progress を優先</text>
-  <rect class="box" data-id="Develop" x="780" y="400" width="180" height="60" rx="6"/><text x="870" y="426" text-anchor="middle">develop を回す</text><text class="label" x="870" y="444" text-anchor="middle">PR と CI まで</text>
-  <rect class="box" data-id="Verify" x="540" y="400" width="180" height="60" rx="6"/><text x="630" y="426" text-anchor="middle">受け入れ条件を検証</text><text class="label" x="630" y="444" text-anchor="middle">マージ(許可時)と Done</text>
-  <rect class="box" data-id="Record" x="300" y="400" width="180" height="60" rx="6"/><text x="390" y="434" text-anchor="middle">記録に 1 行書く</text>
-
-  <!-- 辺 -->
-  <path class="edge" data-edge="Decompose->Progress" d="M180,140 L180,290 L298,290"/><text class="label" x="240" y="282" text-anchor="middle">書く</text>
-  <path class="edge" data-edge="Decompose->Backlog" d="M100,140 L100,630 L538,630"/><text class="label" x="320" y="622" text-anchor="middle">タスクを書く</text>
-  <path class="edge" data-edge="Progress->ReadProg" d="M340,260 L340,142"/><text class="label" x="348" y="214">読む</text>
-  <path class="edge" data-edge="ReadProg->Judge" d="M460,110 L538,110"/><text class="label" x="500" y="102" text-anchor="middle">記録と停止</text>
-  <path class="edge" data-edge="Judge->Launch" d="M800,110 L1018,110"/><text class="label" x="909" y="102" text-anchor="middle">続ける</text>
-  <path class="edge" data-edge="Judge->User" d="M740,140 L740,200 L980,200 L980,258"/><text class="label" x="988" y="234">止まる</text>
-  <path class="edge" data-edge="Launch->ReadProg" d="M1110,80 L1110,60 L380,60 L380,78"/><text class="label" x="745" y="54" text-anchor="middle">終了を待って繰り返す</text>
-  <path class="edge" data-edge="Launch->Pick" d="M1160,140 L1160,398"/><text class="label" x="1152" y="300" text-anchor="end">プロンプト</text>
-  <path class="edge" data-edge="Progress->Pick" d="M720,320 L720,350 L1060,350 L1060,398"/><text class="label" x="890" y="344" text-anchor="middle">停止と回答を読む</text>
-  <path class="edge" data-edge="Backlog->Pick" d="M1110,600 L1110,462"/><text class="label" x="1102" y="584" text-anchor="end">タスクを読む</text>
-  <path class="edge" data-edge="Pick->Develop" d="M1020,430 L962,430"/><text class="label" x="990" y="420" text-anchor="middle">1 タスク</text>
-  <path class="edge" data-edge="Develop->Verify" d="M780,430 L722,430"/><text class="label" x="750" y="420" text-anchor="middle">CI 通過</text>
-  <path class="edge" data-edge="Verify->Backlog" d="M630,460 L630,598"/><text class="label" x="638" y="584">Done を書く</text>
-  <path class="edge" data-edge="Verify->Record" d="M540,430 L482,430"/><text class="label" x="510" y="420" text-anchor="middle">結果</text>
-  <path class="edge" data-edge="Record->Progress" d="M390,400 L390,322"/><text class="label" x="398" y="374">1 行と停止を書く</text>
-  <path class="edge" data-edge="User->Progress" d="M880,290 L762,290"/><text class="label" x="820" y="282" text-anchor="middle">回答と停止を書く</text>
-  <path class="edge" data-edge="User->ReadProg" d="M920,260 L920,230 L420,230 L420,142"/><text class="label" x="670" y="224" text-anchor="middle">再び起動</text>
+  <!-- 反復 -->
+  <path class="edge" data-edge="Backlog->Iterate" d="M760,480 L960,480 L960,382"/><text class="label" x="860" y="472" text-anchor="middle">9 タスクを読む</text>
+  <path class="edge" data-edge="Progress->Iterate" d="M760,340 L938,340"/><text class="label" x="849" y="332" text-anchor="middle">10 停止と回答を読む</text>
+  <path class="edge" data-edge="Iterate->Iterate" d="M1150,380 L1150,410 L1190,410 L1190,382"/><text class="label" x="1170" y="428" text-anchor="middle">11 develop で PR まで</text>
+  <path class="edge" data-edge="Iterate->Backlog" d="M1040,380 L1040,520 L762,520"/><text class="label" x="900" y="512" text-anchor="middle">12 Done・Notes</text>
+  <path class="edge" data-edge="Iterate->Progress" d="M980,300 L980,280 L740,280 L740,298"/><text class="label" x="860" y="274" text-anchor="middle">13 記録 1 行・停止</text>
 
   <!-- 凡例 -->
-  <rect class="box hot" x="20" y="703" width="14" height="14" rx="3"/><text class="label" x="42" y="714">反復どうしが状態を受け渡す場所</text>
-  <rect class="box old" x="440" y="703" width="14" height="14" rx="7"/><text class="label" x="462" y="714">ループの外で判断する人</text>
+  <rect class="box" x="40" y="593" width="14" height="14" rx="3"/><text class="label" x="62" y="604">動作主</text>
+  <rect class="box hot" x="160" y="593" width="14" height="14" rx="3"/><text class="label" x="182" y="604">動作主どうしが状態を受け渡すファイル</text>
 </svg>
