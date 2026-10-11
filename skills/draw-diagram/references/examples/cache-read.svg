@@ -13,7 +13,7 @@
   <defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="context-stroke"/></marker></defs>
   <rect class="box" data-id="Client" x="20" y="20" width="120" height="60" rx="6"/><text x="80" y="55" text-anchor="middle">クライアント</text>
   <rect class="box hot" data-id="Cache" x="220" y="20" width="120" height="60" rx="6"/><text x="280" y="55" text-anchor="middle">キャッシュ</text>
-  <rect class="box" data-id="DB" x="420" y="20" width="120" height="60" rx="6"/><text x="480" y="55" text-anchor="middle">DB</text>
+  <path class="box" data-id="DB" d="M420,30 v40 a60,10 0 0 0 120,0 v-40 a60,10 0 0 0 -120,0 a60,10 0 0 0 120,0"/><text x="480" y="64" text-anchor="middle">DB</text>
   <path class="edge" data-edge="Client->Cache" d="M140,50 L218,50"/><text class="label" x="180" y="40" text-anchor="middle">読み取り</text>
   <path class="edge" data-edge="Cache->DB" d="M340,50 L418,50"/><text class="label" x="380" y="40" text-anchor="middle">ミス時のみ</text>
   <rect class="box hot" x="20" y="126" width="14" height="14" rx="3"/><text class="label" x="42" y="137">読み取りがここで完結する要素</text>
