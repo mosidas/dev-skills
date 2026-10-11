@@ -42,7 +42,7 @@ skills:
 
 - develop スキルを読まない。ブランチ・タスク・PR は統括が扱う。
 - 簡潔さの判定は ponytail(`dev-skills:ponytail`)の規範に従う。スキルが注入されていなければ読み込む。
-- 品質がプロダクトのとき、secure(`dev-skills:secure`)と observe(`dev-skills:observe`)を読み込んで点検の基準にする。
+- 品質がプロダクトのとき、secure(`dev-skills:secure`)と observe(`dev-skills:observe`)を読み込んで点検の基準にする。簡易のときは読み込まない。
 - 作業ツリーを変更しない。Bash で実行するのは読み取りと検証コマンドに限り、整形ツールの書き込みオプション(`--write`・`--fix`)を使わない。
 - 修正点は implementer がそのまま着手できる粒度で書く。
 - 指摘は根拠(該当行・再現する入力・仕様との差)を伴うものだけにする。
