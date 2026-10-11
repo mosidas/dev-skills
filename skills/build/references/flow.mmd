@@ -1,24 +1,43 @@
-flowchart TB
-    User[ユーザー]
-    Decompose[AI セッション 分解]
-    Loop[loop.py]
-    Iterate[AI セッション 反復]
-    Progress[(進捗ファイル)]
-    Backlog[(backlog)]
+%% build の工程の論理構造。主体 = subgraph(ユーザー / AI セッション / loop.py / コンテキストの外)、処理・情報 = ノード。
+%% 順序は辺と「停止条件?」の分岐で示す。どのスキルがいつ動くかは枠の題(build 3.・build 4.)とノード(develop)に書く。
+%% develop の中のサブエージェント(planner・implementer・reviewer・gate-reviewer)は develop のノードの補足に書き、
+%% 内部の往復は develop スキルの図に委ねる。SVG(flow.svg)への描画は本構造を正とする。
+flowchart LR
+  subgraph user["ユーザー"]
+    instruct["PRD を渡し、タスク一覧を承認する"]
+    run["loop.py を起動する"]
+    answer["要判断に回答する"]
+  end
 
-    User -->|1 PRD を渡す| Decompose
-    Decompose -->|2 タスク案| User
-    User -->|3 承認・マージ許可・上限| Decompose
-    Decompose -->|4 タスクを書く| Backlog
-    Decompose -->|5 進捗ファイルを作る| Progress
-    User -->|6 loop.py を起動| Loop
-    Progress -->|7 停止と失敗回数を読む| Loop
-    Loop -->|8 claude -p で新しいプロセスを起動| Iterate
-    Backlog -->|9 タスクを読む| Iterate
-    Progress -->|10 停止と回答を読む| Iterate
-    Iterate -->|11 develop で PR まで| Iterate
-    Iterate -->|12 Done・Notes| Backlog
-    Iterate -->|13 記録 1 行・停止| Progress
-    Loop -->|14 止まる| User
-    User -->|15 回答・停止なし| Progress
-    User -->|16 再び起動| Loop
+  subgraph decompose["AI セッション(分解): build スキル 3.、1 回"]
+    split["PRD をタスクに分け、backlog と進捗ファイルを書く"]
+  end
+
+  subgraph outside["コンテキストの外"]
+    state["進捗ファイル・backlog"]
+  end
+
+  subgraph loop["loop.py(スクリプト)"]
+    judge{"停止条件?"}
+    launch["新しいセッションを起動する"]
+  end
+
+  subgraph iterate["AI セッション(反復): build スキル 4.、タスクごとに新しいプロセス"]
+    pick["タスクを 1 つ取る"]
+    develop["develop スキルを回す"]
+    verify["受け入れ条件を検証して Done にする"]
+  end
+
+  instruct -->|"PRD"| split
+  instruct -->|"承認後"| run
+  split -->|"タスクと進捗ファイルを書く"| state
+  run -->|"起動"| judge
+  state -->|"セッションが終わるたびに読む"| judge
+  judge -->|"いいえ"| launch
+  judge -->|"はい: 止まる"| answer
+  launch -->|"claude -p"| pick
+  state -->|"タスクと回答を読む"| pick
+  pick -->|"1 タスク"| develop
+  develop -->|"PR と CI 通過"| verify
+  verify -->|"Done・記録・停止を書く"| state
+  answer -->|"回答を書いて再び起動"| run
