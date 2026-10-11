@@ -50,7 +50,7 @@ npm test
 
 ## 4. シークレット検知と依存監査
 
-要件の品質がプロダクトのとき、hook にシークレット検知と依存監査を追加する。pre-commit で gitleaks、pre-push で osv-scanner を実行する。エコシステム標準の監査(`npm audit`・`cargo audit`・`pip-audit` など)が既に入っていればそれを使い、osv-scanner を重ねて入れない。依存のマニフェストもロックファイルも無いリポジトリでは osv-scanner を入れない。osv-scanner は監査の対象が無いと終了コード 128 で失敗し、push が止まる。オフラインでも API に届かず、終了コード 129 で止まる。
+要件の品質がプロダクトのとき、hook にシークレット検知と依存監査を追加する。pre-commit で gitleaks、pre-push で osv-scanner を実行する。エコシステム標準の監査(`npm audit`・`cargo audit`・`pip-audit` など)が既に入っていればそれを使い、osv-scanner を重ねて入れない。依存が 1 つも無いリポジトリ(マニフェストやロックファイルが無い、または依存の記載が 0 件)では osv-scanner を入れない。監査の対象が無いと終了コード 128 で失敗し、push が止まる。オフラインでも API に届かず、終了コード 129 で止まる。
 
 ```sh
 brew install gitleaks osv-scanner   # macOS。ほかは https://github.com/gitleaks/gitleaks と https://google.github.io/osv-scanner/installation/
