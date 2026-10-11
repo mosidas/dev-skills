@@ -50,4 +50,4 @@
 - 出典は URL をリンクにし、リンクテキストを資料の正式な名前(サイト名・ページ名)にする。URL をそのまま書かない。
   - Before: 「出典: [文化庁の資料](https://www.bunka.go.jp/kokugo_nihongo/sisaku/joho/joho/kijun/sanko/koyobun/pdf/kunrei.pdf)」
   - After: 「出典: [公用文における漢字使用等について](https://www.bunka.go.jp/kokugo_nihongo/sisaku/joho/joho/kijun/sanko/koyobun/pdf/kunrei.pdf)」
-- 読み手がたどれない出典(「社内調査」、確認日だけの記載)は書かない。書籍など URL のない公刊資料は、書名・著者・出版社で示す。
+- 読み手がたどれない出典(「社内調査」、確認日だけの記載)は書かない。たどれない根拠しかない記述は、`sentence.md` 4. に従い事実として書かない。書籍など URL のない公刊資料は、書名・著者・出版社で示す。
