@@ -102,7 +102,7 @@ class PhraseCatalogTest(unittest.TestCase):
         self.assertEqual(warn_findings[0].severity, "warn")
 
     def test_yomiyasu_由来の語を検出する(self) -> None:
-        """yomiyasu 由来の 14 語は、ng か forms を含む例文で info として 1 件だけ検出される。"""
+        """yomiyasu 由来の 16 語は、ng か forms を含む例文で info として 1 件だけ検出される。"""
         sentences = [
             "画面の手触りを確かめた。",
             "現場の肌感では遅い。",
@@ -118,6 +118,8 @@ class PhraseCatalogTest(unittest.TestCase):
             "設定が静かに壊れる。",
             "不正な行は黙って捨てられる。",
             "議論はその案に収斂した。",
+            "実装の詳細まで踏み込んで説明する。",
+            "プロセスが静かに沈黙する。",
         ]
         yomiyasu = [p for p in self.phrases if "yomiyasu" in p.get("note", "")]
         self.assertEqual(len(yomiyasu), len(sentences))
