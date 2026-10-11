@@ -1,4 +1,5 @@
-"""yomiyasu 由来の語と定型句が、日常語の境界値コーパスに発火しないことのテスト。
+"""yomiyasu 由来の語と定型句が、日常語の境界値コーパスのうち字義どおりの「壊れる」を含む 5 本では
+「壊れ」だけを検出し、残りの 43 本には発火しないことのテスト。
 
 コーパスは nanaism/yomiyasu の tests/corpus/edge_cases(MIT、LICENSE 同梱)をそのまま取り込んだもの。
 お握り・主導権を握る・卒倒など、比喩動詞の語幹を含むが正当な文を集めている。
@@ -20,6 +21,18 @@ CORPUS = helpers.REPO_ROOT / "tests" / "corpus" / "yomiyasu_edge_cases"
 sys.path.insert(0, str(SCRIPTS))
 
 import lint  # noqa: E402
+
+# 字義どおりの「壊れる」(給紙ローラーが壊れた等)を含む境界値。上流は残す判断だが、
+# 本リポジトリはシステム開発の文書で字義どおりの用法がほぼ無いとして「壊れ」を
+# 禁止語(warn)にしたため、検出しないことの固定から外し、検出することを固定する。
+# 取り込んだコーパスは LICENSE とともにそのまま保つため、ファイルは削除しない。
+LITERAL_KOWARERU = {
+    "edge_kowareru_38.md",
+    "edge_kowareru_40.md",
+    "edge_kowareru_41.md",
+    "edge_kowareru_42.md",
+    "edge_kowareru_44.md",
+}
 
 
 def _lex_lines(path: Path) -> list[tuple[int, str]]:
@@ -49,7 +62,8 @@ class YomiyasuEdgeCasesTest(unittest.TestCase):
                     (f.line, dict_forms[re.search(r"「(.+?)」", f.detail).group(1)])
                     for f in lint.detect_forbidden_phrases(_lex_lines(path))
                 ]
-                self.assertEqual([h for h in hits if h[1] in yomiyasu_ngs], [])
+                expected = [(3, "壊れ")] if path.name in LITERAL_KOWARERU else []
+                self.assertEqual([h for h in hits if h[1] in yomiyasu_ngs], expected)
 
     def test_前置フィラーと定型クロージングが境界値に発火しない(self) -> None:
         for path in self.files:

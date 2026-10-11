@@ -60,18 +60,19 @@ from textcore import (
 
 # ---------------------------------------------------------------------------
 # 辞書: 動詞と名詞・形容語のカタログ
-# 正本は同ディレクトリの forbidden_phrases.json(NG/OK 対のカタログ)。不正確・
+# カタログは同ディレクトリの forbidden_phrases.json(NG/OK 対)。不正確・
 # 文脈依存の動詞(imprecise)、話し言葉の和語の動詞(colloquial)、訳語が定着して
 # いる外来語の動詞(loanword)、質感・認知を装う名詞・形容語(pseudo_concrete)を
 # 収める。語ごとに type・severity・ok(言い換え例)を持ち、本スクリプトは ng と
 # severity を、検査 hook は ok を読む。語の追加はカタログへ行う。2026-10-01 に
-# yomiyasu の slop-catalog.md(MIT)から疑似具体語と比喩動詞(共起形)を足した
+# yomiyasu の slop-catalog.md(MIT)から疑似具体語と比喩動詞を足した
 # (note に「yomiyasu」を含む)。
 #
 # severity は、正当な用法があり文脈判断を要する語を info、空虚な動詞(掘り下げる・
-# 深掘りする・言語化する・を探求する)を warn とする。2026-07 のコーパス校正
-# (corpus/reports/archive/deep-analysis.md §4a)で削除した「最後に」「まさに」は
-# カタログの removed に記録してある。
+# 深掘りする・言語化する・を探求する)と、システム開発の文書で字義どおりの用法が
+# ほぼ無い比喩語(壊れる・静かに・黙って・沈黙・逃がす。2026-10-11)を warn と
+# する。2026-07 のコーパス校正(corpus/reports/archive/deep-analysis.md §4a)で
+# 削除した「最後に」「まさに」はカタログの removed に記録してある。
 # ---------------------------------------------------------------------------
 PHRASE_CATALOG_PATH = Path(__file__).resolve().parent / "forbidden_phrases.json"
 

@@ -75,11 +75,13 @@ class PhraseCatalogTest(unittest.TestCase):
             {p["ng"] for p in self.phrases if p["severity"] == "info"},
         )
 
-    def test_空虚な動詞だけが_warn_を持つ(self) -> None:
-        """severity の方針を固定する。正当な用法のある語は info、空虚な動詞だけ warn。"""
+    def test_warn_は空虚な動詞と比喩語に限る(self) -> None:
+        """severity の方針を固定する。正当な用法のある語は info、空虚な動詞と、
+        システム開発の文書で字義どおりに使わない比喩語だけ warn。"""
         empty_verbs = {"掘り下げる", "深掘りする", "言語化する", "を探求する"}
+        metaphors = {"壊れ", "静かに", "黙って", "沈黙", "逃が"}
         warns = {p["ng"] for p in self.phrases if p["severity"] == "warn"}
-        self.assertEqual(warns, empty_verbs)
+        self.assertEqual(warns, empty_verbs | metaphors)
         for ng in ("落とし込む", "を選ぶ", "チェックする"):
             self.assertIn(ng, lint.FORBIDDEN_PHRASES_WEAK_SIGNAL, ng)
 
@@ -102,8 +104,11 @@ class PhraseCatalogTest(unittest.TestCase):
         self.assertEqual(warn_findings[0].severity, "warn")
 
     def test_yomiyasu_由来の語を検出する(self) -> None:
-        """yomiyasu 由来の 14 語は、ng か forms を含む例文で info として 1 件だけ検出される。"""
-        sentences = [
+        """yomiyasu 由来の 18 語は、ng か forms を含む例文でカタログの severity として 1 件だけ検出される。
+
+        13 語は info、システム開発の文書で字義どおりに使わない 5 語は warn とする。
+        """
+        info_sentences = [
             "画面の手触りを確かめた。",
             "現場の肌感では遅い。",
             "顧客との温度感を合わせる。",
@@ -115,19 +120,26 @@ class PhraseCatalogTest(unittest.TestCase):
             "残さない側に倒した。",
             "調査で時間を溶かした。",
             "警告を 1 つずつ潰していく。",
-            "設定が静かに壊れる。",
-            "不正な行は黙って捨てられる。",
             "議論はその案に収斂した。",
+            "実装の詳細まで踏み込んで説明する。",
+        ]
+        warn_sentences = [
+            "設定ファイルが壊れる。",
+            "検証に失敗した行を静かに捨てる。",
+            "不正な行は黙って捨てられる。",
+            "プロセスが沈黙する。",
+            "例外を呼び出し元へ逃がす。",
         ]
         yomiyasu = [p for p in self.phrases if "yomiyasu" in p.get("note", "")]
-        self.assertEqual(len(yomiyasu), len(sentences))
+        self.assertEqual(len(yomiyasu), len(info_sentences) + len(warn_sentences))
         variants = {v for p in yomiyasu for v in [p["ng"], *p.get("forms", [])]}
-        for sentence in sentences:
+        cases = [(s, "info") for s in info_sentences] + [(s, "warn") for s in warn_sentences]
+        for sentence, severity in cases:
             with self.subTest(sentence=sentence):
                 findings = lint.detect_forbidden_phrases([(1, sentence)])
                 self.assertEqual(len(findings), 1)
                 self.assertEqual(findings[0].category, "forbidden_phrase")
-                self.assertEqual(findings[0].severity, "info")
+                self.assertEqual(findings[0].severity, severity)
                 self.assertIn(findings[0].detail.split("「")[1].split("」")[0], variants)
 
     def test_温度感知を巻き込まない(self) -> None:
