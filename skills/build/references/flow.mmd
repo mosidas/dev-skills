@@ -25,7 +25,7 @@ flowchart LR
     Judge -->|止まる| User
     Launch -->|プロンプト| Pick
     Launch -->|終了を待って繰り返す| ReadProg
-    Progress -->|停止を読む| Pick
+    Progress -->|停止と回答を読む| Pick
     Backlog -->|タスクを読む| Pick
     Pick -->|1 タスク| Develop
     Develop -->|CI 通過| Verify
