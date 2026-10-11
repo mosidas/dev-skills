@@ -71,9 +71,8 @@ from textcore import (
 # severity は、正当な用法があり文脈判断を要する語を info、空虚な動詞(掘り下げる・
 # 深掘りする・言語化する・を探求する)と、システム開発の文書で字義どおりの用法が
 # ほぼ無い比喩語(壊れる・静かに・黙って・沈黙・逃がす。2026-10-11)を warn と
-# する。2026-07 のコーパス校正
-# (corpus/reports/archive/deep-analysis.md §4a)で削除した「最後に」「まさに」は
-# カタログの removed に記録してある。
+# する。2026-07 のコーパス校正(corpus/reports/archive/deep-analysis.md §4a)で
+# 削除した「最後に」「まさに」はカタログの removed に記録してある。
 # ---------------------------------------------------------------------------
 PHRASE_CATALOG_PATH = Path(__file__).resolve().parent / "forbidden_phrases.json"
 

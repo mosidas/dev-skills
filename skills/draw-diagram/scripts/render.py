@@ -341,7 +341,7 @@ def screenshot(
         stderr_path = os.path.join(user_data_dir, "chrome-stderr.log")
         # stdout/stderr を PIPE のまま誰も読まないと、Chrome がパイプのバッファを
         # 埋めた時点で書き込みがブロックし撮影に到達できなくなるため、stdout は
-        # 読み捨て、stderr は一時ディレクトリ内のファイルへ逃がす。
+        # 読み捨て、stderr は一時ディレクトリ内のファイルへ書き出す。
         with open(stderr_path, "wb") as stderr_file:
             try:
                 proc = subprocess.Popen(
