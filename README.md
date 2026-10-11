@@ -7,7 +7,7 @@ Claude Code・Codex CLI・Antigravity CLI のプラグインである。開発�
 | 構成要素 | 種別 | 役割 |
 | :-- | :-- | :-- |
 | `develop` | スキル | 実装タスクを要件の確認から PR まで進める統括の手順。要件(目的・完了条件・対象外・品質(簡易 / プロダクト))の壁打ち、Backlog.md のタスク、GitHub flow、git hook(lefthook・husky)、planner・implementer・reviewer による実装と点検のループ、gate-reviewer によるブランチ全体の点検、push 後の CI 確認を定める。品質がプロダクトのときは secure・observe を適用し、git hook にシークレット検知(gitleaks)と依存監査(osv-scanner)を追加する |
-| `build` | スキル | PRD から起こした複数のタスクを develop で 1 つずつ PR まで進める外側のループ。PRD を受け入れ条件つきの backlog のタスクに分解する工程と、未完了のタスクを 1 つ取って develop で PR まで進め、受け入れ条件を検証して Done にする反復を定める。状態は backlog と進捗ファイルだけに持ち、全タスクの Done・同じタスクの失敗の上限・要判断のどれかで止まる。`scripts/loop.py` が反復ごとに新しい `claude -p` を起動する |
+| `build` | スキル | PRD から起こした複数のタスクを develop で 1 つずつ PR まで進める外側のループ。PRD を受け入れ条件つきの backlog のタスクに分解する工程と、未完了のタスクを 1 つ取って develop で PR まで進め、受け入れ条件を検証して Done にする反復を定める。状態は backlog と進捗ファイルだけに持ち、全タスクの Done・要判断・同じタスクの失敗の上限・反復の回数の上限などで止まる。`scripts/loop.py` が反復ごとに新しい `claude -p` を起動する(Claude Code) |
 | `planner`・`implementer`・`reviewer`・`gate-reviewer` | サブエージェント(`agents/`) | develop が起動する 4 つの役割。planner は計画(Write/Edit 不可)、implementer はステップ 1 つ分の実装とコミット、reviewer はステップの適合・テスト・欠陥・簡潔さの点検(Write/Edit 不可)、gate-reviewer は push 前のブランチ全体の点検(要件の充足・ステップ間の整合・残骸・PR 本文。Write/Edit 不可)。このうち planner・implementer・reviewer は起動時に ponytail を読み込み、品質がプロダクトのときは secure・observe も読み込む |
 | `ponytail` | スキル | コードを最小に保つ規範。そもそも作るかを問い、標準ライブラリと既存のものを先に使い、動く最小の差分で終える。planner・implementer・reviewer が起動時に読み込む |
 | `secure` | スキル | プロダクト品質のコードの安全性の規範。信頼境界での入力検証、認証・認可、シークレットと設定、依存の脆弱性、ログへの秘密の出力、エラー応答からの情報漏えいについて、何を対策すれば十分かを定める。OWASP ASVS と OWASP Cheat Sheet Series を出典とする |
@@ -30,7 +30,7 @@ Claude Code・Codex CLI・Antigravity CLI のプラグインである。開発�
 - `semantic.py`(文埋め込みで話題の平板さを検出する opt-in の検出器)だけは torch と sentence-transformers に依存し、初回実行時にモデル約 1GB をダウンロードする。hooks からは呼ばない。
 - `draw-diagram` の `render.py` による PNG 出力は Google Chrome を必要とする(パスは環境変数 `CHROME_BIN` で変更できる)。Chrome が無い環境では `--png` を付けずに実行し、照合と検査だけを行う。Claude Code のサンドボックス内では Chrome が起動できないため、PNG 出力はサンドボックス外で実行する。
 - `first-reader` は `python3` とサブエージェントを使い、通読中は 127.0.0.1 でローカルの HTTP サーバーを起動する。
-- `build` の反復は `backlog`(Backlog.md の CLI)・`gh`・`claude` を使う。
+- `build` の反復は `backlog`(Backlog.md の CLI)・`gh` と、反復を起動する CLI(Claude Code では `claude`)を使う。
 
 ## 3. 導入
 
