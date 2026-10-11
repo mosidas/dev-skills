@@ -9,6 +9,7 @@ description: コードの可観測性(ログ・メトリクス・トレース)�
 
 - develop の要件で品質がプロダクトのコード、またはユーザーが運用性・監視を求めたコードに適用する。
 - ponytail と同時に適用する。プロジェクトに既存のロガー・計装があればそれを使い、新しい監視基盤やベンダーの SDK を導入しない。
+- 2.2・2.3・2.5 は、要求やメッセージを受けて常駐するプロセス(サーバー・ワーカー)に適用する。CLI・ライブラリ・一回きりのバッチには 2.1・2.4・2.6・2.7 だけを適用する。
 - タイムアウト・リトライ・冪等は扱わない。
 
 ## 2. 規則
@@ -30,9 +31,10 @@ description: コードの可観測性(ログ・メトリクス・トレース)�
 
 ### 2.3 メトリクス
 
-- 入口ごとに golden signals の 4 つを取る。レイテンシ・トラフィック・エラー・飽和である。
+- 入口ごとに、golden signals のうちレイテンシ・トラフィック・エラーを取る。
+- 飽和はサービス単位で、もっとも制約の強い資源(接続プールの使用数・キューの長さ・メモリなど)を 1 つ以上取る。
 - レイテンシはヒストグラムで取り、成功と失敗を属性(`error.type` など)で分ける。失敗の速い応答が混ざると、成功のレイテンシが実際より短く見えるためである。
-- メトリクスと属性の名前は OpenTelemetry のセマンティック規約に従う(例: `http.server.request.duration`)。
+- メトリクスと属性の名前は、既存のメトリクスに命名の慣習があればそれに合わせ、無ければ OpenTelemetry のセマンティック規約に従う(例: `http.server.request.duration`)。
 - カーディナリティの高い値(ユーザー ID・URL のパス変数など)を属性にしない。パスはルートのテンプレート(`/users/{id}`)で載せる。
 
 ### 2.4 トレース
@@ -48,7 +50,7 @@ description: コードの可観測性(ログ・メトリクス・トレース)�
 
 ### 2.6 エラーの分類
 
-- エラーを 2 つの軸で分類し、ログの属性に載せる。利用者起因かシステム起因か、一時的か恒久的かである。
+- エラーを 2 つの軸で分類し、ログの属性に載せる。利用者起因かシステム起因か、一時的か恒久的かである。例: OpenTelemetry の `error.type` に例外の種別、独自の属性 `app.error.origin` に `client` か `system`、`app.error.transient` に真偽値を載せる。独自の属性には、OpenTelemetry の名前と衝突しない接頭辞を付ける。
 - 例外を捕捉したら、その場で処理するか、呼び出し元へ送出する。捕捉したまま何も残さずに処理を続けない。
 - 同じエラーのログは、境界(要求の入口・ジョブの最上位など)で 1 回だけ出す。途中の層は文脈を付けて送出し、ログには出さない。
 
@@ -70,3 +72,5 @@ description: コードの可観測性(ログ・メトリクス・トレース)�
 - OpenTelemetry Semantic Conventions 1.44.0。Apache-2.0(リポジトリ open-telemetry/semantic-conventions)。https://opentelemetry.io/docs/specs/semconv/
 - Google『Site Reliability Engineering』(2017)第 6 章 "Monitoring Distributed Systems"。CC BY-NC-ND 4.0。https://sre.google/sre-book/monitoring-distributed-systems/
 - W3C Trace Context Level 1(W3C 勧告、2021-11-23)。W3C Software and Document License。https://www.w3.org/TR/trace-context/
+
+2.5 は Kubernetes の liveness/readiness probe の慣習に基づく。https://kubernetes.io/docs/concepts/configuration/liveness-readiness-startup-probes/
