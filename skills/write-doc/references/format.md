@@ -44,3 +44,10 @@
 - 括弧は、半角の `()`、`[]`、`{}` を使用する。
 - 数式・コード・固有名詞を除き、上記以外の記号は使用しない。
 - 全角スペースは使用してはならない。
+
+## 4. 出典
+
+- 出典は URL をリンクにし、リンクテキストを資料の正式な名前(サイト名・ページ名)にする。URL をそのまま書かない。
+  - Before: 「出典: [文化庁の資料](https://www.bunka.go.jp/kokugo_nihongo/sisaku/joho/joho/kijun/sanko/koyobun/pdf/kunrei.pdf)」
+  - After: 「出典: [公用文における漢字使用等について](https://www.bunka.go.jp/kokugo_nihongo/sisaku/joho/joho/kijun/sanko/koyobun/pdf/kunrei.pdf)」
+- 読み手がたどれない出典(「社内調査」、確認日だけの記載)は書かない。たどれない根拠しかない記述は、`sentence.md` 4. に従い事実として書かない。書籍など URL のない公刊資料は、書名・著者・出版社で示す。
