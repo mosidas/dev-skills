@@ -104,6 +104,12 @@ class ParseProgressTest(unittest.TestCase):
         with self.assertRaises(ValueError):
             loop.parse_progress(_progress(max_failures="三"))
 
+    def test_SKILLmdの進捗ファイルの雛形を解析できる(self) -> None:
+        skill = (SCRIPTS.parent / "SKILL.md").read_text(encoding="utf-8")
+        template = skill.split("```markdown\n", 1)[1].split("\n```", 1)[0]
+        progress = loop.parse_progress(template)
+        self.assertEqual(progress, {"stop": "なし", "max_failures": 3, "failures": {}})
+
 
 class LoopRunTest(helpers.TempDirTestCase):
     def run_loop(
