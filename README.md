@@ -189,6 +189,8 @@ evals/                     # claude plugin eval のケース(prompt.md と grade
 
 ## 6. 開発
 
+### 6.1. プラグインの変更手順
+
 テストは標準ライブラリの `unittest` だけで動く。
 
 ```console
@@ -204,6 +206,14 @@ $ claude plugin validate . --strict
 $ uv run --with pyyaml python3 ~/.codex/skills/.system/plugin-creator/scripts/validate_plugin.py .
 $ agy plugin validate .
 ```
+
+### 6.2. スキルを書くときの規則
+
+スキルの `SKILL.md` と `references/` のファイルを書くときは、次の規則に従う。
+
+- 雛形は、コピーするとそのまま下書きになる形で提供する。節ごとの書き方の説明は各節の見出しの直下に HTML コメントで書き、使う人は節を書き終えたらコメントを削除する。雛形をコードブロックに入れ、書き方の説明を別の表に分ける形にしない。write-doc の lint は HTML コメントを検査しないため、説明の文面は検出の対象にならない。例は `skills/specify/references/prd.md` である。
+- 複数のスキルが同じ規則を「develop 2.」のような節番号で参照するときは、その規則を、参照される側のスキルの `references/<name>.md` に抜き出す。参照する側は、そのファイル名で参照する。節番号での参照は、節を追加・削除すると別の節を指すためである。抜き出すのは規則の定義だけにし、手順(誰が・いつ確かめるか)は元のスキルに残す。例は `skills/develop/references/requirements.md`(要件の 4 行の形式)である。
+- 上流の資料(yomiyasu など)にある条件付きの規則(文脈で言い換え先が変わる比喩動詞など)を write-doc へ取り込むときは、語ごとに、システム開発の文書で字義どおりの正当な用法があるかを確かめる。正当な用法が無い語は、`skills/write-doc/scripts/forbidden_phrases.json` に禁止語として登録し、lint で検出する。開発文書でも正当な用法と言い換えるべき用法の両方がある語(引き返す・契約・正本など)だけを、`skills/write-doc/references/sentence.md` に条件付きの規則として書く。条件付きの規則は lint が検出しないためである。
 
 ## 7. 評価
 
