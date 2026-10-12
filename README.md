@@ -140,7 +140,7 @@ agents/
 └── gate-reviewer.md       # push 前のブランチ全体の点検(opus、Write/Edit 不可)
 skills/develop/
 ├── SKILL.md               # 統括の工程(要件・タスク・ブランチ・計画・実装と点検のループ・ゲート・PR・完了)
-└── references/            # git-flow.md(ブランチ・PR・CI・マージ)、hooks.md(lefthook・husky・シークレット検知・依存監査)
+└── references/            # requirements.md(要件の 4 行の形式・聞く範囲・品質の決め方)、git-flow.md(ブランチ・PR・CI・マージ)、hooks.md(lefthook・husky・シークレット検知・依存監査)
 skills/specify/
 ├── SKILL.md               # 着想から PRD を書く工程(聞く・PRD を書く・確かめて終える)
 └── references/prd.md      # PRD の雛形(節ごとの書き方は各節の直下のコメント)

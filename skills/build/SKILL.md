@@ -63,7 +63,7 @@ description: 製品の要求一覧・PRD(製品要求仕様書)から起こし�
 ## 3. 分解する
 
 - PRD を読み、「何を作るか」の不明点をユーザーに 1 問ずつ、最大 3 問まで聞く(develop 2. と同じ)。
-- 1 つのタスクを 1 つの PR の大きさにする。本文は要件の 4 行(目的・完了条件・対象外・品質)にし、品質は develop 2. の決め方で書く。
+- 1 つのタスクを 1 つの PR の大きさにする。本文は要件の 4 行(目的・完了条件・対象外・品質)にし、品質は `../develop/references/requirements.md` の決め方で書く。
 - 受け入れ条件は `--ac` で 1 件ずつ付け、コマンドの結果や画面の挙動など、検証できる形で書く。依存するタスクは `--dep` で指定する。
 - PRD が specify の雛形(`../specify/references/prd.md`)に沿っているときは、次のように写す。
   - 要求一覧の 1 項目(`### R<n>. <タイトル>`)を 1 タスクにする。タイトルを `backlog task create` のタイトルに、4 行を `-d` に、`受け入れ条件:` の箇条を 1 件ずつ `--ac` に渡す。
@@ -156,5 +156,6 @@ agy --new-project -p='dev-skills の build スキルの「反復する」工程�
 | `references/flow.mmd` | 工程の図の構造(ノードと辺) | 工程の図を直すとき |
 | `references/flow.svg` | 工程の図(1. に埋め込む) | 工程の全体を見るとき |
 | `../specify/references/prd.md` | specify の PRD の雛形。節ごとの書き方を、各節の直下のコメントに書いている | 分解するとき |
+| `../develop/references/requirements.md` | 要件の 4 行の形式と品質の決め方 | 分解するとき |
 | `../develop/SKILL.md` | 1 タスクを PR まで進める手順 | 反復するとき |
 | `../develop/references/git-flow.md` | ブランチ・PR・CI 確認・マージのコマンド | 反復で PR を出すとき、マージするとき |
