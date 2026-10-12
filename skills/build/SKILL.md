@@ -69,6 +69,7 @@ description: 製品の要求一覧・PRD(製品要求仕様書)から起こし�
   - 要求一覧の 1 項目(`### R<n>. <タイトル>`)を 1 タスクにする。タイトルを `backlog task create` のタイトルに、4 行を `-d` に、`受け入れ条件:` の箇条を 1 件ずつ `--ac` に渡す。
   - PRD の「依存と順序」の表の行の順にタスクを作る。依存先の要求の ID(`R1` の形)は、その要求から作成済みのタスクの ID(`TASK-12` の形)に置き換えて `--dep` に渡す。複数なら `--dep TASK-1,TASK-2` とする。
   - 不明点の質問は、PRD の「未決事項」に残った項目から選ぶ(最大 3 問は変わらない)。
+  - PRD の 1.(背景と利用者)・2.(対象外)・3.(品質)の節はタスクに写さず、分解するときに読む文脈にする。
 
 ```sh
 backlog task create $'<タイトル>' -l build-<slug> -d $'<要件の 4 行>' --ac $'<条件 1>' --ac $'<条件 2>' --dep <TASK-id>
@@ -154,6 +155,6 @@ agy --new-project -p='dev-skills の build スキルの「反復する」工程�
 | `scripts/loop.py` | 反復を繰り返し起動し、停止条件を判定するスクリプト | Claude Code で反復を回すとき |
 | `references/flow.mmd` | 工程の図の構造(ノードと辺) | 工程の図を直すとき |
 | `references/flow.svg` | 工程の図(1. に埋め込む) | 工程の全体を見るとき |
-| `../specify/references/prd.md` | specify の PRD の雛形と、build 3. への写し方 | 分解するとき |
+| `../specify/references/prd.md` | specify の PRD の雛形。節ごとの書き方を、各節の直下のコメントに書いている | 分解するとき |
 | `../develop/SKILL.md` | 1 タスクを PR まで進める手順 | 反復するとき |
 | `../develop/references/git-flow.md` | ブランチ・PR・CI 確認・マージのコマンド | 反復で PR を出すとき、マージするとき |

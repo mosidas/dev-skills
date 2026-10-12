@@ -143,7 +143,7 @@ skills/develop/
 └── references/            # git-flow.md(ブランチ・PR・CI・マージ)、hooks.md(lefthook・husky・シークレット検知・依存監査)
 skills/specify/
 ├── SKILL.md               # 着想から PRD を書く工程(聞く・PRD を書く・確かめて終える)
-└── references/prd.md      # PRD の雛形と、各節の書き方・build 3. への写し方
+└── references/prd.md      # PRD の雛形(節ごとの書き方は各節の直下のコメント)
 skills/build/
 ├── SKILL.md               # 外側のループの工程(進捗ファイル・分解・反復・停止と再開・反復の回し方)
 └── scripts/loop.py        # 反復ごとに新しい `claude -p` を起動し、停止条件を判定する
