@@ -15,6 +15,7 @@ Claude Code・Codex CLI・Antigravity CLI のプラグインである。開発�
 | `observe` | スキル | プロダクト品質のコードの可観測性の規範。構造化ログ、相関 ID、メトリクス、トレース、ヘルスチェック、エラーの分類、計画の完了条件に書く観測の内容を定める。OpenTelemetry のセマンティック規約、Google の SRE 本、W3C Trace Context を出典とする |
 | `write-doc` | スキル | 仕様書・手順書・調査レポート・議事録・記事などの日本語文書を書く・推敲する・リライトするときの規範。読み手・表記・文・段落・検査の規範と、検査スクリプト(`lint.py` ほか)を持つ |
 | `write-slide` | スキル | プレゼン資料・説明資料のスライド構成を作る・点検するときの規範。型の選択、メッセージライン、ページの役割分担、文体と強調を定める |
+| `write-message` | スキル | issue・PR のコメント、レビューコメント、業務チャット、短いメールなど、他者へ送る短い日本語メッセージを敬語で書く・直すときの規範。宛先・場・用件を確かめ、用件から書き、定型の謝辞・結び・申し出と敬語の誤用を除く。敬語の規範(`references/keigo.md`)と場ごとの規範(`references/places.md`)を持つ |
 | `respond` | スキル | 会話の応答の形を定める規範。読み手を ADHD と想定し、次の行動から書く・複数手順に番号を振る・状態を毎回書き直す・調べた事実に根拠となるソースを示すなどの規則を定める |
 | `draw-diagram` | スキル | `.mmd` で構造を固めてから人間が見やすい SVG を描く作図の規範。`render.py` で `.mmd` と SVG の対応照合・禁止要素の検査・Chrome headless の PNG 出力を行う |
 | `design-ui` | スキル | Web・iOS・Android・デスクトップの画面・コンポーネント・ページを設計・実装するときの規範。題材からトークン案を書き、汎用の既定と照合してから実装し、有限回の検証で止める工程を定める |
@@ -23,7 +24,7 @@ Claude Code・Codex CLI・Antigravity CLI のプラグインである。開発�
 | `hooks/inspect_write.py` | hook(PostToolUse、Claude Code のみ) | 日本語 Markdown の書き込み直後に `lint.py` を実行し、検出があれば書き直しを促す警告を返す |
 | `hooks/inspect_stop.py` | hook(Stop、Claude Code のみ) | セッション完了時に再検査し、重大カテゴリの検出が残るあいだ完了を差し戻す |
 
-スキルは各 CLI が用途を判断して自動で読み込む。Claude Code では `/dev-skills:develop`・`/dev-skills:specify`・`/dev-skills:build`・`/dev-skills:ponytail`・`/dev-skills:secure`・`/dev-skills:observe`・`/dev-skills:write-doc`・`/dev-skills:write-slide`・`/dev-skills:draw-diagram`・`/dev-skills:design-ui`・`/dev-skills:first-reader`、Codex CLI では `$dev-skills:develop`、Antigravity CLI では `/develop` で明示的に呼んでもよい。サブエージェントは Claude Code では `dev-skills:planner` のように plugin 名つきで起動する。Codex CLI と Antigravity CLI はサブエージェントを起動しないため、develop では統括が 4 つの役割を順に担う。respond は Claude Code では SessionStart hook が常時適用し、Codex CLI・Antigravity CLI ではスキルとして読み込む。hooks に呼び出しの操作はない。プラグインを有効にした Claude Code のセッションで、セッション開始・日本語 Markdown の書き込み・セッション完了のたびに自動で発火する。hooks の stdin の形式は CLI ごとに異なるため、Codex CLI と Antigravity CLI では hooks を提供しない。
+スキルは各 CLI が用途を判断して自動で読み込む。Claude Code では `/dev-skills:develop`・`/dev-skills:specify`・`/dev-skills:build`・`/dev-skills:ponytail`・`/dev-skills:secure`・`/dev-skills:observe`・`/dev-skills:write-doc`・`/dev-skills:write-slide`・`/dev-skills:write-message`・`/dev-skills:draw-diagram`・`/dev-skills:design-ui`・`/dev-skills:first-reader`、Codex CLI では `$dev-skills:develop`、Antigravity CLI では `/develop` で明示的に呼んでもよい。サブエージェントは Claude Code では `dev-skills:planner` のように plugin 名つきで起動する。Codex CLI と Antigravity CLI はサブエージェントを起動しないため、develop では統括が 4 つの役割を順に担う。respond は Claude Code では SessionStart hook が常時適用し、Codex CLI・Antigravity CLI ではスキルとして読み込む。hooks に呼び出しの操作はない。プラグインを有効にした Claude Code のセッションで、セッション開始・日本語 Markdown の書き込み・セッション完了のたびに自動で発火する。hooks の stdin の形式は CLI ごとに異なるため、Codex CLI と Antigravity CLI では hooks を提供しない。
 
 ## 2. 前提
 
@@ -98,7 +99,7 @@ $ codex plugin add dev-skills@personal
 $ agy plugin install <クローンのパス>
 ```
 
-導入先は `~/.gemini/config/plugins/dev-skills/`(コピー)である。クローンを更新したら同じコマンドで導入し直す。スキルは `/develop`・`/specify`・`/build`・`/ponytail`・`/secure`・`/observe`・`/write-doc`・`/write-slide`・`/respond`・`/draw-diagram`・`/design-ui`・`/first-reader` のスラッシュコマンドにもなる。
+導入先は `~/.gemini/config/plugins/dev-skills/`(コピー)である。クローンを更新したら同じコマンドで導入し直す。スキルは `/develop`・`/specify`・`/build`・`/ponytail`・`/secure`・`/observe`・`/write-doc`・`/write-slide`・`/write-message`・`/respond`・`/draw-diagram`・`/design-ui`・`/first-reader` のスラッシュコマンドにもなる。
 
 ## 4. hooks
 
@@ -153,6 +154,9 @@ skills/write-doc/
 └── scripts/               # lint.py・outline.py・terms.py・semantic.py と動詞・名詞の NG/OK カタログ
 skills/write-slide/
 └── SKILL.md               # スライド構成の規範
+skills/write-message/
+├── SKILL.md               # 短いメッセージの規範の入口(工程・構成・書式・AI らしさの抑制・検査)
+└── references/            # keigo.md・places.md(敬語の規範・場ごとの規範)
 skills/respond/
 └── SKILL.md               # 会話の応答の形を定める規範(ADHD 想定の読み手、次の行動から書く規則群)
 skills/ponytail/
