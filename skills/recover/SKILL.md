@@ -24,7 +24,7 @@ description: 失敗時の挙動の規範。入口ごとの失敗の列挙、タ�
   - サーバー内部の例外。
   - 上限の超過(サイズ・回数)。
 - 失敗を、利用者が直せるものと直せないものに分ける。直せる失敗には直し方を示し、直せない失敗には次の行動(時間をおいて再試行するなど)を示す。文言は design-ui の `references/text.md` に従う。
-- 利用者が直せない制約(プラットフォームや中継が課す要求サイズの上限など)は、設計の段階で洗い出す。洗い出した制約は、入力の段階で利用者に分かる上限へ写すか、上限に当たらない設計にする。例: 本文をエンコードしてから送ると、日本語の本文は文字数の上限より手前で要求サイズの上限に当たる。
+- 同じ入力に複数の層(画面の入力制限・サーバーの検証・プラットフォームや中継)が上限を課すときは、単位(文字数・エンコード後のバイト数)をそろえて突き合わせ、もっとも厳しい上限を入力の段階で利用者に分かる形にする。例: 本文をエンコードしてから送ると、日本語の本文は文字数の上限より手前で要求サイズの上限に当たる。
 - 応答が想定の形でないときと、呼び出し自体が例外を送出したときは、失敗として扱う。成功とみなして処理を続けない。
 
 ### 2.2 タイムアウト
@@ -47,9 +47,9 @@ description: 失敗時の挙動の規範。入口ごとの失敗の列挙、タ�
 
 ### 2.4 二重送信の防止
 
-- 送信が始まってから結果が出るまで、送信の操作を無効にし、送信中の表示を出す。開始前には無効にしない(design-ui の `references/checklist.md` と同じ規則である)。
+- 送信が始まってから結果が出るまで送信の操作を無効に保ち、送信中の表示を出す。無効化と表示の時機の詳細は design-ui の `references/checklist.md` に従う。
 - 送信の前提(CAPTCHA のトークンなど)が揃っていないときは、送信せずに理由を表示する。
-- サーバー側でも、1 回限りのトークンか冪等キーを使い、同じ送信を 1 回だけ処理する。
+- 二重に処理すると害がある操作(課金・在庫の引き当てなど)に限り、サーバー側でも 1 回限りのトークンか冪等キーを使い、同じ送信を 1 回だけ処理する。省くときは ponytail の `shortcut:` の形で理由を残す。
 - 失敗したときは、入力を残したまま再送できる状態に戻す。1 回限りのトークンを使っていれば、取り直す。
 - 再読み込みによる再送を防ぐため、成功したときは、フォームを結果の表示に置き換えるか、POST の応答を転送にする。
 
@@ -58,7 +58,6 @@ description: 失敗時の挙動の規範。入口ごとの失敗の列挙、タ�
 - 失敗したときに返すものを段階で決める。例: 本来の応答、静的なエラーページ、固定文のプレーンテキストの順に試す。
 - 最後の段は外部(ストレージ・テンプレート・別のサービス)に依存させず、コードに埋め込んだ固定の内容で返す。
 - 例外は境界(要求の入口・ジョブの最上位)で捕捉し、次の段へ進める。
-- 利用者への応答には例外の内容を出さない(secure のエラー応答の規則)。ログには 1 回だけ残す(observe のエラーの分類)。
 - 画面や応答の一部が失敗したときの扱いを、全体を失敗にするか、失敗した部分を除いて残りを返すかから選び、2.1 の表に書く。
 
 ### 2.6 エラーページ
@@ -66,7 +65,7 @@ description: 失敗時の挙動の規範。入口ごとの失敗の列挙、タ�
 - 404・405・500 のページを、サイトの見た目と正しい状態コードで返す。エラーの内容を 200 で返さない(soft 404)。
 - 要件に応じて、403・429・503 のページも用意する。
 - 405 の応答には Allow ヘッダーを付ける。429・503 の応答には、再試行できる時期が分かるときに Retry-After を付ける。
-- エラーページ自身の URL を直接開くと 200 で返るため、エラーページには noindex を付ける。
+- エラーページを独立した URL で配信するとき(静的サイトの 404.html など)は、その URL を直接開くと 200 で返るため、エラーページに noindex を付ける。
 - 本文は、design-ui の `references/text.md` にある利用者向けの文言の規則に従う。
 
 ### 2.7 中間状態の露出防止
@@ -81,6 +80,7 @@ description: 失敗時の挙動の規範。入口ごとの失敗の列挙、タ�
 
 - 計画の各ステップの完了条件には、2.1 の表の失敗ごとに、利用者が見るものとシステムの挙動を書く。形は observe の完了条件と同じにする。
 - タイムアウト・二重送信の防止・フォールバックの最後の段には、失敗を起こして挙動を確かめるテストか手順を、それぞれ 1 つ以上残す。
+- サイズの上限には、上限ちょうどの入力を、エンコード後にもっとも膨らむ文字(日本語など)で送り、受理されることを確かめるテストを残す。
 
 ## 3. 他スキルとの関係
 
@@ -92,16 +92,16 @@ description: 失敗時の挙動の規範。入口ごとの失敗の列挙、タ�
 
 ## 4. 出典
 
-本規範は次の資料を参照し、要点を自分の言葉でまとめた。文面は転載していない。いずれも 2026-10-14 に公式ページで版とライセンスを確かめた。
+本規範は次の資料を参照し、要点を自分の言葉でまとめた。文面は転載していない。Release It! を除き、いずれも 2026-10-14 に公式ページで版とライセンスを確かめた。
 
 - Google『Site Reliability Engineering』(2017)第 22 章 "Addressing Cascading Failures"。CC BY-NC-ND 4.0。https://sre.google/sre-book/addressing-cascading-failures/
 - Amazon Builders' Library "Timeouts, retries, and backoff with jitter"(Marc Brooker)。ライセンスの明示は無い(© Amazon Web Services, Inc.)ため、要点の要約にとどめた。https://builder.aws.com/content/3EumjoZascWd1oZiEgL8ORlv3qE/timeouts-retries-and-backoff-with-jitter
-- RFC 9110 HTTP Semantics(2022-06、STD 97)。IETF Trust Legal Provisions。https://www.rfc-editor.org/rfc/rfc9110.html 。参照した節は 9.2.2(冪等なメソッド)・10.2.3(Retry-After)・15.5.5(404)・15.5.6(405 と Allow)・15.6.1(500)である。
+- RFC 9110 HTTP Semantics(2022-06、STD 97)。IETF Trust Legal Provisions。https://www.rfc-editor.org/rfc/rfc9110.html 。参照した節は 9.2.2(冪等なメソッド)・10.2.3(Retry-After)・15.5.5(404)・15.5.6(405 と Allow)・15.6.1(500)・15.6.4(503。Retry-After は MAY)である。
 - RFC 6585 Additional HTTP Status Codes(2012-04)。IETF Trust Legal Provisions。https://www.rfc-editor.org/rfc/rfc6585.html 。参照した節は 4.(429)である。
 - Stripe API Reference "Idempotent requests"。ライセンスの明示は無いため、要点の要約にとどめた。https://docs.stripe.com/api/idempotent_requests
 - Google Search Central "How HTTP status codes, and network and DNS errors affect Google Search"(2026-02-04 更新)。CC BY 4.0。https://developers.google.com/search/docs/crawling-indexing/http-network-errors
 - Michael T. Nygard『Release It! Second Edition』(Pragmatic Bookshelf、2018)。Timeouts・Fail Fast の背景として書名だけを挙げる。
 
-2.7 は外部の出典を持たず、実装の事例(結果ページを直接開くと置換前の印が見えた)に基づく。
+2.6 の noindex と 2.7 は外部の出典を持たない。2.6 の noindex は本文に書いた理由(エラーページの URL を直接開くと 200 で返る)に基づき、2.7 は実装の事例(結果ページを直接開くと置換前の印が見えた)に基づく。
 
 NN/g Error-Message Guidelines は design-ui の `references/text.md` の出典にある。
