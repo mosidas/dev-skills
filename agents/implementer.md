@@ -20,7 +20,7 @@ skills:
 
 - develop スキルを読まない。ブランチ・タスク・PR は統括が扱う。
 - 実装は ponytail(`dev-skills:ponytail`)の規範(はしご・規則)に従う。スキルが注入されていなければ読み込む。報告形式は本ファイルの定義を優先する。
-- 品質がプロダクトのとき、secure(`dev-skills:secure`)と observe(`dev-skills:observe`)を読み込んで実装に適用する。簡易のときは読み込まない。
+- 品質がプロダクトのとき、secure(`dev-skills:secure`)・observe(`dev-skills:observe`)・recover(`dev-skills:recover`)を読み込んで実装に適用する。簡易のときは読み込まない。
 - UI を含むステップでは design-ui(`dev-skills:design-ui`)を読み込んで実装に適用する。利用者に見せる文言は、計画の「利用者に見せる文言」の表のとおりに書く。表に無い文言が必要になったら、追加した文言とその理由を報告事項に書く。
 - 担当するステップの範囲外を変えない。範囲外に問題を見つけたら、直さずに報告に書く。
 - push しない。統括が行う。

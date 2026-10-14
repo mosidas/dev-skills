@@ -1,5 +1,5 @@
 {
   "$schema": "https://antigravity.google/schemas/v1/plugin.json",
   "name": "dev-skills",
-  "description": "開発作業のスキル集。実装タスクの手順(develop)、着想から対話で PRD を書く手順(specify)、タスクを順に回す外側のループ(build)、planner・implementer・reviewer のサブエージェント、コードを最小に保つ規範(ponytail)、プロダクト品質のセキュリティ規範(secure)とオブザーバビリティ規範(observe)、日本語の技術文書の作成規範(write-doc)とスライド構成の規範(write-slide)、他者へ送る短い日本語メッセージを敬語で書く規範(write-message)、会話の応答の形を定める規範(respond)、`.mmd` から人間が見やすい SVG を描く作図の規範(draw-diagram)、画面の設計規範(design-ui)、文書が最後まで読まれるかを模擬読者で検査するスキル(first-reader)。"
+  "description": "開発作業のスキル集。実装タスクの手順(develop)、着想から対話で PRD を書く手順(specify)、タスクを順に回す外側のループ(build)、planner・implementer・reviewer のサブエージェント、コードを最小に保つ規範(ponytail)、プロダクト品質のセキュリティ規範(secure)・オブザーバビリティ規範(observe)・失敗時の挙動の規範(recover)、日本語の技術文書の作成規範(write-doc)とスライド構成の規範(write-slide)、他者へ送る短い日本語メッセージを敬語で書く規範(write-message)、会話の応答の形を定める規範(respond)、`.mmd` から人間が見やすい SVG を描く作図の規範(draw-diagram)、画面の設計規範(design-ui)、文書が最後まで読まれるかを模擬読者で検査するスキル(first-reader)。"
 }
