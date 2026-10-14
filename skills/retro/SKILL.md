@@ -73,7 +73,7 @@ description: タスクで受けた本人の指摘とレビューの指摘から�
 ### 5.1 判定に使う規範の版
 
 - 現行の版には、指摘を受けて後から追加した規則が含まれることがある。そのため、指摘の時点で使われていた版で判定する。
-- Claude Code では、使われた版が `~/.claude/plugins/cache/<marketplace>/dev-skills/<version>/` に残る。指摘の日時に有効だった版のディレクトリを読む。各版の導入日時は `ls -lt ~/.claude/plugins/cache/<marketplace>/dev-skills/` で見分ける。
+- Claude Code では、使われた版が `~/.claude/plugins/cache/<marketplace>/dev-skills/<version>/` に残る。指摘の日時に有効だった版のディレクトリを読む。各版の導入日時は `ls -lt ~/.claude/plugins/cache/<marketplace>/dev-skills/` で見分ける。更新日時が同じ版が並んで見分けられないときは、次の git の手順で特定する。
 - 版が分からないときは、指摘の日時より前のコミットを特定し、その時点のファイルを読む。
 
   ```sh
