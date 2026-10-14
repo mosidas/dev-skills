@@ -69,7 +69,7 @@ description: Web・iOS・Android・デスクトップの画面・コンポーネ
 
 - コード自体の最小化は ponytail に従う。依存の選定・抽象化の要否も含む。
 - 図・ポンチ絵を作るときは draw-diagram に従う。
-- 画面内の日本語の文言は `references/text.md` 8. に従う。語の選び方だけ `../write-doc/references/sentence.md` 3. に従い、文体は text.md 8. を優先する。
+- 画面内の日本語の文言は `references/text.md` 8. に従う。語の選び方と文の組み立ては `../write-doc/references/sentence.md` に従い(漢語基調の項を除く)、文体は text.md 8. を優先する。
 
 ## 9. 出典
 
