@@ -42,7 +42,7 @@ description: タスクで受けた本人の指摘とレビューの指摘から�
   gh api repos/<owner>/<repo>/pulls/<n>/comments
   ```
 
-- memory(Claude Code のみ): `grep -l "type: feedback" ~/.claude/projects/<project>/memory/*.md` で feedback のファイルを探す。`<project>` は、作業ディレクトリの絶対パスの `/` を `-` に置き換えた文字列である。frontmatter の `modified` の日時で、扱いを次のように分ける。
+- memory(Claude Code のみ): `grep -l "type: feedback" ~/.claude/projects/<project>/memory/*.md` で feedback のファイルを探す。`~/.claude/projects/<project>/memory/` には、セッションに読み込まれた MEMORY.md のディレクトリ(コンテキストに表示されるパス)を使う。手で組み立てるときの `<project>` は、作業ディレクトリの絶対パスの英数字以外の文字(`/`・`.`・`_` など)を `-` に置き換えた文字列であり、`ls ~/.claude/projects/` で実在を照合する。frontmatter の `metadata.modified` の日時で、扱いを次のように分ける。
   - タスクの期間中に作成・更新された feedback は、新しい指摘として拾う。
   - それより前の feedback は、守られたかを照合する規則として 5. で使う。
   - Codex CLI・Antigravity CLI では、この入力を省く。
@@ -73,7 +73,7 @@ description: タスクで受けた本人の指摘とレビューの指摘から�
 ### 5.1 判定に使う規範の版
 
 - 現行の版には、指摘を受けて後から追加した規則が含まれることがある。そのため、指摘の時点で使われていた版で判定する。
-- Claude Code では、使われた版が `~/.claude/plugins/cache/<marketplace>/dev-skills/<version>/` に残る。指摘の日時に有効だった版のディレクトリを読む。
+- Claude Code では、使われた版が `~/.claude/plugins/cache/<marketplace>/dev-skills/<version>/` に残る。指摘の日時に有効だった版のディレクトリを読む。各版の導入日時は `ls -lt ~/.claude/plugins/cache/<marketplace>/dev-skills/` で見分ける。
 - 版が分からないときは、指摘の日時より前のコミットを特定し、その時点のファイルを読む。
 
   ```sh
@@ -88,7 +88,7 @@ description: タスクで受けた本人の指摘とレビューの指摘から�
 - 条件: 該当する規則を、dev-skills のファイルと節番号、または memory のファイル名で引用できること。
 - 守られなかった理由で、次の 3 つに分ける。
   - (a) 読まれなかった: 作業した役割の `agents/<name>.md` の `skills:` にも読み込みの規則にも、その規則を持つスキルが無かった。
-  - (b) 読まれたが、提案止まりだった: 指摘は出たが、reviewer の進め方 4. の要修正の条件に当たらなかった。
+  - (b) 読まれたが、提案止まりだった: 指摘は出たが、reviewer の進め方 4. の要修正の条件、または gate-reviewer の進め方 3. の差し戻しの条件に当たらなかった。
   - (c) 統括の確認から漏れた: 統括が読む規則か memory にあったが、統括自身の操作(コミット・PR など)で守られなかった。
 - 対処は「次から気をつける」で済ませず、5.6 の型で仕組みを直す。
 
@@ -123,10 +123,10 @@ description: タスクで受けた本人の指摘とレビューの指摘から�
 - `references/report.md` を写し、表と起票の案を埋める。
 - 起票の単位は、1 つの PR で直せる行のまとまりにする。同じ分類で、直す場所が近い行を 1 件にまとめる。
 - 表と起票の案を本人に見せ、承認を得てから起票する。
-- 起票は、Backlog.md を初期化したリポジトリのルートで実行する(サブモジュールの中では動かない)。`-l` には dev-skills のタスクに使うラベル(例: `dev-skills`)を、`--ref` には根拠の PR の URL と元のタスクのパスを渡す。
+- 起票は、Backlog.md を初期化したリポジトリのルートで実行する(backlog の無いサブモジュールの中では動かない)。`-l` には dev-skills のタスクに使うラベル(例: `dev-skills`)を、`--ref` には根拠の PR の URL と元のタスクのパスを渡す。`--ref` は 1 つの値ごとに繰り返す。元のタスクのパスには空白が入るので `$'...'` で囲む。
 
   ```sh
-  backlog task create $'<タイトル>' -l <dev-skills のラベル> -d $'目的: ...\n完了条件: ...\n対象外: ...\n品質: ...' --ref <PR の URL・元のタスクのパス>
+  backlog task create $'<タイトル>' -l <dev-skills のラベル> -d $'目的: ...\n完了条件: ...\n対象外: ...\n品質: ...' --ref <PR の URL> --ref $'<元のタスクのパス>'
   ```
 
 - タイトルと本文は `$'...'` で渡し、先に `\` を `\\` にし、次に `'` を `\'` にエスケープする(build 3. と同じ規則)。`"..."` の中では `$` とバッククォートが展開され、指摘に含まれるコマンドが起票の時点で実行される。
