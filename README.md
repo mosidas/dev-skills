@@ -9,7 +9,7 @@ Claude Code・Codex CLI・Antigravity CLI のプラグインである。開発�
 | `develop` | スキル | 実装タスクを要件の確認から PR まで進める統括の手順。要件(目的・完了条件・対象外・品質(簡易 / プロダクト))の壁打ち、Backlog.md のタスク、GitHub flow、git hook(lefthook・husky)、planner・implementer・reviewer による実装と点検のループ、gate-reviewer によるブランチ全体の点検、push 後の CI 確認を定める。品質がプロダクトのときは secure・observe を適用し、git hook にシークレット検知(gitleaks)と依存監査(osv-scanner)を追加する |
 | `specify` | スキル | 曖昧な着想から、ユーザーとの対話で「何を作るか」を 1 問ずつ聞き出し、build がそのまま 1 要求 = 1 タスクで分解できる PRD(製品要求仕様書)を書く手順。PRD は雛形 `references/prd.md` から書き、要求ごとに目的・完了条件・対象外・品質の 4 行と、検証できる受け入れ条件を持たせる。PRD をタスクに分解して実装するのは build が担う |
 | `build` | スキル | PRD から起こした複数のタスクを develop で 1 つずつ PR まで進める外側のループ。PRD を受け入れ条件つきの backlog のタスクに分解する工程と、未完了のタスクを 1 つ取って develop で PR まで進め、受け入れ条件を検証して Done にする反復を定める。状態は backlog と進捗ファイルだけに持ち、全タスクの Done・要判断・同じタスクの失敗の上限・反復の回数の上限などで止まる。`scripts/loop.py` が反復ごとに新しい `claude -p` を起動する(Claude Code) |
-| `planner`・`implementer`・`reviewer`・`gate-reviewer` | サブエージェント(`agents/`) | develop が起動する 4 つの役割。planner は計画(Write/Edit 不可)、implementer はステップ 1 つ分の実装とコミット、reviewer はステップの適合・テスト・欠陥・簡潔さの点検(Write/Edit 不可)、gate-reviewer は push 前のブランチ全体の点検(要件の充足・ステップ間の整合・残骸・PR 本文。Write/Edit 不可)。このうち planner・implementer・reviewer は起動時に ponytail を読み込み、品質がプロダクトのときは secure・observe も読み込む |
+| `planner`・`implementer`・`reviewer`・`gate-reviewer` | サブエージェント(`agents/`) | develop が起動する 4 つの役割。planner は計画(Write/Edit 不可)、implementer はステップ 1 つ分の実装とコミット、reviewer はステップの適合・テスト・欠陥・簡潔さの点検(Write/Edit 不可)、gate-reviewer は push 前のブランチ全体の点検(要件の充足・ステップ間の整合・残骸・PR 本文。Write/Edit 不可)。このうち planner・implementer・reviewer は起動時に ponytail を読み込み、品質がプロダクトのときは secure・observe も読み込み、UI を含むタスクでは design-ui も読み込む。planner は UI を含むタスクで、状態ごとの見出し・本文・操作を「利用者に見せる文言」の表として計画に書き、reviewer と gate-reviewer は実装の文言がその表と文言の規範に合うかを点検する |
 | `ponytail` | スキル | コードを最小に保つ規範。そもそも作るかを問い、標準ライブラリと既存のものを先に使い、動く最小の差分で終える。planner・implementer・reviewer が起動時に読み込む |
 | `secure` | スキル | プロダクト品質のコードの安全性の規範。信頼境界での入力検証、認証・認可、シークレットと設定、依存の脆弱性、ログへの秘密の出力、エラー応答からの情報漏えいについて、何を対策すれば十分かを定める。OWASP ASVS と OWASP Cheat Sheet Series を出典とする |
 | `observe` | スキル | プロダクト品質のコードの可観測性の規範。構造化ログ、相関 ID、メトリクス、トレース、ヘルスチェック、エラーの分類、計画の完了条件に書く観測の内容を定める。OpenTelemetry のセマンティック規約、Google の SRE 本、W3C Trace Context を出典とする |
@@ -18,7 +18,7 @@ Claude Code・Codex CLI・Antigravity CLI のプラグインである。開発�
 | `write-message` | スキル | issue・PR のコメント、レビューコメント、業務チャット、短いメールなど、他者へ送る短い日本語メッセージを敬語で書く・直すときの規範。宛先・場・用件を確かめ、用件から書き、定型の謝辞・結び・申し出と敬語の誤用を除く。敬語の規範(`references/keigo.md`)と場ごとの規範(`references/places.md`)を持つ |
 | `respond` | スキル | 会話の応答の形を定める規範。読み手を ADHD と想定し、次の行動から書く・複数手順に番号を振る・状態を毎回書き直す・調べた事実に根拠となるソースを示すなどの規則を定める |
 | `draw-diagram` | スキル | `.mmd` で構造を固めてから人間が見やすい SVG を描く作図の規範。`render.py` で `.mmd` と SVG の対応照合・禁止要素の検査・Chrome headless の PNG 出力を行う |
-| `design-ui` | スキル | Web・iOS・Android・デスクトップの画面・コンポーネント・ページを設計・実装するときの規範。題材からトークン案を書き、汎用の既定と照合してから実装し、有限回の検証で止める工程を定める |
+| `design-ui` | スキル | Web・iOS・Android・デスクトップの画面・コンポーネント・ページを設計・実装するときの規範。題材からトークン案を書き、汎用の既定と照合してから実装し、有限回の検証で止める工程を定める。利用者向けの日本語の文言の規範(敬体で書く、利用者が行動を変えられない情報を出さない)を `references/text.md` に持つ |
 | `first-reader` | スキル | 模擬読者 2 人に下書きを 1 段落ずつ読ませ、斜め読みの関門・離脱点・翌日の想起・信頼の台帳を報告する。書き直しはしない。scripts は標準ライブラリだけで動く。Apache-2.0(`skills/first-reader/LICENSE`・`NOTICE`) |
 | `hooks/inject_respond.py` | hook(SessionStart、Claude Code のみ) | セッション開始時に `skills/respond/SKILL.md` の本文を注入する |
 | `hooks/inspect_write.py` | hook(PostToolUse、Claude Code のみ) | 日本語 Markdown の書き込み直後に `lint.py` を実行し、検出があれば書き直しを促す警告を返す |
@@ -135,9 +135,9 @@ PostToolUse と Stop は日本語文書の検査を行う。発火するのは�
 plugin.json                # Antigravity CLI 向けのマニフェスト
 lefthook.yml                # git hook(pre-commit: plugin validate、pre-push: unittest)
 agents/
-├── planner.md             # 計画(opus、Write/Edit 不可、ponytail 読み込み。品質がプロダクトのとき secure・observe も読み込む)
-├── implementer.md         # 実装とコミット(opus、ponytail 読み込み。品質がプロダクトのとき secure・observe も読み込む)
-├── reviewer.md            # ステップの点検と判定(opus、Write/Edit 不可、ponytail 読み込み。品質がプロダクトのとき secure・observe も読み込む)
+├── planner.md             # 計画(opus、Write/Edit 不可、ponytail 読み込み。品質がプロダクトのとき secure・observe も、UI を含むタスクでは design-ui も読み込む)
+├── implementer.md         # 実装とコミット(opus、ponytail 読み込み。品質がプロダクトのとき secure・observe も、UI を含むタスクでは design-ui も読み込む)
+├── reviewer.md            # ステップの点検と判定(opus、Write/Edit 不可、ponytail 読み込み。品質がプロダクトのとき secure・observe も、UI を含むタスクでは design-ui も読み込む)
 └── gate-reviewer.md       # push 前のブランチ全体の点検(opus、Write/Edit 不可)
 skills/develop/
 ├── SKILL.md               # 統括の工程(要件・タスク・ブランチ・計画・実装と点検のループ・ゲート・PR・完了)
@@ -171,7 +171,7 @@ skills/draw-diagram/
 └── scripts/render.py      # `.mmd` と SVG の対応照合・禁止要素の検査・Chrome headless の PNG 出力
 skills/design-ui/
 ├── SKILL.md               # UI 設計規範の入口(モードの選択・工程・スケール)
-└── references/            # anti-ai.md・text.md・checklist.md・native.md(汎用の既定の一覧・文言の規範・実装の品質床・ネイティブアプリ固有の規範)
+└── references/            # anti-ai.md・text.md・checklist.md・native.md(汎用の既定の一覧・UI テキストの最小化と利用者向けの文言の規範・実装の品質床・ネイティブアプリ固有の規範)
 skills/first-reader/
 ├── SKILL.md               # 模擬読者による通読の工程(斜め読みの関門・通読・想起・信頼の台帳・報告)
 ├── README.md              # スキルの概要
