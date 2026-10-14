@@ -89,7 +89,7 @@ backlog task create "<タイトル>" -l <area> -d "<要件の 4 行>"
 backlog task edit <id> -s Done --final-summary "<結果>"
 ```
 
-- 本人の指摘(ユーザーが計画・実装・文言・PR を直させた指摘)が 1 回以上あったタスクでは、Final Summary を書いた後に retro(`dev-skills:retro`)を実行する。
+- 本人の指摘(ユーザーが計画・実装・文言・PR を直させた指摘)が 1 回以上あったタスクでは、Final Summary を書いた後に retro(`dev-skills:retro`)を実行する。build の反復では実行しない(retro 1.)。
 
 ## 10. 参照ファイル
 
