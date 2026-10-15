@@ -66,6 +66,8 @@ backlog task create "<タイトル>" -l <area> -d "<要件の 4 行>"
 4. 要修正なら、修正点をそのまま implementer に渡して直させ、再び reviewer に点検させる。3 回直しても承認されないときは、計画か指摘のどちらかに無理があるので、統括がユーザーに状況を報告して判断を仰ぐ。
 5. 承認されたら、ステップの結果をタスクの Implementation Notes に書き、ユーザーに進捗を報告する。
 
+5.〜8. のどの時点でも、ユーザーが計画・実装・文言・PR を直させたときは、そのつど「ユーザーの指摘」として Implementation Notes に書く。retro が後から Notes を読んで指摘を集めるためである。
+
 統括は各報告を鵜呑みにせず、検証コマンドの実行結果と `git log`・`git diff` で検収する。サブエージェントの報告は要約であり、報告と実物が食い違うことがある。
 
 ## 7. ゲートを通す
@@ -88,6 +90,8 @@ backlog task create "<タイトル>" -l <area> -d "<要件の 4 行>"
 ```sh
 backlog task edit <id> -s Done --final-summary "<結果>"
 ```
+
+- 本人の指摘(ユーザーが計画・実装・文言・PR を直させた指摘)が 1 回以上あったタスクでは、Final Summary を書いた後に retro(`dev-skills:retro`)を実行する。build の反復では実行しない(retro 1.)。
 
 ## 10. 参照ファイル
 
