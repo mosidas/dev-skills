@@ -38,6 +38,7 @@ class GuardSessionUrlTest(helpers.TempDirTestCase):
         self.assertEqual(proc.stdout, "")
         self.assertIn(needle, proc.stderr)
         self.assertEqual(proc.stderr.rstrip("\n").count("\n"), 0, proc.stderr)
+        self.assertTrue(proc.stderr.rstrip("\n").endswith("。"), proc.stderr)
         self.assertNotIn(SESSION_ID, proc.stderr)
 
     def assertPassed(self, proc: subprocess.CompletedProcess) -> None:
@@ -88,6 +89,16 @@ class GuardSessionUrlTest(helpers.TempDirTestCase):
 
     def test_Co_Authored_Byだけのコミットは通す(self) -> None:
         self.assertPassed(self.run_hook(f'git commit -m "feat: x" -m "{COAUTHOR}"'))
+
+    def test_heredocでCo_Authored_Byだけを付けたコミットは通す(self) -> None:
+        command = f"git commit -q -m \"$(cat <<'EOF'\nfeat: x\n\n{COAUTHOR}\nEOF\n)\""
+        self.assertPassed(self.run_hook(command))
+
+    def test_メッセージ中のオプション名は本文ファイルと見なさず通す(self) -> None:
+        self.assertPassed(self.run_hook("git commit -m 'docs: --body-file の説明'"))
+
+    def test_grep_Fによる検索は通す(self) -> None:
+        self.assertPassed(self.run_hook("grep -F 'git commit' README.md"))
 
     def test_Generated_withを付けたgh_pr_createは通す(self) -> None:
         body = "本文\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)"

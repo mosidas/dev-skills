@@ -28,21 +28,29 @@ from pathlib import Path
 COMMIT_RE = re.compile(r"\bgit(?:\s+-[Cc]\s+(?:\"[^\"]*\"|'[^']*'|\S+)|\s+--[\w-]+(?:=\S+)?)*\s+commit\b")
 PR_RE = re.compile(r"\bgh\s+pr\s+(?:create|edit)\b")
 FORBIDDEN_RE = re.compile(r"claude\.ai/code/session_|claude-session\s*:", re.I)
+# 引用符の区間を先に読み飛ばし、`-m '... -F ...'` のような文字列の中をオプションと見なさない。
 # shortcut: 短いオプションの結合形(-aF・-Fpath)は読まない, 取りこぼしが起きたら引数を shlex で分解する
-FILE_RE = re.compile(r"(?:^|\s)(?:-F|--file|--body-file)(?:=|\s+)(\"[^\"\n]*\"|'[^'\n]*'|[^\s;&|)]+)")
+FILE_RE = re.compile(
+    r"\"[^\"]*\"|'[^']*'|(?:^|\s)(?:-F|--file|--body-file)(?:=|\s+)(\"[^\"\n]*\"|'[^'\n]*'|[^\s;&|)]+)"
+)
 
 DETECTED = (
     "コミットメッセージ・PR 本文から Claude-Session の行と claude.ai/code/session_ の URL を消して"
-    "実行し直す(検出箇所: {where})"
+    "実行し直す(検出箇所: {where})。"
 )
-UNREADABLE = "本文ファイル {path} を読めないため止めた。ファイルを先に作り、絶対パスで渡して実行し直す"
+UNREADABLE = "本文ファイル {path} を読めないため止めた。ファイルを先に作り、絶対パスで渡して実行し直す。"
 FAILED = "セッション URL の検査が失敗したため止めた({name})。"
 
 
 def body_files(command: str, cwd: str) -> list[Path]:
     """`-F`・`--file`・`--body-file` で渡した本文ファイルのパスを返す(`-` は標準入力なので除く)。"""
+    # 対象のコマンドより前の `-F`(`grep -F 'git commit'` など)は別のコマンドのオプションなので読まない。
+    start = min(m.start() for m in (COMMIT_RE.search(command), PR_RE.search(command)) if m)
     paths = []
-    for raw in FILE_RE.findall(command):
+    for match in FILE_RE.finditer(command):
+        raw = match.group(1)
+        if not raw or match.start() < start:
+            continue
         if raw[0] in "\"'":
             raw = raw[1:-1]
         if raw == "-":
