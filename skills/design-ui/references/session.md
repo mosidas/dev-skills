@@ -1,6 +1,6 @@
 # UI モックの作成
 
-本ファイルは、新しい画面とフォームを実装する前に、UI モックを本人と往復して作る工程を定める。UI モックは、出力先のディレクトリにある brief.md・mock.html・frames.html と、往復ごとの PNG からなる。ダーク表示を持つ製品では、frames-dark.html も加わる。PRD があれば PRD と組で build に渡し、無ければ単独で develop に渡す。
+本ファイルは、Web の新しい画面とフォームを実装する前に、UI モックを本人と往復して作る工程を定める。UI モックは、出力先のディレクトリにある brief.md・mock.html・frames.html と、往復ごとの PNG からなる。ダーク表示を持つ製品では、frames-dark.html も加わる。PRD があれば PRD と組で build に渡し、無ければ単独で develop に渡す。
 
 対象は Web の新しい画面とフォームである。次のものは対象外とする。
 
