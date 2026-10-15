@@ -17,14 +17,14 @@
 UI モック: <brief.md のパス / 不要>
 ```
 
-- brief.md は、design-ui の `../../design-ui/references/session.md` の工程で本人と往復して作る UI モックの brief であり、既定の置き場所は、backlog を初期化したリポジトリのルートからの `docs/ui-mock/<slug>/brief.md` である。
+- brief.md は、`../../design-ui/references/session.md` の工程で本人と往復して作る UI モックの brief であり、既定の置き場所は、backlog を初期化したリポジトリのルートからの `docs/ui-mock/<slug>/brief.md` である。
 - `不要` は、UI モックを作らずに実装すると本人が答えたことを示す。
 
 ## 2. 聞く範囲
 
 聞くのは「何を作るか」に限る。「どう作るか」(実現方針の選択)は planner の仕事なので、要件では決めない。
 
-新しい画面・フォームでは、UI モックの有無も聞く。既存の画面の変更では聞かない。実装そのものが見本になるためである。既存の画面でも、ユーザーが明示して求めたときは、design-ui の `../../design-ui/references/session.md` の工程で UI モックを作る。
+新しい画面・フォームでは、UI モックの有無も聞く。既存の画面の変更では聞かない。実装そのものが見本になるためである。既存の画面でも、ユーザーが明示して求めたときは、`../../design-ui/references/session.md` の工程で UI モックを作る。
 
 ## 3. 品質の決め方
 
