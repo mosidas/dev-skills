@@ -1,6 +1,6 @@
 # dev-skills
 
-Claude Code・Codex CLI・Antigravity CLI のプラグインである。開発作業で使うスキルとサブエージェントを 3 つの CLI に提供し、Claude Code にはセッション開始時に respond を注入し、日本語 Markdown を書き込むたびに検査する hooks も提供する。
+Claude Code・Codex CLI・Antigravity CLI のプラグインである。開発作業で使うスキルとサブエージェントを 3 つの CLI に提供し、Claude Code にはセッション開始時に respond を注入し、日本語 Markdown を書き込むたびに検査し、コミットと PR 本文のセッション URL を拒否する hooks も提供する。
 
 ## 1. 提供するもの
 
@@ -23,10 +23,11 @@ Claude Code・Codex CLI・Antigravity CLI のプラグインである。開発�
 | `design-ui` | スキル | Web・iOS・Android・デスクトップの画面・コンポーネント・ページを設計・実装するときの規範。題材からトークン案を書き、汎用の既定と照合してから実装し、有限回の検証で止める工程を定める。利用者向けの日本語の文言の規範(敬体で書く、利用者が行動を変えられない情報を出さない)を `references/text.md` に持つ。新しい Web の画面・フォームの実装の前に、UI モックを本人と往復して作る工程を `references/session.md` に持つ。往復は HTML のモック・headless Chrome で撮った PNG・文言の表で 1 案ずつ行い(1 往復に質問 1 つ、3 往復まで)、合意を brief.md にまとめる(既定の置き場所は `docs/ui-mock/<slug>/`)。UI モックは PRD と組で build に渡すか、単独で develop に渡す |
 | `first-reader` | スキル | 模擬読者 2 人に下書きを 1 段落ずつ読ませ、斜め読みの関門・離脱点・翌日の想起・信頼の台帳を報告する。書き直しはしない。scripts は標準ライブラリだけで動く。Apache-2.0(`skills/first-reader/LICENSE`・`NOTICE`) |
 | `hooks/inject_respond.py` | hook(SessionStart、Claude Code のみ) | セッション開始時に `skills/respond/SKILL.md` の本文を注入する |
+| `hooks/guard_session_url.py` | hook(PreToolUse、Claude Code のみ) | コミットと PR 本文に入るセッション URL を実行前に止める |
 | `hooks/inspect_write.py` | hook(PostToolUse、Claude Code のみ) | 日本語 Markdown の書き込み直後に `lint.py` を実行し、検出があれば書き直しを促す警告を返す |
 | `hooks/inspect_stop.py` | hook(Stop、Claude Code のみ) | セッション完了時に再検査し、重大カテゴリの検出が残るあいだ完了を差し戻す |
 
-スキルは各 CLI が用途を判断して自動で読み込む。Claude Code では `/dev-skills:develop`・`/dev-skills:specify`・`/dev-skills:build`・`/dev-skills:retro`・`/dev-skills:ponytail`・`/dev-skills:secure`・`/dev-skills:observe`・`/dev-skills:recover`・`/dev-skills:write-doc`・`/dev-skills:write-slide`・`/dev-skills:write-message`・`/dev-skills:draw-diagram`・`/dev-skills:design-ui`・`/dev-skills:first-reader`、Codex CLI では `$dev-skills:develop`、Antigravity CLI では `/develop` で明示的に呼んでもよい。サブエージェントは Claude Code では `dev-skills:planner` のように plugin 名つきで起動する。Codex CLI と Antigravity CLI はサブエージェントを起動しないため、develop では統括が 4 つの役割を順に担う。respond は Claude Code では SessionStart hook が常時適用し、Codex CLI・Antigravity CLI ではスキルとして読み込む。hooks に呼び出しの操作はない。プラグインを有効にした Claude Code のセッションで、セッション開始・日本語 Markdown の書き込み・セッション完了のたびに自動で発火する。hooks の stdin の形式は CLI ごとに異なるため、Codex CLI と Antigravity CLI では hooks を提供しない。
+スキルは各 CLI が用途を判断して自動で読み込む。Claude Code では `/dev-skills:develop`・`/dev-skills:specify`・`/dev-skills:build`・`/dev-skills:retro`・`/dev-skills:ponytail`・`/dev-skills:secure`・`/dev-skills:observe`・`/dev-skills:recover`・`/dev-skills:write-doc`・`/dev-skills:write-slide`・`/dev-skills:write-message`・`/dev-skills:draw-diagram`・`/dev-skills:design-ui`・`/dev-skills:first-reader`、Codex CLI では `$dev-skills:develop`、Antigravity CLI では `/develop` で明示的に呼んでもよい。サブエージェントは Claude Code では `dev-skills:planner` のように plugin 名つきで起動する。Codex CLI と Antigravity CLI はサブエージェントを起動しないため、develop では統括が 4 つの役割を順に担う。respond は Claude Code では SessionStart hook が常時適用し、Codex CLI・Antigravity CLI ではスキルとして読み込む。hooks に呼び出しの操作はない。プラグインを有効にした Claude Code のセッションで、セッション開始、`git commit`・`gh pr create`・`gh pr edit` の実行前、日本語 Markdown の書き込み、セッション完了のたびに自動で発火する。hooks の stdin の形式は CLI ごとに異なるため、Codex CLI と Antigravity CLI では hooks を提供しない。
 
 ## 2. 前提
 
@@ -108,8 +109,13 @@ $ agy plugin install <クローンのパス>
 | hook | 発火 | 動作 |
 | :-- | :-- | :-- |
 | SessionStart(すべての source) | セッション開始時 | `skills/respond/SKILL.md` の本文を frontmatter を除いて注入する |
+| PreToolUse(Bash) | `git commit`・`gh pr create`・`gh pr edit` の実行前 | セッション URL か `Claude-Session:` の行があれば exit 2 で止め、理由を 1 行で返す |
 | PostToolUse(Write / Edit / MultiEdit / NotebookEdit) | 日本語 Markdown の書き込み直後 | `lint.py` を `--json` で実行し、検出があれば警告を返す。書き込みは取り消さない |
 | Stop | セッション完了時 | そのセッションで検査したファイルを再検査し、重大カテゴリの検出が残るあいだ完了をブロックする |
+
+PreToolUse の対象は、`git commit`(`git -C <path> commit` を含む)・`gh pr create`・`gh pr edit` を含む Bash のコマンドである。`claude.ai/code/session_` の URL と `Claude-Session:` の行(大文字と小文字を区別しない)を、コマンド文字列全体と、`-F`・`--file`・`--body-file` で渡した本文ファイルから探す。相対パスは `cwd` から解決し、`-` は読まない。`Co-Authored-By` と `Generated with` の行は止めない。再利用するメッセージ(`--amend --no-edit`・`-C <commit>`)は検査しない。
+
+対象と判定したあとは、ファイルが読めないときや検査の失敗でも止める(fail-closed)。同じコマンドで作ったファイルや `cd` のあとの相対パスも止まるため、ファイルを先に作り、絶対パスで渡して実行し直す。
 
 PostToolUse と Stop は日本語文書の検査を行う。発火するのは、拡張子が `.md` / `.markdown` で、日本語文字が 30 文字以上あり、除外パターンに一致しないファイルへの書き込みに限る。警告には、検出の一覧、該当文を丸ごと書き直す指示、語ごとの言い換え例、カテゴリ別の指針が入る。
 
@@ -117,7 +123,7 @@ PostToolUse と Stop は日本語文書の検査を行う。発火するのは�
 
 設定の正本は `hooks/inspection.config.json` である。利用側の変更は `.claude/write-doc-inspection.json` に同じキーで書く。浅い上書きなので、プラグインを更新しても残る。キーの一覧は `skills/write-doc/references/inspection.md` 3. にある。
 
-次のいずれかに当たると、hooks は書き込みと完了を止めずに素通しする。
+次のいずれかに当たると、検査と注入の hooks は書き込みと完了を止めずに素通しする。
 
 - `uv` が無い、または `lint.py` を実行できない。
 - lint がタイムアウトした、または異常終了した。
@@ -187,7 +193,8 @@ skills/first-reader/
 ├── LICENSE                # Apache-2.0
 └── NOTICE                 # 出典と変更点
 hooks/
-├── hooks.json             # SessionStart・PostToolUse・Stop の配線
+├── hooks.json             # SessionStart・PreToolUse・PostToolUse・Stop の配線
+├── guard_session_url.py   # PreToolUse: コミットと PR 本文のセッション URL を拒否する
 ├── inject_respond.py      # SessionStart: respond スキルの本文を注入する
 ├── inspect_write.py       # PostToolUse: 書き込み直後の検査と警告
 ├── inspect_stop.py        # Stop: 再検査と重大カテゴリによる完了ブロック
