@@ -1,7 +1,7 @@
 {
   "name": "dev-skills",
-  "version": "1.21.0",
-  "description": "開発作業のスキル集。実装タスクの手順(develop)、着想から対話で PRD を書く手順(specify)、タスクを順に回す外側のループ(build)、指摘から規範の欠け・守られなかった規則・矛盾を導いて改善のタスクを起票する手順(retro)、planner・implementer・reviewer のサブエージェント、コードを最小に保つ規範(ponytail)、プロダクト品質のセキュリティ規範(secure)・オブザーバビリティ規範(observe)・失敗時の挙動の規範(recover)、日本語の技術文書の作成規範(write-doc)とスライド構成の規範(write-slide)、他者へ送る短い日本語メッセージを敬語で書く規範(write-message)、会話の応答の形を定める規範(respond)、`.mmd` から人間が見やすい SVG を描く作図の規範(draw-diagram)、画面の設計規範(design-ui)、文書が最後まで読まれるかを模擬読者で検査するスキル(first-reader)。",
+  "version": "1.22.0",
+  "description": "開発作業のスキル集。実装タスクの手順(develop)、着想から対話で PRD を書く手順(specify)、タスクを順に回す外側のループ(build)、指摘から規範の欠け・守られなかった規則・矛盾を導いて改善のタスクを起票する手順(retro)、planner・implementer・reviewer のサブエージェント、コードを最小に保つ規範(ponytail)、プロダクト品質のセキュリティ規範(secure)・オブザーバビリティ規範(observe)・失敗時の挙動の規範(recover)、日本語の技術文書の作成規範(write-doc)とスライド構成の規範(write-slide)、他者へ送る短い日本語メッセージを敬語で書く規範(write-message)、会話の応答の形を定める規範(respond)、`.mmd` から人間が見やすい SVG を描く作図の規範(draw-diagram)、画面の設計規範と、実装の前に UI モックを本人と往復して作る手順(design-ui)、文書が最後まで読まれるかを模擬読者で検査するスキル(first-reader)。",
   "author": {
     "name": "mosidas"
   },
@@ -9,8 +9,8 @@
   "skills": "./skills/",
   "interface": {
     "displayName": "dev-skills",
-    "shortDescription": "実装タスクの手順、着想から対話で PRD を書く手順、タスクを順に回す外側のループ、指摘からのふりかえりと、最小のコード・プロダクト品質のセキュリティ・オブザーバビリティ・失敗時の挙動、日本語の技術文書・スライド構成・敬語の短いメッセージ・応答の形・作図・UI 設計の規範と、模擬読者による文書の検査",
-    "longDescription": "開発作業のスキル集。実装タスクの手順(develop)、着想から対話で PRD を書く手順(specify)、タスクを順に回す外側のループ(build)、指摘から規範の欠け・守られなかった規則・矛盾を導いて改善のタスクを起票する手順(retro)、planner・implementer・reviewer のサブエージェント、コードを最小に保つ規範(ponytail)、プロダクト品質のセキュリティ規範(secure)・オブザーバビリティ規範(observe)・失敗時の挙動の規範(recover)、日本語の技術文書の作成規範(write-doc)とスライド構成の規範(write-slide)、他者へ送る短い日本語メッセージを敬語で書く規範(write-message)、会話の応答の形を定める規範(respond)、`.mmd` から人間が見やすい SVG を描く作図の規範(draw-diagram)、画面の設計規範(design-ui)、文書が最後まで読まれるかを模擬読者で検査するスキル(first-reader)。",
+    "shortDescription": "実装タスクの手順、着想から対話で PRD を書く手順、タスクを順に回す外側のループ、指摘からのふりかえりと、最小のコード・プロダクト品質のセキュリティ・オブザーバビリティ・失敗時の挙動、日本語の技術文書・スライド構成・敬語の短いメッセージ・応答の形・作図・UI 設計の規範と UI モックの作成と、模擬読者による文書の検査",
+    "longDescription": "開発作業のスキル集。実装タスクの手順(develop)、着想から対話で PRD を書く手順(specify)、タスクを順に回す外側のループ(build)、指摘から規範の欠け・守られなかった規則・矛盾を導いて改善のタスクを起票する手順(retro)、planner・implementer・reviewer のサブエージェント、コードを最小に保つ規範(ponytail)、プロダクト品質のセキュリティ規範(secure)・オブザーバビリティ規範(observe)・失敗時の挙動の規範(recover)、日本語の技術文書の作成規範(write-doc)とスライド構成の規範(write-slide)、他者へ送る短い日本語メッセージを敬語で書く規範(write-message)、会話の応答の形を定める規範(respond)、`.mmd` から人間が見やすい SVG を描く作図の規範(draw-diagram)、画面の設計規範と、実装の前に UI モックを本人と往復して作る手順(design-ui)、文書が最後まで読まれるかを模擬読者で検査するスキル(first-reader)。",
     "developerName": "mosidas",
     "category": "Productivity",
     "capabilities": [],
