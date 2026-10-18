@@ -191,6 +191,7 @@ class FillerPhraseTest(unittest.TestCase):
             "次の章では設定を説明します。",
             "一度試してみてはいかがでしょうか。",
             "原因は設定と言っても過言ではありません。",
+            "原因は設定と言っても過言ではありません!",
         ]
         for sentence in sentences:
             with self.subTest(sentence=sentence):
@@ -204,6 +205,7 @@ class FillerPhraseTest(unittest.TestCase):
             "ボタンを押してください。",
             "**この設定で重要なのは**、速度だ。",
             "次の章では API の一覧を表にした。",
+            "次の章では説明を省く。",
         ]:
             with self.subTest(sentence=sentence):
                 self.assertEqual(lint.detect_filler_phrases([(1, sentence)]), [])

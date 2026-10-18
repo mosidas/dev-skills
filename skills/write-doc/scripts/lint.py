@@ -49,6 +49,8 @@ from textcore import (
     SENTENCE_SPLIT_RE,
     _HEADING_RE,
     _LIST_ITEM_RE,
+    _TABLE_DELIMITER_RE,
+    _TABLE_ROW_RE,
     get_tokenizer,
     iter_lines_with_no,
     iter_paragraphs_with_lines,
@@ -137,13 +139,17 @@ FILLER_PATTERNS: list[tuple[str, str]] = [
     (r"いかがでした(?:でしょうか|か)", "定型クロージング"),
     (r"ぜひ[^。！？]{0,20}?(?:てみて|にして)ください", "定型クロージング"),
     (r"参考になれば幸い", "定型クロージング"),
-    (r"次の章では[^。！？]{0,30}?(?:説明|解説|紹介|見ていき)", "定型導入"),
+    # 「説明を省く」「紹介しない」のような打ち消しの予告は定型導入ではないので除く。
+    (
+        r"次の章では(?![^。！？]*(?:省[くかきけい略]|しない|しません|せず))[^。！？]{0,30}?(?:説明|解説|紹介|見ていき)",
+        "定型導入",
+    ),
     (r"て(?:みて)?はいかが(?:でしょうか|ですか)", "定型クロージング"),
     (
         r"とも?(?:言|い)(?:い切|いき)?っても(?:過言|言い過ぎ|言いすぎ|いいすぎ)"
         r"(?:では(?:ありません|ない)|じゃ(?:ありません|ない))(?:です)?"
         r"(?:でしょう|だろう|かもしれ(?:ません|ない)|と(?:思|おも)(?:います|う)|ね|よ)?"
-        r"(?:[（(][^）)]*[）)])?(?=[。！？]|$)",
+        r"(?:[（(][^）)]*[）)])?(?=[。！？!?]|$)",
         "文末の付け足し",
     ),
 ]
@@ -1945,6 +1951,56 @@ def print_human_report(
         print()
 
 
+def split_units(raw_text: str) -> list[dict]:
+    """段落ごとの確かめの単位(見出し・箇条書きの 1 項目・表の 1 行・地の文の段落)に分ける。
+
+    判定は keep_structure_text のマスク後の行で行い、フロントマター・コードブロック・
+    HTML コメント・日本語を含まない行を外す。表示には原文の行を使う。
+    出典: natural-japanese v1.6.0(1038d53)の scripts/paragraphs.py(MIT)。
+    """
+    raw_lines = raw_text.split("\n")
+    masked_lines = mask_markdown_structure(raw_text, keep_structure_text=True).split("\n")
+    units: list[dict] = []
+    cur: dict | None = None
+    for no, (raw, masked) in enumerate(zip(raw_lines, masked_lines), start=1):
+        if not masked.strip():
+            cur = None
+            continue
+        if _HEADING_RE.match(masked) or (_TABLE_ROW_RE.match(masked) and masked.count("|") >= 2):
+            if not _TABLE_DELIMITER_RE.match(masked):
+                kind = "見出し" if _HEADING_RE.match(masked) else "表"
+                units.append({"line": no, "kind": kind, "lines": [raw]})
+            cur = None
+            continue
+        if _LIST_ITEM_RE.match(masked) or cur is None:
+            cur = {"line": no, "kind": "箇条書き" if _LIST_ITEM_RE.match(masked) else "段落", "lines": [raw]}
+            units.append(cur)
+        else:
+            cur["lines"].append(raw)
+    return [
+        {"no": i, "line": u["line"], "kind": u["kind"], "text": "\n".join(u["lines"]).strip()}
+        for i, u in enumerate(units, start=1)
+    ]
+
+
+def print_paragraph_sheet(raw_text: str) -> None:
+    """段落ごとの確かめ(references/inspection.md 4.)の一覧を出す。判断はしない。
+
+    文書を通して読むだけだと、モデルは段落ごとの確かめを飛ばす。別のコマンドにすると
+    実行を省かれるので、毎回実行される lint の出力に含める(natural-japanese 1038d53)。
+    """
+    units = split_units(raw_text)
+    print(f"=== 段落ごとの確かめ(全 {len(units)} 段落。既存の文書を直すときは必須。references/inspection.md 4.) ===")
+    print("1段落ずつ、動詞と名詞をすべて見て、references/sentence.md 3.「読み手が何のことか取れない言い回し」の型に当たるものを")
+    print("「番号: 言い回し → 指しているもの(元の文書やコードにある事実・名前)」の形で書き出す。")
+    print("当たらない段落は「番号: なし」と書く。最後の段落まで書き出してから直す。途中で省かない。")
+    print()
+    for u in units:
+        body = u["text"].replace("\n", " / ")
+        print(f"[{u['no']}] L{u['line']} {u['kind']}: {body}")
+    print()
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(
         description="AI臭い日本語文章を決定的に検出する lint スクリプト（CI ゲートではない）。"
@@ -2030,9 +2086,11 @@ def main() -> int:
                 "summary": baseline_summary,
                 "resolved": resolved,
             }
+        output["paragraphs"] = split_units(text)
         print(json.dumps(output, ensure_ascii=False, indent=2))
     else:
         print_human_report(args.file, findings, stats, baseline_summary)
+        print_paragraph_sheet(text)
 
     # lint であって CI ゲートではない。文章の検出結果は件数に関わらず常に exit 0 とし、
     # 修正するかどうかの判断は人間（または後続の AI 自己点検フロー）に委ねる。

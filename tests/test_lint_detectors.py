@@ -216,5 +216,51 @@ class IdentifierTest(unittest.TestCase):
         )
 
 
+class SplitUnitsTest(unittest.TestCase):
+    TEXT = "\n".join(
+        [
+            "---",
+            "title: 試験",
+            "---",
+            "# 見出しの行",
+            "",
+            "- 一つ目の項目",
+            "  続きの行",
+            "- 二つ目の項目",
+            "",
+            "| 列 | 説明 |",
+            "| --- | --- |",
+            "| 値 | 中身 |",
+            "",
+            "```python",
+            "# コードの中の見出し",
+            "```",
+            "",
+            "一つ目の段落。",
+            "同じ段落の二行目。",
+            "",
+            "Use the API.",
+            "",
+            "二つ目の段落。",
+        ]
+    )
+
+    def test_単位の種類と行番号を並べる(self) -> None:
+        units = lint.split_units(self.TEXT)
+        self.assertEqual(
+            [(u["kind"], u["line"]) for u in units],
+            [("見出し", 4), ("箇条書き", 6), ("箇条書き", 8), ("表", 10), ("表", 12), ("段落", 18), ("段落", 23)],
+        )
+        self.assertEqual([u["no"] for u in units], list(range(1, 8)))
+        self.assertEqual(units[1]["text"], "- 一つ目の項目\n  続きの行")
+        self.assertEqual(units[5]["text"], "一つ目の段落。\n同じ段落の二行目。")
+
+    def test_コードとフロントマターと英字だけの段落は出さない(self) -> None:
+        body = "\n".join(u["text"] for u in lint.split_units(self.TEXT))
+        for absent in ["title", "コードの中", "Use the API", "---"]:
+            with self.subTest(absent=absent):
+                self.assertNotIn(absent, body)
+
+
 if __name__ == "__main__":
     unittest.main()
