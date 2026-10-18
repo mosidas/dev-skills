@@ -246,3 +246,7 @@ $ claude plugin eval . --trust-plugin --allow-tools Write Edit -j 4 --max-cost-u
 - スコアは、あり・なしの各アームの値と、その差(Δ)を見る。Δ が正で、回をまたいで再現するなら、プラグインが採点項目を改善していると判断できる。
 - `arm` を指定しない `tool_used: Skill` の grader(`write-doc-report` の `fired`)は、ありアームの発火指標であり、Δ には入らない。`arm: both` を付けた `one-liner-control` の `no-skill` はスコアに入る。
 - 1 ケースを 2〜3 回しか実行しないため、Δ の小さな差は誤差の範囲にある。差は傾向として読む。
+
+## 8. ライセンス
+
+MIT ライセンスで公開する。全文は `LICENSE` にある。
