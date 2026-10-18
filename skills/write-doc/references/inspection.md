@@ -70,6 +70,10 @@ uv run <スキルのディレクトリ>/scripts/semantic.py <file.md> [--json] [
 - カテゴリごとの書き直し指針の正本は `hooks/rewrite_guides.json` にあり、hook の警告に同梱される。指針が指す規範の節をそのつど読み直してから、文脈に照らして「直す/直さない」を判断する。
 - 禁止語カテゴリ(`forbidden_phrase`)の対象は NG/OK カタログ(`../scripts/forbidden_phrases.json`)に登録した語であり、言い換え例は各語の `ok` にある。
 - 構造レビューは `outline.py` の出力でスケルトン通読(`paragraph.md` 5.)を行う。事実レビューは `sentence.md` 4. に従い、要約・記憶で書いた箇所と仕様変更を述べた箇所を優先して原典に当てる。補いと訂正の根拠は、`sentence.md` 4. の範囲(原文・利用者の発言・作業中に開いたファイル・コマンドの出力)に限る。
+- 公開・提出の前に、仮置きの残り(「〇〇」「XXX」「[ここに〜を入れる]」)を探し、次のとおり扱う。
+  - 入れる値が原文・依頼・資料に明示されているときだけ置き換える。分からなければ推測で埋めず、削りもせず、書き手に確かめる。
+  - 会話や引用の中の伏せ字(「〇〇さんの承認待ち」)、例として書いた「〇〇」、意図して残したテンプレートの空欄は残す。
+  - 【要確認】は確信度のラベル(`sentence.md` 4.)なので、この点検の対象に含めない。
 - 読み手の手間を増やす次の 5 種は、lint ではほとんど検出されない。次の項目の段落ごとの確かめで拾い、内容を足さずに直す。
   - 冗長な言い回し: 情報を増やさずに字数だけを増やす言い回しを縮める(「〜という形で進めていく予定です」→「〜で進める予定です」)。
   - 主張が 2 つ以上ある文: 主張ごとに文を分ける(`sentence.md` 2.)。
@@ -118,5 +122,5 @@ uv run <スキルのディレクトリ>/scripts/semantic.py <file.md> [--json] [
 ## 6. 参考文献
 
 - [coji/natural-japanese](https://github.com/coji/natural-japanese)(MIT ライセンス): スクリプト 5 本(textcore.py・lint.py・outline.py・terms.py・semantic.py)と、検査手順・判断台帳・収束条件の原典。本スキルの構成に合わせて再構成した。v1.6.0(コミット 03bc944)からは、文末の打ち消しの多用の検出器(`negation_repetition`)、文中の太字の多用の既定化と行頭のラベルの除外、誤検出の削減(語の境目・文頭の反復・段落の具体性・画像と URL とタグの除外・英字だけの行の除外)、BOM 付きファイルの読み込み、段落ごとの確かめの一覧と、読み手の手間を増やす 5 種(4.)を取り込んだ。段落の分割は、上流の `scripts/paragraphs.py` を持ち込まず、lint.py の中に書いた。
-- [nanaism/yomiyasu](https://github.com/nanaism/yomiyasu)(MIT ライセンス): v2.0.1(コミット 84e1f5b)の `references/rephrase-test.md`・`references/fact-recovery.md` からは、言い直しテストの 6 点と削る案の比べ方、補いと訂正の根拠の範囲(4.)を取り込んだ。同じ版の `references/lists/fact-gaps.txt` の程度の語・比喩の語と、`references/slop-catalog.md` の定型導入・文末の付け足し・定型の結びは、lint の NG/OK カタログと前置フィラーの検出へ取り込んだ。
+- [nanaism/yomiyasu](https://github.com/nanaism/yomiyasu)(MIT ライセンス): v2.0.1(コミット 84e1f5b)の `references/rephrase-test.md`・`references/fact-recovery.md` からは、言い直しテストの 6 点と削る案の比べ方、補いと訂正の根拠の範囲(4.)を取り込んだ。同じ版の `references/lists/fact-gaps.txt` の程度の語・比喩の語と、`references/slop-catalog.md` の定型導入・文末の付け足し・定型の結びは、lint の NG/OK カタログと前置フィラーの検出へ取り込んだ。同じ版の `references/slop-catalog.md` の仮置きの残り(4.)を取り込んだ。【要確認】を仮置きとして扱う部分は、確信度ラベルと衝突するため取り込んでいない。
 - lint の閾値・severity は、原典が 2026-07 に実施したコーパス校正(人間 103 文書 + AI 81 文書)の結果を引き継いでいる。
