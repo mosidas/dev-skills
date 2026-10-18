@@ -49,6 +49,8 @@ from textcore import (
     SENTENCE_SPLIT_RE,
     _HEADING_RE,
     _LIST_ITEM_RE,
+    _TABLE_DELIMITER_RE,
+    _TABLE_ROW_RE,
     get_tokenizer,
     iter_lines_with_no,
     iter_paragraphs_with_lines,
@@ -107,9 +109,10 @@ FORBIDDEN_PHRASE_VARIANTS: list[tuple[str, str]] = [
 # ---------------------------------------------------------------------------
 # 辞書: 翻訳調パターン（英語直訳っぽい構文）
 # ---------------------------------------------------------------------------
+# 「することができる」「することが可能」は、上流 natural-japanese の 2026-10 の測定で生成AI以前の人間の文書
+# (Qiita 2022・llm-jp)のほうが生成AIの文書より多く使っており、生成AIらしさの印にならない。
+# 正規表現からは外し、品詞列で「〜ことができる」を拾う translationese_morph だけで扱う。
 TRANSLATIONESE_PATTERNS: list[str] = [
-    r"することができ(る|ます|た)",
-    r"することが可能(です|だ|になる)",
     r"と言えるだろう",
     r"という点で",
     r"という観点(から|で)",
@@ -123,6 +126,9 @@ TRANSLATIONESE_PATTERNS: list[str] = [
 # 前置フィラーと定型クロージング（要素は (正規表現, ラベル)）。
 # 出典: yomiyasu の references/slop-catalog.md 6. と scripts/yomiyasu_lint.py の
 # FILLER_PATTERNS（MIT ライセンス）。前置フィラーは文頭に限って照合する。
+# 定型導入・「〜てはいかがでしょうか」・文末の付け足しは v2.0.1(84e1f5b)の
+# slop-catalog.md 6. 定型導入・文末の付け足し・定型の結びから足した。
+# 文末の付け足しは _OVERSTATEMENT_PATTERN の文末の $ を、文の終わりの句点か行末に変えた形。
 # lex_lines は箇条書き・見出し・引用の行頭記号を残すため、記号と強調記号を文頭側で読み飛ばす。
 FILLER_PATTERNS: list[tuple[str, str]] = [
     (
@@ -133,6 +139,19 @@ FILLER_PATTERNS: list[tuple[str, str]] = [
     (r"いかがでした(?:でしょうか|か)", "定型クロージング"),
     (r"ぜひ[^。！？]{0,20}?(?:てみて|にして)ください", "定型クロージング"),
     (r"参考になれば幸い", "定型クロージング"),
+    # 「説明を省く」「紹介しない」のような打ち消しの予告は定型導入ではないので除く。
+    (
+        r"次の章では(?![^。！？]*(?:省[くかきけい略]|しない|しません|せず))[^。！？]{0,30}?(?:説明|解説|紹介|見ていき)",
+        "定型導入",
+    ),
+    (r"て(?:みて)?はいかが(?:でしょうか|ですか)", "定型クロージング"),
+    (
+        r"とも?(?:言|い)(?:い切|いき)?っても(?:過言|言い過ぎ|言いすぎ|いいすぎ)"
+        r"(?:では(?:ありません|ない)|じゃ(?:ありません|ない))(?:です)?"
+        r"(?:でしょう|だろう|かもしれ(?:ません|ない)|と(?:思|おも)(?:います|う)|ね|よ)?"
+        r"(?:[（(][^）)]*[）)])?(?=[。！？!?]|$)",
+        "文末の付け足し",
+    ),
 ]
 
 # 段落頭に来ると「AI が構成を接続詞で誤魔化しがち」な語
@@ -210,7 +229,11 @@ BURSTINESS_MIN_TOKENIZED = 6
 # -0.24で human FP率2.4%・AI検出率100.0%と、他の統計系検出器の中では唯一
 # 弁別力を示したため、この値を採用する。ただしAI標本はn=3と極めて小さく、
 # コーパス拡充後に再sweepして確定させる必要がある暫定値。
-BURSTINESS_THRESHOLD = -0.24
+# 2026-10 再校正: 画像・URL・HTML タグ・かな漢字を含まない行を本文から外す前処理に変えたため、
+# 人間の文書の文長のばらつきが小さく出るようになった(英文や URL の行が長短の幅を作っていた)。
+# 生成AI以前の人間の文書400本(Qiita 2022・llm-jp)と生成AIの文書100本で走査し、
+# -0.30 で人間 21%・17%、生成AI 63%(旧前処理・旧閾値 -0.24 では 17%・28%、67%)。
+BURSTINESS_THRESHOLD = -0.30
 AUTOCORR_MIN_XS = 4
 AUTOCORR_THRESHOLD = 0.6
 # 2026-07 コーパス校正で閾値を大幅に引き上げ、severityも格下げ（deep-analysis.md
@@ -365,21 +388,22 @@ GENRE_PROFILES: dict[str, dict] = {
     #   - lead_repeat_threshold: tech と同値（7）を維持。実測でこの値が
     #     human_business の誤検知（デフォルト閾値6で20%→閾値7で10%）を
     #     半減させつつ ai_business の検出率（4%）を落とさない局所最適点。
-    #   - disabled_categories: high_bullet_ratio・high_bold_density・
+    #   - disabled_categories: high_bullet_ratio・
     #     boilerplate_heading・numbered_phase_structure は、事業文書
-    #     （報告書・提案書・議事録等）で箇条書き・太字強調・「まとめ」等の
+    #     （報告書・提案書・議事録等）で箇条書き・「まとめ」等の
     #     定型見出し・フェーズ/ステップ表現が正当に多用されるため、
     #     AI側の発火率がどうであれ business ジャンルでは無効化する。
     #     これらはいずれも EXPERIMENTAL_CATEGORIES に属し、デフォルトでは
     #     既に出力されない（--experimental 指定時のみ影響する）が、将来
     #     デフォルト化された場合の誤検知を防ぐため、ジャンル側でも明示的に
     #     無効化しておく。
+    #     high_bold_density は無効にしない。仕事の文書でも文中の太字が多すぎると
+    #     読みにくい(上流 natural-japanese 5bec41d・d5adde2 の測定。構造層のコメントを参照)。
     "business": {
         "nominal_min_chars": 3000,
         "lead_repeat_threshold": 7,
         "disabled_categories": {
             "high_bullet_ratio",
-            "high_bold_density",
             "boilerplate_heading",
             "numbered_phase_structure",
         },
@@ -557,6 +581,25 @@ def _raw_or_masked(raw_lines_by_no: dict[int, str] | None, no: int, fallback: st
     return raw_lines_by_no.get(no, fallback)
 
 
+_KATAKANA_RE = re.compile(r"[ァ-ヶー]")
+_KANJI_RE = re.compile(r"[一-龠々]")
+
+
+def _phrase_positions(line: str, phrase: str) -> list[int]:
+    """phrase が語として現れる位置をすべて返す。カタカナで始まる語の直前がカタカナ、
+    漢字で始まる語の直前が漢字のときは、別の語の一部(「エンドポイントは」の「ポイントは」、
+    「発熱量」の「熱量」など)とみなして数えない。"""
+    out = []
+    head = phrase[0]
+    for m in re.finditer(re.escape(phrase), line):
+        prev = line[m.start() - 1] if m.start() > 0 else ""
+        if prev and ((_KATAKANA_RE.match(head) and _KATAKANA_RE.match(prev))
+                     or (_KANJI_RE.match(head) and _KANJI_RE.match(prev))):
+            continue
+        out.append(m.start())
+    return out
+
+
 def detect_forbidden_phrases(
     lines: list[tuple[int, str]], raw_lines_by_no: dict[int, str] | None = None
 ) -> list[Finding]:
@@ -567,8 +610,7 @@ def detect_forbidden_phrases(
     for no, line in lines:
         raw_line = _raw_or_masked(raw_lines_by_no, no, line)
         for phrase, dict_form in FORBIDDEN_PHRASE_VARIANTS:
-            idx = line.find(phrase)
-            if idx != -1:
+            for idx in _phrase_positions(line, phrase):
                 start = max(0, idx - 10)
                 end = idx + len(phrase) + 10
                 excerpt = raw_line[start:end] if len(raw_line) >= end else line[start:end]
@@ -697,6 +739,44 @@ def detect_antithesis_repetition(
                         f"否定→肯定対比パターンが文書内で{len(hits)}回検出（閾値{threshold}回以上、"
                         f"総文数に対する比率={ratio:.1%}）。{related}"
                     ),
+                    related_lines=all_lines,
+                )
+            )
+    return findings
+
+
+# 文末を打ち消しで終える文(「〜ではない。」「〜わけではない。」)の多用。GPT 系の文書に特に多い。
+# 2026-10 の測定(上流 natural-japanese 30310f2、手元の評価用データ):文書内に4回以上
+# あったのは、生成AI以前の人間の文書400本で0本、Claude・Gemini の文書65本で0本、GPT 系の文書35本で
+# 22本。「〜ではないでしょうか」「〜ではないか」のような問いかけ・推量は数えない(人間の文書に多く、
+# 打ち消しではないため)。
+NEGATION_END_RE = re.compile(r"(?:ではない|ではありません|じゃない|わけではない|わけではありません|わけじゃない)(?:のです|んです|のだ)?$")
+NEGATION_REPETITION_THRESHOLD = 4
+
+
+def detect_negation_repetition(
+    lines: list[tuple[int, str]],
+    raw_lines_by_no: dict[int, str] | None = None,
+    threshold: int = NEGATION_REPETITION_THRESHOLD,
+) -> list[Finding]:
+    """文末を打ち消しで終える文を文書全体で数え、threshold 回以上なら多用として検出する。"""
+    hits = []
+    for no, sent, raw in split_sentences_with_lines(lines, raw_lines_by_no):
+        body = sent.strip().rstrip("。．")
+        if NEGATION_END_RE.search(body):
+            hits.append((no, (raw or sent).strip()))
+    findings = []
+    if len(hits) >= threshold:
+        all_lines = [no for no, _ in hits]
+        related = format_related_lines(all_lines)
+        for no, text in hits:
+            findings.append(
+                Finding(
+                    line=no,
+                    category="negation_repetition",
+                    excerpt=text[:60],
+                    severity="warn",
+                    detail=f"文末を打ち消しで終える文が文書内で{len(hits)}回(閾値{threshold}回以上)。{related}",
                     related_lines=all_lines,
                 )
             )
@@ -1076,16 +1156,15 @@ def detect_rhythm_statistics(
 
 
 
-# 文頭反復の severity 判定: 固有名詞・製品名/技術用語（ラテン文字主体の表層）が
+# 文頭反復の除外判定: 固有名詞・製品名/技術用語（ラテン文字主体の表層）が
 # 文頭に来る場合は「そして」「また」のような定型導入の使い回しとは性質が異なり、
-# 技術文書では自然な反復（例: 「Cloudflareは」「better-authが」）なので
-# severity を warn ではなく info に下げる（検出自体は残し、判断材料として提示する）。
+# 技術文書では自然な反復（例: 「Cloudflareは」「better-authが」）なので数えない。
 _LATIN_TECH_TOKEN_RE = re.compile(r"^[A-Za-z][A-Za-z0-9\-_.]*$")
 
 
 def _is_proper_noun_or_tech_term(morpheme) -> bool:
     """先頭形態素が固有名詞、またはラテン文字・数字主体（製品名/ライブラリ名等）かを判定する。
-    カタカナ語は一般語（「クラウド」「システム」等）も多く誤って severity を下げるリスクが
+    カタカナ語は一般語（「クラウド」「システム」等）も多く誤って数えなくなるリスクが
     高いため、ここでは対象外とする（迷ったら対象外でよい、という方針）。
     """
     pos = morpheme.part_of_speech()
@@ -1104,8 +1183,8 @@ def detect_ngram_repetition(
     """
     1) 文頭2形態素（表層形）の n-gram が3回以上繰り返される
        → 「そして、」「また、」のような定型導入の使い回し
-       ただし先頭形態素が固有名詞・ラテン文字主体の技術用語（製品名/ライブラリ名等）の
-       場合は技術文書として自然な反復なので severity を info に下げる（検出自体は残す）。
+       ただし先頭形態素が固有名詞・ラテン文字主体の技術用語（製品名/ライブラリ名等）・数の
+       文は数えない。同じ書き出しの反復は1件（info）にまとめる。
     2) 文頭のPOS 4-gram（品詞の粗い並び）の一致率が高い
        → 語彙は違っても構文テンプレートが同じ（AIにありがちな構造の使い回し）
     をそれぞれ検出する。
@@ -1119,39 +1198,39 @@ def detect_ngram_repetition(
         lead_morphemes = ts.morphemes[:2]
         surfaces = [m.surface() for m in lead_morphemes]
         if len(surfaces) == 2:
-            is_tech_lead = _is_proper_noun_or_tech_term(lead_morphemes[0])
-            lead_bigrams.append((ts.line, ts.raw_text, "".join(surfaces), is_tech_lead))
+            # 文頭が固有名詞・英字の技術用語・数(「2019年」「Amazon」「Python」など)の反復は、
+            # 主題や日付を並べた自然な書き方で、上流の 2026-10 の測定で人間の文書と生成AIの文書の
+            # 件数に差がなかった。数えない。
+            first = lead_morphemes[0]
+            if (
+                _is_proper_noun_or_tech_term(first)
+                or first.part_of_speech()[1] == "数詞"
+                or re.match(r"[0-9０-９]", first.surface())
+            ):
+                continue
+            lead_bigrams.append((ts.line, ts.raw_text, "".join(surfaces)))
 
-    bigram_counter = Counter(text for _, _, text, _ in lead_bigrams)
+    bigram_counter = Counter(text for _, _, text in lead_bigrams)
     for bigram, count in bigram_counter.items():
         if count >= lead_repeat_threshold:
-            bigram_lines = [no for no, _, text, _ in lead_bigrams if text == bigram]
+            bigram_lines = [no for no, _, text in lead_bigrams if text == bigram]
             related = format_related_lines(bigram_lines)
-            for no, sent, text, is_tech_lead in lead_bigrams:
-                if text == bigram:
-                    # コーパス校正により、人間の意図的な反復と区別できないため
-                    # severity は常に info（判断材料の提示にとどめる。detail 参照）。
-                    severity = "info"
-                    if is_tech_lead:
-                        detail = (
-                            f"文頭2形態素「{bigram}」が{count}回反復（閾値{lead_repeat_threshold}回以上）。"
-                            f"固有名詞/技術用語由来の可能性が高い。{related}"
-                        )
-                    else:
-                        detail = (
-                            f"文頭2形態素「{bigram}」が{count}回反復（閾値{lead_repeat_threshold}回以上）。"
-                            f"人間の意図的な反復技法との区別がつかないため参考情報として提示。{related}"
-                        )
-                    findings.append(
-                        Finding(
-                            line=no,
-                            category="repeated_sentence_lead",
-                            excerpt=sent[:20],
-                            severity=severity,
-                            detail=detail,
-                            related_lines=bigram_lines,
-                        )
-                    )
+            # 出現ごとに数えると件数が膨らみ指摘の大半を占めるため、反復ごとに1件にまとめる。
+            # severity は常に info（人間の意図的な反復と区別できない）。
+            no, sent, _ = next(x for x in lead_bigrams if x[2] == bigram)
+            findings.append(
+                Finding(
+                    line=no,
+                    category="repeated_sentence_lead",
+                    excerpt=sent[:20],
+                    severity="info",
+                    detail=(
+                        f"文頭2形態素「{bigram}」が{count}回反復（閾値{lead_repeat_threshold}回以上）。"
+                        f"人間の意図的な反復技法との区別がつかないため参考情報として提示。{related}"
+                    ),
+                    related_lines=bigram_lines,
+                )
+            )
 
     lead_pos_ngrams = []
     for ts in tokenized:
@@ -1284,6 +1363,10 @@ def detect_lexical_diversity(
     return findings, stats
 
 
+_URL_IN_TEXT_RE = re.compile(r"https?://\S+")
+_IDENTIFIER_RE = re.compile(r"(?<![A-Za-z0-9_])[A-Za-z][A-Za-z0-9_.\-]*[A-Za-z0-9](?![A-Za-z0-9_])")
+
+
 def detect_low_specificity(
     lines: list[tuple[int, str]],
     raw_lines_by_no: dict[int, str] | None = None,
@@ -1340,6 +1423,17 @@ def detect_low_specificity(
         proper_noun_count = sum(
             1 for m in content_words if m.part_of_speech()[0] == "名詞" and m.part_of_speech()[1] == "固有名詞"
         )
+        # 英字の識別子(React、useState、`config.yaml` など)も、段落を具体的にする名前として数える。
+        # インラインコードは解析用テキストでは空白にしてあるので、原文の行から数える。
+        # sudachipy が英字の語を固有名詞と判定した分と二重に数えないよう、多いほうを採る。
+        raw_para = "\n".join(_raw_or_masked(raw_lines_by_no, no, t) for no, t in para_lines)
+        raw_para = _URL_IN_TEXT_RE.sub(" ", raw_para)
+        identifier_count = len(_IDENTIFIER_RE.findall(raw_para))
+        latin_proper = sum(
+            1 for m in content_words
+            if m.part_of_speech()[1] == "固有名詞" and re.fullmatch(r"[A-Za-z][\w.\-]*", m.surface())
+        )
+        proper_noun_count += max(0, identifier_count - latin_proper)
         abstract_noun_count = sum(
             1
             for m in content_words
@@ -1529,8 +1623,14 @@ def detect_inanimate_subject_morph(tokenized: list[TokenizedSentence]) -> list[F
 # 注意: この一群はまだ deep-analysis.md の定量コーパス計測を経ておらず、
 # 5文書の質的観察のみが根拠（暫定閾値）。EXPERIMENTAL_CATEGORIES に含めて
 # デフォルト無効化し、--experimental フラグを付けたときだけ有効にする。
+# ただし太字の多用(high_bold_density)だけは、上流 natural-japanese が 2026-10 に測って既定で有効にした
+# (5bec41d・d5adde2)。行頭の「**ラベル**:」を除いた文中の太字が1000字あたり3回以上(かつ3か所以上)になるのは、
+# 生成AI以前の Qiita 2022 で6%、LLM-jp 由来で0%、生成記事で6%、Qiita 2026 で22%。
+# ラベルの太字は、作者の読み比べで残したほうが読みやすく探しやすかった。
 # ---------------------------------------------------------------------------
 BOLD_SPAN_RE = re.compile(r"\*\*[^*\n]+\*\*")
+# 行頭(箇条の頭を含む)の「**ラベル**:」は項目を探す目印なので数えない
+BOLD_LABEL_RE = re.compile(r"^\s*(?:[-*+]|\d+[.)])?\s*\*\*[^*\n]+\*\*\s*[:：]", re.M)
 BOLD_DENSITY_PER_1000_THRESHOLD = 3.0
 BULLET_LINE_RATIO_THRESHOLD = 0.35
 BULLET_LINE_MIN_LINES = 10
@@ -1557,14 +1657,16 @@ EMOJI_SYMBOL_PER_1000_THRESHOLD = 2.0
 def detect_structural_ai_habits(raw_text: str) -> tuple[list[Finding], dict]:
     """マスク前の raw テキストに対して、Markdown 構造レベルの「教科書的AI癖」を検出する。
     太字密度・箇条書き行比率・定型見出し・番号付きフェーズ構造・絵文字/装飾記号密度の
-    5種類。すべて severity="info"、EXPERIMENTAL カテゴリ扱い（デフォルト無効）。
+    5種類。すべて severity="info"。high_bold_density 以外は EXPERIMENTAL カテゴリ扱い（デフォルト無効）。
     """
     findings: list[Finding] = []
     raw_lines = iter_lines_with_no(raw_text)
     total_chars = len(raw_text) or 1
 
     # 1) 太字密度
-    bold_hits = list(BOLD_SPAN_RE.finditer(raw_text))
+    label_starts = {m.end() - len(m.group(0).lstrip()) for m in BOLD_LABEL_RE.finditer(raw_text)}
+    bold_hits = [m for m in BOLD_SPAN_RE.finditer(raw_text)
+                 if not any(st <= m.start() <= st + 4 for st in label_starts)]
     bold_per_1000 = len(bold_hits) / total_chars * 1000
     if bold_per_1000 >= BOLD_DENSITY_PER_1000_THRESHOLD and len(bold_hits) >= 3:
         first_line = raw_text[: bold_hits[0].start()].count("\n") + 1
@@ -1572,11 +1674,11 @@ def detect_structural_ai_habits(raw_text: str) -> tuple[list[Finding], dict]:
             Finding(
                 line=first_line,
                 category="high_bold_density",
-                excerpt=f"太字スパン{len(bold_hits)}箇所（1000字あたり{bold_per_1000:.2f}）",
+                excerpt=f"文中の太字{len(bold_hits)}箇所（1000字あたり{bold_per_1000:.2f}）",
                 severity="info",
                 detail=(
-                    f"太字（**...**）の使用密度が閾値（1000字あたり{BOLD_DENSITY_PER_1000_THRESHOLD}）"
-                    "以上。強調の多用は教科書的なAI生成文に見られる傾向（実験的検出器、閾値は暫定）"
+                    f"文中の強調の太字（**...**）が閾値（1000字あたり{BOLD_DENSITY_PER_1000_THRESHOLD}）"
+                    "以上。行頭の「**ラベル**:」は数えていない"
                 ),
             )
         )
@@ -1682,15 +1784,14 @@ def detect_structural_ai_habits(raw_text: str) -> tuple[list[Finding], dict]:
 # 検出器（corpus/reports/archive/deep-analysis.md §3, §5）。sweepで閾値を緩めても
 # low_burstiness 以外は弁別力を示す根拠データがまだない（sweepレポート未生成）ため、
 # 削除はせず「実験的（experimental）」としてデフォルト無効化する。
-# 加えて、新設の構造層検出器（high_bold_density 等）もまだ定量校正前なので
-# 同様に実験的カテゴリに含める。
+# 加えて、新設の構造層検出器（high_bullet_ratio 等）もまだ定量校正前なので
+# 同様に実験的カテゴリに含める。high_bold_density は測定を経て既定で有効にした(構造層のコメントを参照)。
 # --experimental フラグを付けたときだけ、これらのカテゴリの finding を残す。
 EXPERIMENTAL_CATEGORIES: set[str] = {
     "high_length_autocorrelation",
     "paragraph_lead_conjunction",
     "repeated_syntax_template",
     "english_syntax_cleft_because",
-    "high_bold_density",
     "high_bullet_ratio",
     "boilerplate_heading",
     "numbered_phase_structure",
@@ -1742,6 +1843,7 @@ def run_lint(
         raw_lines_by_no,
         rate_critical_above=profile.get("antithesis_rate_critical_above", ANTITHESIS_RATE_CRITICAL_ABOVE),
     )
+    findings += detect_negation_repetition(lines, raw_lines_by_no)
     findings += detect_low_sentence_length_variance(sentences)
     findings += detect_english_syntax_smell(lines, raw_lines_by_no)
 
@@ -1849,6 +1951,56 @@ def print_human_report(
         print()
 
 
+def split_units(raw_text: str) -> list[dict]:
+    """段落ごとの確かめの単位(見出し・箇条書きの 1 項目・表の 1 行・地の文の段落)に分ける。
+
+    判定は keep_structure_text のマスク後の行で行い、フロントマター・コードブロック・
+    HTML コメント・日本語を含まない行を外す。表示には原文の行を使う。
+    出典: natural-japanese v1.6.0(1038d53)の scripts/paragraphs.py(MIT)。
+    """
+    raw_lines = raw_text.split("\n")
+    masked_lines = mask_markdown_structure(raw_text, keep_structure_text=True).split("\n")
+    units: list[dict] = []
+    cur: dict | None = None
+    for no, (raw, masked) in enumerate(zip(raw_lines, masked_lines), start=1):
+        if not masked.strip():
+            cur = None
+            continue
+        if _HEADING_RE.match(masked) or (_TABLE_ROW_RE.match(masked) and masked.count("|") >= 2):
+            if not _TABLE_DELIMITER_RE.match(masked):
+                kind = "見出し" if _HEADING_RE.match(masked) else "表"
+                units.append({"line": no, "kind": kind, "lines": [raw]})
+            cur = None
+            continue
+        if _LIST_ITEM_RE.match(masked) or cur is None:
+            cur = {"line": no, "kind": "箇条書き" if _LIST_ITEM_RE.match(masked) else "段落", "lines": [raw]}
+            units.append(cur)
+        else:
+            cur["lines"].append(raw)
+    return [
+        {"no": i, "line": u["line"], "kind": u["kind"], "text": "\n".join(u["lines"]).strip()}
+        for i, u in enumerate(units, start=1)
+    ]
+
+
+def print_paragraph_sheet(raw_text: str) -> None:
+    """段落ごとの確かめ(references/inspection.md 4.)の一覧を出す。判断はしない。
+
+    文書を通して読むだけだと、モデルは段落ごとの確かめを飛ばす。別のコマンドにすると
+    実行を省かれるので、毎回実行される lint の出力に含める(natural-japanese 1038d53)。
+    """
+    units = split_units(raw_text)
+    print(f"=== 段落ごとの確かめ(全 {len(units)} 段落。既存の文書を直すときは必須。references/inspection.md 4.) ===")
+    print("1段落ずつ、動詞と名詞をすべて見て、references/sentence.md 3.「読み手が何のことか取れない言い回し」の型に当たるものを")
+    print("「番号: 言い回し → 指しているもの(元の文書やコードにある事実・名前)」の形で書き出す。")
+    print("当たらない段落は「番号: なし」と書く。最後の段落まで書き出してから直す。途中で省かない。")
+    print()
+    for u in units:
+        body = u["text"].replace("\n", " / ")
+        print(f"[{u['no']}] L{u['line']} {u['kind']}: {body}")
+    print()
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(
         description="AI臭い日本語文章を決定的に検出する lint スクリプト（CI ゲートではない）。"
@@ -1934,9 +2086,11 @@ def main() -> int:
                 "summary": baseline_summary,
                 "resolved": resolved,
             }
+        output["paragraphs"] = split_units(text)
         print(json.dumps(output, ensure_ascii=False, indent=2))
     else:
         print_human_report(args.file, findings, stats, baseline_summary)
+        print_paragraph_sheet(text)
 
     # lint であって CI ゲートではない。文章の検出結果は件数に関わらず常に exit 0 とし、
     # 修正するかどうかの判断は人間（または後続の AI 自己点検フロー）に委ねる。

@@ -163,6 +163,15 @@ _INLINE_CODE_SPAN_RE = re.compile(r"``(?:[^`\n]|`(?!`))+``|`[^`\n]+`")
 # Markdown 内のリンク・画像 `[text](url)` / `![alt](url)` の url 部分。
 # alt/text 側は自然文の一部として残し、URL のみ空白化する。
 _MARKDOWN_LINK_URL_RE = re.compile(r"(\]\()([^)]*)(\))")
+# 画像 `![alt](url)` は alt も含めて丸ごと空白化する。alt は「image.png」「Screen Shot ...」の
+# ようなファイル名であることが多く、地の文として数えると文頭の反復などの誤検知になる。
+_MARKDOWN_IMAGE_RE = re.compile(r"!\[[^\]\n]*\]\([^)\n]*\)")
+# 地の文に直接書かれた URL と、HTML のタグ(`<img ...>` `<details>` `</h3>` など)。
+_BARE_URL_RE = re.compile(r"https?://[^\s)\]>」』）]+")
+_HTML_TAG_RE = re.compile(r"</?[A-Za-z][A-Za-z0-9-]*(?:\s[^<>\n]*)?/?>")
+# かな・漢字を1字も含まない行は、日本語の地の文ではない(英文の引用、URL や画像だけの行、
+# コードの断片など)。文の長さや文頭の反復の計算に入れない。
+_JAPANESE_CHAR_RE = re.compile(r"[ぁ-んァ-ヶ一-龠々〆ヵヶ]")
 
 
 def _mask_html_comments_in_line(line: str, in_comment: bool) -> tuple[str, bool]:
@@ -222,9 +231,12 @@ def _blank_inline_code_spans(line: str) -> str:
     """行内のインラインコードスパン・Markdownリンク/画像のURL部分を
     同じ長さの空白に置換する（オフセット保持）。"""
     line = _INLINE_CODE_SPAN_RE.sub(lambda m: " " * len(m.group(0)), line)
+    line = _MARKDOWN_IMAGE_RE.sub(lambda m: " " * len(m.group(0)), line)
+    line = _HTML_TAG_RE.sub(lambda m: " " * len(m.group(0)), line)
     # `](url)` の url 部分だけ空白化し、`](` と `)` はそのまま残す
     # （text/alt 側は文章の一部として解析対象に残すため）。
     line = _MARKDOWN_LINK_URL_RE.sub(lambda m: m.group(1) + " " * len(m.group(2)) + m.group(3), line)
+    line = _BARE_URL_RE.sub(lambda m: " " * len(m.group(0)), line)
     return line
 
 
@@ -303,7 +315,10 @@ def mask_markdown_structure(text: str, keep_structure_text: bool = False) -> str
             if not keep_structure_text:
                 masked_lines.append("")
                 continue
-        masked_lines.append(_blank_inline_code_spans(line))
+        line = _blank_inline_code_spans(line)
+        if line.strip() and not _JAPANESE_CHAR_RE.search(line):
+            line = ""
+        masked_lines.append(line)
     return "\n".join(masked_lines)
 
 
@@ -435,6 +450,6 @@ def read_source_file(path: Path) -> tuple[str | None, str | None]:
     if path.is_dir():
         return None, f"エラー: ディレクトリが指定されました（ファイルを指定してください）: {path}"
     try:
-        return path.read_text(encoding="utf-8"), None
+        return path.read_text(encoding="utf-8-sig"), None
     except (OSError, UnicodeDecodeError) as exc:
         return None, f"エラー: ファイルを読み込めません: {path} ({exc})"

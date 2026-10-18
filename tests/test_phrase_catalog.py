@@ -104,9 +104,9 @@ class PhraseCatalogTest(unittest.TestCase):
         self.assertEqual(warn_findings[0].severity, "warn")
 
     def test_yomiyasu_由来の語を検出する(self) -> None:
-        """yomiyasu 由来の 18 語は、ng か forms を含む例文でカタログの severity として 1 件だけ検出される。
+        """yomiyasu 由来の 41 語は、ng か forms を含む例文でカタログの severity として 1 件だけ検出される。
 
-        13 語は info、システム開発の文書で字義どおりに使わない 5 語は warn とする。
+        36 語は info、システム開発の文書で字義どおりに使わない 5 語は warn とする。
         """
         info_sentences = [
             "画面の手触りを確かめた。",
@@ -122,6 +122,29 @@ class PhraseCatalogTest(unittest.TestCase):
             "警告を 1 つずつ潰していく。",
             "議論はその案に収斂した。",
             "実装の詳細まで踏み込んで説明する。",
+            "応答時間が大幅に短くなった。",
+            "劇的な変化があった。",
+            "処理が飛躍的に速くなった。",
+            "精度が格段に上がった。",
+            "応答が著しく遅い。",
+            "利用者が圧倒的に多い。",
+            "桁違いの速さで処理する。",
+            "段違いの精度で判定する。",
+            "今月は土台づくりに充てる。",
+            "移行の第一歩とする。",
+            "大きな一歩を踏み出した。",
+            "設定の管理が成否の鍵を握る。",
+            "円安が追い風になった。",
+            "新機能を普及の起爆剤にする。",
+            "この文書を開発の羅針盤とする。",
+            "利用者と開発者の架け橋になる。",
+            "このサービスは事業の屋台骨である。",
+            "全体の品質を底上げする。",
+            "盤石な体制を作る。",
+            "古い画面に息を吹き込む。",
+            "試作品に命を吹き込む。",
+            "障害の連鎖を断ち切る。",
+            "検索に新たな地平を開いた。",
         ]
         warn_sentences = [
             "設定ファイルが壊れる。",
@@ -145,6 +168,9 @@ class PhraseCatalogTest(unittest.TestCase):
     def test_温度感知を巻き込まない(self) -> None:
         self.assertEqual(lint.detect_forbidden_phrases([(1, "温度感知センサーで計測する。")]), [])
 
+    def test_最大幅にを巻き込まない(self) -> None:
+        self.assertEqual(lint.detect_forbidden_phrases([(1, "列を最大幅に広げる。")]), [])
+
     def test_severity_が_info_か_warn_に限られる(self) -> None:
         for entry in self.phrases:
             self.assertIn(entry["severity"], ("info", "warn"), entry["ng"])
@@ -162,6 +188,10 @@ class FillerPhraseTest(unittest.TestCase):
             "**重要なのは**、速度である。",
             "ここで**重要なのは、速度である。",
             "ここで、重要なのは速度だ。",
+            "次の章では設定を説明します。",
+            "一度試してみてはいかがでしょうか。",
+            "原因は設定と言っても過言ではありません。",
+            "原因は設定と言っても過言ではありません!",
         ]
         for sentence in sentences:
             with self.subTest(sentence=sentence):
@@ -174,6 +204,8 @@ class FillerPhraseTest(unittest.TestCase):
             "この設定で重要なのは、タイムアウトだ。",
             "ボタンを押してください。",
             "**この設定で重要なのは**、速度だ。",
+            "次の章では API の一覧を表にした。",
+            "次の章では説明を省く。",
         ]:
             with self.subTest(sentence=sentence):
                 self.assertEqual(lint.detect_filler_phrases([(1, sentence)]), [])
