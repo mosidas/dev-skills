@@ -22,6 +22,7 @@ python3 -m unittest discover -s tests -t tests -p test_phrase_catalog.py
 | :-- | :-- | :-- |
 | `helpers.py` | — | 一時ディレクトリとサブプロセス実行の共通処理 |
 | `test_phrase_catalog.py` | `skills/write-doc/scripts/forbidden_phrases.json` | 動詞・名詞のカタログの整合(型が 4 つ・重複・包含・OK 例の必須・severity 方針)と lint.py の検出語・severity の導出 |
+| `test_lint_detectors.py` | `skills/write-doc/scripts/lint.py`・`textcore.py` | 前処理(画像・地の文の URL・HTML タグの空白化、かな・漢字を含まない行の除外と行数の保持)と、BOM 付きファイルの読み込み・不正な UTF-8 のエラー |
 | `test_inspection_hooks.py` | `hooks/` | 検査対象の判定・重大カテゴリの絞り込み・設定の上書き・警告文・完了ブロックと上限、検査できない環境での素通し |
 | `test_respond_hook.py` | `hooks/inject_respond.py` | frontmatter の除去(CRLF・本文中の区切り線を含む)・本文の出力・スキルが無い環境での素通し |
 | `test_session_url_hook.py` | `hooks/guard_session_url.py` | コマンド文字列と本文ファイル(`-F`・`--file`・`--body-file`、空白を含むパス)にあるセッション URL と `Claude-Session:` の行の拒否、本文ファイルが読めないときの拒否、`Co-Authored-By`・`Generated with`・`git log --grep`・`-F -`・Bash 以外のツール・不正な JSON の素通し |
