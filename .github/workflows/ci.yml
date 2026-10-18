@@ -1,0 +1,32 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    # shortcut: 仮に 10 分, 手元で unittest は約 10 秒・npm install は 1 分前後。CI の実測が 5 分を超えたら見直す
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - run: python3 --version
+      - run: python3 -m unittest discover -s tests -t tests
+
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - run: npm install -g @anthropic-ai/claude-code@2.1.302
+      - run: claude --version
+      - run: claude plugin validate . --strict
