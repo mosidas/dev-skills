@@ -19,7 +19,7 @@
 
 - Markdown 形式で記述し、GitHub での表示を前提に [GitHub Flavored Markdown](https://github.github.com/gfm/) に従う。
 - 英数字は半角を使用する。
-- 文体は常体で統一することを推奨する。
+- 文体は常体で統一することを推奨する。読み手に答えを求める問いは、常体の文書でも敬体で書く(`readers.md` 3.)。
 - 能動態を優先する。
 - 体言止めを避ける。
 - 略語は、初出時に正式名称を併記する(例: `GitHub Flavored Markdown(GFM)`)。
