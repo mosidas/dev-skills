@@ -237,8 +237,8 @@ $ agy plugin validate .
 リポジトリのルートで次のコマンドを実行する。1 ケースだけ回すときは `--case <name>` を付ける。Claude Code のサンドボックス内からは実行できないため、通常の端末で実行する。`--max-cost-usd 5` は実績($3.01)に基づく値である。
 
 ```console
-$ claude plugin eval . --trust-plugin --allow-tools Bash Write Edit -j 4 --max-cost-usd 5 --no-publish
-$ claude plugin eval . --trust-plugin --allow-tools Bash Write Edit -j 4 --max-cost-usd 5 --no-publish --case write-doc-report
+$ claude plugin eval . --trust-plugin --allow-tools Write Edit -j 4 --max-cost-usd 5 --no-publish
+$ claude plugin eval . --trust-plugin --allow-tools Write Edit -j 4 --max-cost-usd 5 --no-publish --case write-doc-report
 ```
 
 結果は `evals/results/<timestamp>/` に `aggregate-result.json` と HTML レポートとして出力される。このディレクトリは git 管理外である。`evals/RESULTS.md` は eval が生成するファイルではなく、実行ごとに人が手で書く記録である。実行のたびに、`aggregate-result.json` と HTML レポートの値から RESULTS.md の表に 1 回分を書き足す。RESULTS.md の表は次の観点で読む。
