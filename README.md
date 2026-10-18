@@ -140,6 +140,8 @@ PostToolUse と Stop は日本語文書の検査を行う。発火するのは�
 └── plugin.json            # Codex CLI 向けのマニフェスト
 plugin.json                # Antigravity CLI 向けのマニフェスト
 lefthook.yml                # git hook(pre-commit: plugin validate、pre-push: unittest)
+.github/workflows/ci.yml   # CI(ubuntu-latest で unittest と plugin validate --strict)
+LICENSE                    # MIT ライセンスの全文
 agents/
 ├── planner.md             # 計画(opus、Write/Edit 不可、ponytail 読み込み。品質がプロダクトのとき secure・observe・recover も、UI を含むタスクでは design-ui も読み込む)
 ├── implementer.md         # 実装とコミット(opus、ponytail 読み込み。品質がプロダクトのとき secure・observe・recover も、UI を含むタスクでは design-ui も読み込む)
@@ -192,7 +194,7 @@ hooks/
 ├── inspect_lib.py         # 共通処理(設定・対象判定・lint 実行・警告文・状態)
 ├── inspection.config.json # 検査設定の正本
 └── rewrite_guides.json    # カテゴリごとの書き直し指針・言い換え例
-tests/                     # カタログと hooks の単体テスト、test_render.py(draw-diagram の render.py)、test_build_loop.py(build の loop.py)、corpus/(境界値コーパス)
+tests/                     # カタログと hooks の単体テスト、test_render.py(draw-diagram の render.py)、test_build_loop.py(build の loop.py)、test_manifest_version.py(2 つのマニフェストの version の一致)、corpus/(境界値コーパス)
 evals/                     # claude plugin eval のケース(prompt.md と graders/)。結果の出力先 results/ は git 管理外
 ```
 
@@ -200,7 +202,7 @@ evals/                     # claude plugin eval のケース(prompt.md と grade
 
 ### 6.1. プラグインの変更手順
 
-テストは標準ライブラリの `unittest` だけで動く。
+テストは標準ライブラリの `unittest` だけで動く。lefthook の pre-push と GitHub Actions(`.github/workflows/ci.yml`)が同じコマンドを実行する。
 
 ```console
 $ python3 -m unittest discover -s tests -t tests
