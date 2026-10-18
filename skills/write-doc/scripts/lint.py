@@ -726,6 +726,44 @@ def detect_antithesis_repetition(
     return findings
 
 
+# 文末を打ち消しで終える文(「〜ではない。」「〜わけではない。」)の多用。GPT 系の文書に特に多い。
+# 2026-10 の測定(上流 natural-japanese 30310f2、corpus/private/mlm/tests.json):文書内に4回以上
+# あったのは、生成AI以前の人間の文書400本で0本、Claude・Gemini の文書65本で0本、GPT 系の文書35本で
+# 22本。「〜ではないでしょうか」「〜ではないか」のような問いかけ・推量は数えない(人間の文書に多く、
+# 打ち消しではないため)。
+NEGATION_END_RE = re.compile(r"(?:ではない|ではありません|じゃない|わけではない|わけではありません|わけじゃない)(?:のです|んです|のだ)?$")
+NEGATION_REPETITION_THRESHOLD = 4
+
+
+def detect_negation_repetition(
+    lines: list[tuple[int, str]],
+    raw_lines_by_no: dict[int, str] | None = None,
+    threshold: int = NEGATION_REPETITION_THRESHOLD,
+) -> list[Finding]:
+    """文末を打ち消しで終える文を文書全体で数え、threshold 回以上なら多用として検出する。"""
+    hits = []
+    for no, sent, raw in split_sentences_with_lines(lines, raw_lines_by_no):
+        body = sent.strip().rstrip("。．")
+        if NEGATION_END_RE.search(body):
+            hits.append((no, (raw or sent).strip()))
+    findings = []
+    if len(hits) >= threshold:
+        all_lines = [no for no, _ in hits]
+        related = format_related_lines(all_lines)
+        for no, text in hits:
+            findings.append(
+                Finding(
+                    line=no,
+                    category="negation_repetition",
+                    excerpt=text[:60],
+                    severity="warn",
+                    detail=f"文末を打ち消しで終える文が文書内で{len(hits)}回(閾値{threshold}回以上)。{related}",
+                    related_lines=all_lines,
+                )
+            )
+    return findings
+
+
 
 def detect_low_sentence_length_variance(
     sentences: list[tuple[int, str, str]],
@@ -1107,7 +1145,7 @@ _LATIN_TECH_TOKEN_RE = re.compile(r"^[A-Za-z][A-Za-z0-9\-_.]*$")
 
 def _is_proper_noun_or_tech_term(morpheme) -> bool:
     """先頭形態素が固有名詞、またはラテン文字・数字主体（製品名/ライブラリ名等）かを判定する。
-    カタカナ語は一般語（「クラウド」「システム」等）も多く誤って severity を下げるリスクが
+    カタカナ語は一般語（「クラウド」「システム」等）も多く誤って数えなくなるリスクが
     高いため、ここでは対象外とする（迷ったら対象外でよい、という方針）。
     """
     pos = morpheme.part_of_speech()
@@ -1779,6 +1817,7 @@ def run_lint(
         raw_lines_by_no,
         rate_critical_above=profile.get("antithesis_rate_critical_above", ANTITHESIS_RATE_CRITICAL_ABOVE),
     )
+    findings += detect_negation_repetition(lines, raw_lines_by_no)
     findings += detect_low_sentence_length_variance(sentences)
     findings += detect_english_syntax_smell(lines, raw_lines_by_no)
 

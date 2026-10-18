@@ -100,6 +100,10 @@ class ForbiddenBoundaryTest(unittest.TestCase):
     def test_カタカナの直後のカタカナ始まりの語は数えない(self) -> None:
         self.assertEqual(self.phrases("ダブルチェックする。"), [])
 
+    def test_漢字の直後の手で始まる語は数えない(self) -> None:
+        # 「人手」は 1 語であり、「手で修正」の語の境目ではない。
+        self.assertEqual(self.phrases("人手で修正する。"), [])
+
     def test_1行の中の出現をすべて数える(self) -> None:
         self.assertEqual(len(self.phrases("仕様に落とし込む。仕様に落とし込む。")), 2)
 
@@ -113,6 +117,32 @@ class TranslationeseTest(unittest.TestCase):
 
     def test_という点では検出する(self) -> None:
         self.assertEqual(self.categories("性能という点で優れている。"), ["translationese"])
+
+
+class NegationRepetitionTest(unittest.TestCase):
+    def findings(self, text: str) -> list:
+        return lint.detect_negation_repetition(_lines(text))
+
+    def test_文末の打ち消しが4文あれば全文を検出する(self) -> None:
+        text = (
+            "A は必須ではない。B は対象ではありません。"
+            "C は不要というわけではない。D は速さの問題ではない。"
+        )
+        found = self.findings(text)
+        self.assertEqual(len(found), 4)
+        self.assertEqual({f.severity for f in found}, {"warn"})
+        self.assertEqual({f.category for f in found}, {"negation_repetition"})
+
+    def test_3文なら検出しない(self) -> None:
+        text = "A は必須ではない。B は対象ではありません。C は不要というわけではない。"
+        self.assertEqual(self.findings(text), [])
+
+    def test_問いかけと推量は数えない(self) -> None:
+        text = (
+            "A は必須ではない。B は対象ではありません。C は不要というわけではない。"
+            "D は速さの問題ではないか。E は誤りではないでしょうか。"
+        )
+        self.assertEqual(self.findings(text), [])
 
 
 class _Morpheme:
