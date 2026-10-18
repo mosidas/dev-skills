@@ -370,21 +370,22 @@ GENRE_PROFILES: dict[str, dict] = {
     #   - lead_repeat_threshold: tech と同値（7）を維持。実測でこの値が
     #     human_business の誤検知（デフォルト閾値6で20%→閾値7で10%）を
     #     半減させつつ ai_business の検出率（4%）を落とさない局所最適点。
-    #   - disabled_categories: high_bullet_ratio・high_bold_density・
+    #   - disabled_categories: high_bullet_ratio・
     #     boilerplate_heading・numbered_phase_structure は、事業文書
-    #     （報告書・提案書・議事録等）で箇条書き・太字強調・「まとめ」等の
+    #     （報告書・提案書・議事録等）で箇条書き・「まとめ」等の
     #     定型見出し・フェーズ/ステップ表現が正当に多用されるため、
     #     AI側の発火率がどうであれ business ジャンルでは無効化する。
     #     これらはいずれも EXPERIMENTAL_CATEGORIES に属し、デフォルトでは
     #     既に出力されない（--experimental 指定時のみ影響する）が、将来
     #     デフォルト化された場合の誤検知を防ぐため、ジャンル側でも明示的に
     #     無効化しておく。
+    #     high_bold_density は無効にしない。仕事の文書でも文中の太字が多すぎると
+    #     読みにくい(上流 natural-japanese 5bec41d・d5adde2 の測定。構造層のコメントを参照)。
     "business": {
         "nominal_min_chars": 3000,
         "lead_repeat_threshold": 7,
         "disabled_categories": {
             "high_bullet_ratio",
-            "high_bold_density",
             "boilerplate_heading",
             "numbered_phase_structure",
         },
@@ -727,7 +728,7 @@ def detect_antithesis_repetition(
 
 
 # 文末を打ち消しで終える文(「〜ではない。」「〜わけではない。」)の多用。GPT 系の文書に特に多い。
-# 2026-10 の測定(上流 natural-japanese 30310f2、corpus/private/mlm/tests.json):文書内に4回以上
+# 2026-10 の測定(上流 natural-japanese 30310f2、手元の評価用データ):文書内に4回以上
 # あったのは、生成AI以前の人間の文書400本で0本、Claude・Gemini の文書65本で0本、GPT 系の文書35本で
 # 22本。「〜ではないでしょうか」「〜ではないか」のような問いかけ・推量は数えない(人間の文書に多く、
 # 打ち消しではないため)。
@@ -1604,8 +1605,14 @@ def detect_inanimate_subject_morph(tokenized: list[TokenizedSentence]) -> list[F
 # 注意: この一群はまだ deep-analysis.md の定量コーパス計測を経ておらず、
 # 5文書の質的観察のみが根拠（暫定閾値）。EXPERIMENTAL_CATEGORIES に含めて
 # デフォルト無効化し、--experimental フラグを付けたときだけ有効にする。
+# ただし太字の多用(high_bold_density)だけは、上流 natural-japanese が 2026-10 に測って既定で有効にした
+# (5bec41d・d5adde2)。行頭の「**ラベル**:」を除いた文中の太字が1000字あたり3回以上(かつ3か所以上)になるのは、
+# 生成AI以前の Qiita 2022 で6%、LLM-jp 由来で0%、生成記事で6%、Qiita 2026 で22%。
+# ラベルの太字は、作者の読み比べで残したほうが読みやすく探しやすかった。
 # ---------------------------------------------------------------------------
 BOLD_SPAN_RE = re.compile(r"\*\*[^*\n]+\*\*")
+# 行頭(箇条の頭を含む)の「**ラベル**:」は項目を探す目印なので数えない
+BOLD_LABEL_RE = re.compile(r"^\s*(?:[-*+]|\d+[.)])?\s*\*\*[^*\n]+\*\*\s*[:：]", re.M)
 BOLD_DENSITY_PER_1000_THRESHOLD = 3.0
 BULLET_LINE_RATIO_THRESHOLD = 0.35
 BULLET_LINE_MIN_LINES = 10
@@ -1632,14 +1639,16 @@ EMOJI_SYMBOL_PER_1000_THRESHOLD = 2.0
 def detect_structural_ai_habits(raw_text: str) -> tuple[list[Finding], dict]:
     """マスク前の raw テキストに対して、Markdown 構造レベルの「教科書的AI癖」を検出する。
     太字密度・箇条書き行比率・定型見出し・番号付きフェーズ構造・絵文字/装飾記号密度の
-    5種類。すべて severity="info"、EXPERIMENTAL カテゴリ扱い（デフォルト無効）。
+    5種類。すべて severity="info"。high_bold_density 以外は EXPERIMENTAL カテゴリ扱い（デフォルト無効）。
     """
     findings: list[Finding] = []
     raw_lines = iter_lines_with_no(raw_text)
     total_chars = len(raw_text) or 1
 
     # 1) 太字密度
-    bold_hits = list(BOLD_SPAN_RE.finditer(raw_text))
+    label_starts = {m.end() - len(m.group(0).lstrip()) for m in BOLD_LABEL_RE.finditer(raw_text)}
+    bold_hits = [m for m in BOLD_SPAN_RE.finditer(raw_text)
+                 if not any(st <= m.start() <= st + 4 for st in label_starts)]
     bold_per_1000 = len(bold_hits) / total_chars * 1000
     if bold_per_1000 >= BOLD_DENSITY_PER_1000_THRESHOLD and len(bold_hits) >= 3:
         first_line = raw_text[: bold_hits[0].start()].count("\n") + 1
@@ -1647,11 +1656,11 @@ def detect_structural_ai_habits(raw_text: str) -> tuple[list[Finding], dict]:
             Finding(
                 line=first_line,
                 category="high_bold_density",
-                excerpt=f"太字スパン{len(bold_hits)}箇所（1000字あたり{bold_per_1000:.2f}）",
+                excerpt=f"文中の太字{len(bold_hits)}箇所（1000字あたり{bold_per_1000:.2f}）",
                 severity="info",
                 detail=(
-                    f"太字（**...**）の使用密度が閾値（1000字あたり{BOLD_DENSITY_PER_1000_THRESHOLD}）"
-                    "以上。強調の多用は教科書的なAI生成文に見られる傾向（実験的検出器、閾値は暫定）"
+                    f"文中の強調の太字（**...**）が閾値（1000字あたり{BOLD_DENSITY_PER_1000_THRESHOLD}）"
+                    "以上。行頭の「**ラベル**:」は数えていない"
                 ),
             )
         )
@@ -1757,15 +1766,14 @@ def detect_structural_ai_habits(raw_text: str) -> tuple[list[Finding], dict]:
 # 検出器（corpus/reports/archive/deep-analysis.md §3, §5）。sweepで閾値を緩めても
 # low_burstiness 以外は弁別力を示す根拠データがまだない（sweepレポート未生成）ため、
 # 削除はせず「実験的（experimental）」としてデフォルト無効化する。
-# 加えて、新設の構造層検出器（high_bold_density 等）もまだ定量校正前なので
-# 同様に実験的カテゴリに含める。
+# 加えて、新設の構造層検出器（high_bullet_ratio 等）もまだ定量校正前なので
+# 同様に実験的カテゴリに含める。high_bold_density は測定を経て既定で有効にした(構造層のコメントを参照)。
 # --experimental フラグを付けたときだけ、これらのカテゴリの finding を残す。
 EXPERIMENTAL_CATEGORIES: set[str] = {
     "high_length_autocorrelation",
     "paragraph_lead_conjunction",
     "repeated_syntax_template",
     "english_syntax_cleft_because",
-    "high_bold_density",
     "high_bullet_ratio",
     "boilerplate_heading",
     "numbered_phase_structure",

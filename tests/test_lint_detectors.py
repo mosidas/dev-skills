@@ -144,6 +144,33 @@ class NegationRepetitionTest(unittest.TestCase):
         )
         self.assertEqual(self.findings(text), [])
 
+    def test_じゃないと文末ののだのですも数える(self) -> None:
+        text = (
+            "A は必須じゃない。B は対象ではないのだ。"
+            "C は不要というわけではないのです。D は速さの問題ではない。"
+        )
+        self.assertEqual(len(self.findings(text)), 4)
+
+
+class BoldDensityTest(unittest.TestCase):
+    def bold(self, text: str) -> list:
+        findings, _ = lint.detect_structural_ai_habits(text)
+        return [f for f in findings if f.category == "high_bold_density"]
+
+    def test_文中の太字が閾値以上なら1件(self) -> None:
+        text = "設定は**必ず**保存する。値は**半角**で書く。期限は**月末**とする。\n"
+        found = self.bold(text)
+        self.assertEqual(len(found), 1)
+        self.assertEqual(found[0].severity, "info")
+
+    def test_行頭のラベルの太字は数えない(self) -> None:
+        text = "".join(f"- **項目{c}**: 説明を書く。\n" for c in "ABCDE") + "**名前**：値を書く。\n"
+        self.assertEqual(self.bold(text), [])
+
+    def test_既定で有効でありジャンルでも無効にしない(self) -> None:
+        self.assertNotIn("high_bold_density", lint.EXPERIMENTAL_CATEGORIES)
+        self.assertNotIn("high_bold_density", lint.GENRE_PROFILES["business"]["disabled_categories"])
+
 
 class _Morpheme:
     def __init__(self, surface: str, pos: tuple[str, ...]) -> None:
