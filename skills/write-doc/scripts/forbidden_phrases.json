@@ -14,7 +14,7 @@
       "ref": "sentence.md 3."
     },
     "pseudo_concrete": {
-      "label": "質感・認知を装う名詞・形容語(中身を伴わない疑似具体語)",
+      "label": "質感・認知・程度を装う名詞・形容語・副詞(中身を伴わない疑似具体語)",
       "ref": "sentence.md 3."
     }
   },
@@ -577,6 +577,237 @@
         "「受け持つ」と書くか、行為者を主語にした文(「営業が顧客を獲得する」)に改める"
       ],
       "note": "2026-10-18 追加(運用での指摘)。forms の「担い」は「担い手」にも一致する(意図的。「担う」を全面的に避けるため)"
+    },
+    {
+      "ng": "大幅に",
+      "forms": [
+        "大幅な"
+      ],
+      "type": "pseudo_concrete",
+      "severity": "info",
+      "ok": [
+        "変化の量を数値で書く。数値が無ければ語を削る"
+      ],
+      "note": "2026-10-18 追加(yomiyasu v2.0.1 references/lists/fact-gaps.txt の degree)。数値を同じ文に書いたときは残してよい"
+    },
+    {
+      "ng": "劇的に",
+      "forms": [
+        "劇的な"
+      ],
+      "type": "pseudo_concrete",
+      "severity": "info",
+      "ok": [
+        "変化の量を数値で書く。数値が無ければ語を削る"
+      ],
+      "note": "2026-10-18 追加(yomiyasu v2.0.1 references/lists/fact-gaps.txt の degree)。数値を同じ文に書いたときは残してよい"
+    },
+    {
+      "ng": "飛躍的に",
+      "forms": [
+        "飛躍的な"
+      ],
+      "type": "pseudo_concrete",
+      "severity": "info",
+      "ok": [
+        "変化の量を数値で書く。数値が無ければ語を削る"
+      ],
+      "note": "2026-10-18 追加(yomiyasu v2.0.1 references/lists/fact-gaps.txt の degree)。数値を同じ文に書いたときは残してよい"
+    },
+    {
+      "ng": "格段に",
+      "forms": [
+        "格段の"
+      ],
+      "type": "pseudo_concrete",
+      "severity": "info",
+      "ok": [
+        "変化の量を数値で書く。数値が無ければ語を削る"
+      ],
+      "note": "2026-10-18 追加(yomiyasu v2.0.1 references/lists/fact-gaps.txt の degree)。数値を同じ文に書いたときは残してよい"
+    },
+    {
+      "ng": "著しく",
+      "forms": [
+        "著しい"
+      ],
+      "type": "pseudo_concrete",
+      "severity": "info",
+      "ok": [
+        "変化の量を数値で書く。数値が無ければ語を削る"
+      ],
+      "note": "2026-10-18 追加(yomiyasu v2.0.1 references/lists/fact-gaps.txt の degree)。数値を同じ文に書いたときは残してよい"
+    },
+    {
+      "ng": "圧倒的に",
+      "forms": [
+        "圧倒的な"
+      ],
+      "type": "pseudo_concrete",
+      "severity": "info",
+      "ok": [
+        "変化の量を数値で書く。数値が無ければ語を削る"
+      ],
+      "note": "2026-10-18 追加(yomiyasu v2.0.1 references/lists/fact-gaps.txt の degree)。数値を同じ文に書いたときは残してよい"
+    },
+    {
+      "ng": "桁違い",
+      "type": "pseudo_concrete",
+      "severity": "info",
+      "ok": [
+        "変化の量を数値で書く。数値が無ければ語を削る"
+      ],
+      "note": "2026-10-18 追加(yomiyasu v2.0.1 references/lists/fact-gaps.txt の degree)。数値を同じ文に書いたときは残してよい"
+    },
+    {
+      "ng": "段違い",
+      "type": "pseudo_concrete",
+      "severity": "info",
+      "ok": [
+        "変化の量を数値で書く。数値が無ければ語を削る"
+      ],
+      "note": "2026-10-18 追加(yomiyasu v2.0.1 references/lists/fact-gaps.txt の degree)。数値を同じ文に書いたときは残してよい"
+    },
+    {
+      "ng": "土台づくり",
+      "forms": [
+        "土台作り"
+      ],
+      "type": "imprecise",
+      "severity": "info",
+      "ok": [
+        "何を先に作る・整備するのか(作るモジュール・決める規約)を名指しする"
+      ],
+      "note": "2026-10-18 追加(yomiyasu v2.0.1 references/lists/fact-gaps.txt の figure)"
+    },
+    {
+      "ng": "第一歩",
+      "type": "imprecise",
+      "severity": "info",
+      "ok": [
+        "最初に行う作業そのもの(何を、いつまでに)を書く"
+      ],
+      "note": "2026-10-18 追加(yomiyasu v2.0.1 references/lists/fact-gaps.txt の figure)"
+    },
+    {
+      "ng": "大きな一歩",
+      "type": "imprecise",
+      "severity": "info",
+      "ok": [
+        "何が完了し、何ができるようになったかを書く"
+      ],
+      "note": "2026-10-18 追加(yomiyasu v2.0.1 references/lists/fact-gaps.txt の figure)"
+    },
+    {
+      "ng": "鍵を握",
+      "forms": [
+        "カギを握"
+      ],
+      "type": "imprecise",
+      "severity": "info",
+      "ok": [
+        "結果を左右する要因を名指しし、どう影響するかを書く"
+      ],
+      "note": "2026-10-18 追加(yomiyasu v2.0.1 references/lists/fact-gaps.txt の figure)"
+    },
+    {
+      "ng": "追い風",
+      "type": "imprecise",
+      "severity": "info",
+      "ok": [
+        "有利に働く条件(需要の増加・規制の変更など)を名指しする"
+      ],
+      "note": "2026-10-18 追加(yomiyasu v2.0.1 references/lists/fact-gaps.txt の figure)"
+    },
+    {
+      "ng": "起爆剤",
+      "type": "imprecise",
+      "severity": "info",
+      "ok": [
+        "何が何を引き起こすか(施策と、それで増える指標)を書く"
+      ],
+      "note": "2026-10-18 追加(yomiyasu v2.0.1 references/lists/fact-gaps.txt の figure)"
+    },
+    {
+      "ng": "羅針盤",
+      "type": "imprecise",
+      "severity": "info",
+      "ok": [
+        "判断の基準そのもの(規約・指標・方針)を名指しする"
+      ],
+      "note": "2026-10-18 追加(yomiyasu v2.0.1 references/lists/fact-gaps.txt の figure)"
+    },
+    {
+      "ng": "架け橋",
+      "type": "imprecise",
+      "severity": "info",
+      "ok": [
+        "何と何を、どう接続・仲介するかを書く"
+      ],
+      "note": "2026-10-18 追加(yomiyasu v2.0.1 references/lists/fact-gaps.txt の figure)"
+    },
+    {
+      "ng": "屋台骨",
+      "type": "imprecise",
+      "severity": "info",
+      "ok": [
+        "依存している中核の部品・事業を名指しし、何が依存しているかを書く"
+      ],
+      "note": "2026-10-18 追加(yomiyasu v2.0.1 references/lists/fact-gaps.txt の figure)"
+    },
+    {
+      "ng": "底上げ",
+      "type": "imprecise",
+      "severity": "info",
+      "ok": [
+        "どの指標をどれだけ上げるかを書く"
+      ],
+      "note": "2026-10-18 追加(yomiyasu v2.0.1 references/lists/fact-gaps.txt の figure)"
+    },
+    {
+      "ng": "盤石",
+      "type": "imprecise",
+      "severity": "info",
+      "ok": [
+        "何が保証されているか(冗長化・試験の範囲・実績値)を書く"
+      ],
+      "note": "2026-10-18 追加(yomiyasu v2.0.1 references/lists/fact-gaps.txt の figure)"
+    },
+    {
+      "ng": "息を吹き込",
+      "type": "imprecise",
+      "severity": "info",
+      "ok": [
+        "何を追加・更新して、何が使えるようになったかを書く"
+      ],
+      "note": "2026-10-18 追加(yomiyasu v2.0.1 references/lists/fact-gaps.txt の figure)"
+    },
+    {
+      "ng": "命を吹き込",
+      "type": "imprecise",
+      "severity": "info",
+      "ok": [
+        "何を実装して、何が動くようになったかを書く"
+      ],
+      "note": "2026-10-18 追加(yomiyasu v2.0.1 references/lists/fact-gaps.txt の figure)"
+    },
+    {
+      "ng": "連鎖を断ち切",
+      "type": "imprecise",
+      "severity": "info",
+      "ok": [
+        "止める事象と止め方(どの処理で何を遮断するか)を書く"
+      ],
+      "note": "2026-10-18 追加(yomiyasu v2.0.1 references/lists/fact-gaps.txt の figure)"
+    },
+    {
+      "ng": "新たな地平",
+      "type": "imprecise",
+      "severity": "info",
+      "ok": [
+        "新しくできるようになったこと(機能・対象・範囲)を名指しする"
+      ],
+      "note": "2026-10-18 追加(yomiyasu v2.0.1 references/lists/fact-gaps.txt の figure)"
     }
   ],
   "removed": [
