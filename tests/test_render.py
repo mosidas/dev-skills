@@ -291,6 +291,7 @@ class ScreenshotTimeoutTest(helpers.TempDirTestCase):
     def _write_png_then_sleep(self, seconds: int) -> "Path":
         # IEND チャンクまで書き終えた完成品の PNG として扱われるよう、末尾に
         # 正しい IEND チャンクを持たせる(シグネチャ8バイト + 任意の内容 + IEND 12バイト)。
+        # dash の printf は \x を解釈しないため 8 進で書く。
         return self.write(
             "dummy-chrome.sh",
             "#!/bin/sh\n"
@@ -299,8 +300,8 @@ class ScreenshotTimeoutTest(helpers.TempDirTestCase):
             "    --screenshot=*) png=\"${arg#--screenshot=}\" ;;\n"
             "  esac\n"
             "done\n"
-            'printf \'\\x89PNG\\x0d\\x0a\\x1a\\x0a\' > "$png"\n'
-            'printf \'\\x00\\x00\\x00\\x00IEND\\xae\\x42\\x60\\x82\' >> "$png"\n'
+            'printf \'\\211PNG\\015\\012\\032\\012\' > "$png"\n'
+            'printf \'\\000\\000\\000\\000IEND\\256\\102\\140\\202\' >> "$png"\n'
             f"sleep {seconds}\n",
         )
 
@@ -314,7 +315,7 @@ class ScreenshotTimeoutTest(helpers.TempDirTestCase):
             "    --screenshot=*) png=\"${arg#--screenshot=}\" ;;\n"
             "  esac\n"
             "done\n"
-            'printf \'\\x89PNG\\x0d\\x0a\\x1a\\x0a\' > "$png"\n'
+            'printf \'\\211PNG\\015\\012\\032\\012\' > "$png"\n'
             f"sleep {seconds}\n",
         )
 
@@ -380,8 +381,8 @@ class ScreenshotTimeoutTest(helpers.TempDirTestCase):
             "  esac\n"
             "done\n"
             "head -c 262144 /dev/urandom 1>&2\n"
-            'printf \'\\x89PNG\\x0d\\x0a\\x1a\\x0a\' > "$png"\n'
-            'printf \'\\x00\\x00\\x00\\x00IEND\\xae\\x42\\x60\\x82\' >> "$png"\n'
+            'printf \'\\211PNG\\015\\012\\032\\012\' > "$png"\n'
+            'printf \'\\000\\000\\000\\000IEND\\256\\102\\140\\202\' >> "$png"\n'
             "exit 0\n",
         )
         dummy_chrome.chmod(0o755)
