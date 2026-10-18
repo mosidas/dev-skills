@@ -64,16 +64,16 @@ class MaskTest(unittest.TestCase):
 class SourceFileTest(helpers.TempDirTestCase):
     def test_BOM_付きのファイルは先頭の_BOM_を除いて読む(self) -> None:
         path = self.tmp / "bom.md"
-        path.write_bytes("﻿# 見出し\n本文。\n".encode("utf-8"))
+        path.write_bytes("\ufeff# 見出し\n本文。\n".encode("utf-8"))
         text, error = lint.read_source_file(path)
         self.assertIsNone(error)
         self.assertEqual(text, "# 見出し\n本文。\n")
 
     def test_BOM_の無いファイルはそのまま読む(self) -> None:
-        path = self.write("plain.md", "# 見出し\n本文﻿。\n")
+        path = self.write("plain.md", "# 見出し\n本文\ufeff。\n")
         text, error = lint.read_source_file(path)
         self.assertIsNone(error)
-        self.assertEqual(text, "# 見出し\n本文﻿。\n")
+        self.assertEqual(text, "# 見出し\n本文\ufeff。\n")
 
     def test_不正な_UTF8_はエラーを返す(self) -> None:
         path = self.tmp / "bad.md"
@@ -81,6 +81,82 @@ class SourceFileTest(helpers.TempDirTestCase):
         text, error = lint.read_source_file(path)
         self.assertIsNone(text)
         self.assertIn("読み込めません", error)
+
+
+def _lines(text: str) -> list[tuple[int, str]]:
+    return list(enumerate(text.split("\n"), start=1))
+
+
+class ForbiddenBoundaryTest(unittest.TestCase):
+    def phrases(self, text: str) -> list[str]:
+        return [f.detail for f in lint.detect_forbidden_phrases(_lines(text))]
+
+    def test_漢字の直後の漢字始まりの語は数えない(self) -> None:
+        self.assertEqual(self.phrases("発熱量を測る。"), [])
+
+    def test_語の境目にある漢字始まりの語は検出する(self) -> None:
+        self.assertEqual(len(self.phrases("熱量が高い。")), 1)
+
+    def test_カタカナの直後のカタカナ始まりの語は数えない(self) -> None:
+        self.assertEqual(self.phrases("ダブルチェックする。"), [])
+
+    def test_1行の中の出現をすべて数える(self) -> None:
+        self.assertEqual(len(self.phrases("仕様に落とし込む。仕様に落とし込む。")), 2)
+
+
+class TranslationeseTest(unittest.TestCase):
+    def categories(self, text: str) -> list[str]:
+        return [f.category for f in lint.detect_translationese(_lines(text))]
+
+    def test_することができるは正規表現では検出しない(self) -> None:
+        self.assertEqual(self.categories("変更することができる。"), [])
+
+    def test_という点では検出する(self) -> None:
+        self.assertEqual(self.categories("性能という点で優れている。"), ["translationese"])
+
+
+class _Morpheme:
+    def __init__(self, surface: str, pos: tuple[str, ...]) -> None:
+        self._surface = surface
+        self._pos = pos
+
+    def surface(self) -> str:
+        return self._surface
+
+    def part_of_speech(self) -> tuple[str, ...]:
+        return self._pos
+
+
+class LeadRepetitionTest(unittest.TestCase):
+    def leads(self, first: _Morpheme) -> list[lint.Finding]:
+        tokenized = [
+            lint.TokenizedSentence(
+                line=no,
+                text="",
+                morphemes=[first, _Morpheme("、", ("補助記号", "読点")), _Morpheme(c, ("名詞", "普通名詞"))],
+                raw_text=f"{first.surface()}、{c} を直した。",
+            )
+            for no, c in enumerate("ABCDEF", start=1)
+        ]
+        findings, _ = lint.detect_ngram_repetition(tokenized)
+        return [f for f in findings if f.category == "repeated_sentence_lead"]
+
+    def test_同じ書き出しの反復は1件にまとめる(self) -> None:
+        findings = self.leads(_Morpheme("そして", ("接続詞", "*")))
+        self.assertEqual(len(findings), 1)
+        self.assertEqual(findings[0].severity, "info")
+        self.assertEqual(findings[0].related_lines, [1, 2, 3, 4, 5, 6])
+
+    def test_数詞で始まる文は数えない(self) -> None:
+        self.assertEqual(self.leads(_Morpheme("三", ("名詞", "数詞"))), [])
+
+
+class IdentifierTest(unittest.TestCase):
+    def test_英字の識別子を拾う(self) -> None:
+        self.assertEqual(
+            lint._IDENTIFIER_RE.findall("React の useState と config.yaml を使う"),
+            ["React", "useState", "config.yaml"],
+        )
 
 
 if __name__ == "__main__":
