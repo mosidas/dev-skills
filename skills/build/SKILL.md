@@ -151,7 +151,7 @@ codex exec "dev-skills の build スキルの「反復する」工程を 1 回�
 agy --new-project -p='dev-skills の build スキルの「反復する」工程を 1 回行う。進捗ファイル: <絶対パス>'
 ```
 
-サブエージェントを起動しない CLI では、develop の定めどおり、統括が planner・implementer・reviewer・gate-reviewer の役割を順に担う。
+サブエージェントを起動しない CLI では、develop の定めどおり、統括が planner・implementer・reviewer・gate-reviewer の役割を順に受け持つ。
 
 ## 7. 参照ファイル
 
