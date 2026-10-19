@@ -48,7 +48,7 @@ backlog task create "<タイトル>" -l <area> -d "<要件の 4 行と、あれ�
 
 - `main` を最新にし、`<type>/<TASK-id>-<slug>` の名前でブランチを切る(`type` は `feat`・`fix`・`refactor`・`chore`。タスクが無いときは `<type>/<slug>`)。
 - git hook が無ければ入れる(`references/hooks.md`)。pre-commit で lint、pre-push でテストを実行する。hook は implementer の「テストが通った」という報告を機械的に裏づける。
-- 品質がプロダクトのとき、シークレット検知と依存監査も hook に入れる(`references/hooks.md` 4.)。
+- 品質がプロダクトのとき、シークレット検知と依存監査を hook と CI に入れ、CI に SAST を入れる(`references/hooks.md` 4.)。
 - 手順の詳細は `references/git-flow.md` に従う。
 - リポジトリの規約が `main` への直接コミットを定めているとき(private の設定リポジトリなど)は、ブランチと PR を省き、`main` 上でステップごとにコミットする。実装と点検のループはそのまま行う。
 
@@ -76,6 +76,7 @@ backlog task create "<タイトル>" -l <area> -d "<要件の 4 行と、あれ�
 ## 7. ゲートを通す
 
 - 全ステップが承認されたら、push の前に gate-reviewer サブエージェント(`dev-skills:gate-reviewer`)を起動する。渡すのは、対象リポジトリのパス、レビューする範囲(`main..HEAD`)、要件の 3 行(目的・完了条件・対象外)、計画の全体、PR 本文案である。
+- Claude Code では、品質がプロダクトのとき、gate-reviewer を起動する前に統括が組み込みの `/security-review` を実行する。指摘があれば implementer に渡して直させ、直したあとで gate-reviewer を起動する。
 - gate-reviewer はブランチ全体でしか分からないこと(完了条件の充足、ステップ間の整合、残骸、PR 本文との一致)を見て、「マージ可」か「差し戻し」を返す。ステップごとの reviewer が見た内容は蒸し返さない。品質がプロダクトのとき、計画に含まれる secure・observe・recover 由来の変更(ヘルスチェック・メトリクス・拒否のテスト・タイムアウト・エラーページなど)は要件内として扱う。
 - 差し戻しなら、修正点を implementer に渡して直させ、再びゲートを通す。2 回直しても通らないときは、統括がユーザーに状況を報告して判断を仰ぐ。ゲートを push の前に通すのは、CI を回す前に直すほうが安いからである。
 
@@ -102,6 +103,6 @@ backlog task edit <id> -s Done --final-summary "<結果>"
 | :-- | :-- | :-- |
 | `references/requirements.md` | 要件の 4 行の形式、聞く範囲、品質の決め方 | 要件を確かめるとき |
 | `references/git-flow.md` | ブランチ・コミット・push・PR・CI 確認・マージのコマンド | ブランチを切るとき、PR を出すとき |
-| `references/hooks.md` | git hook(lefthook・husky)の導入、シークレット検知と依存監査 | hook が無いリポジトリで作業を始めるとき、品質がプロダクトのとき |
+| `references/hooks.md` | git hook(lefthook・husky)の導入、シークレット検知と依存監査、CI での同じ検査と SAST | hook が無いリポジトリで作業を始めるとき、品質がプロダクトのとき |
 
 サブエージェントの定義(`agents/`)は統括が読まなくてよい。役割と出力形式はサブエージェント自身が持つ。

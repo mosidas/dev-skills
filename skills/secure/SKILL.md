@@ -40,6 +40,11 @@ description: コードの安全性の規範。信頼境界での入力検証、�
 - 依存を追加する前に、保守が続いているかと既知の脆弱性を確かめる。
 - ロックファイルをコミットする。
 - 依存の監査は hook か CI で機械的に実行する。仕組みが無ければ planner が計画に挙げる。implementer は計画に無いまま実装の範囲に加えない。
+- GitHub Actions の `uses:` は、タグでなくコミットの SHA で固定し、行末のコメントにバージョンを書く(例 `uses: actions/checkout@<SHA> # v7.0.1`)。タグは付け替えられるためである。
+- `.github/dependabot.yml` に `github-actions` のエコシステムを入れ、固定した SHA を更新させる。
+- ワークフローの先頭に `permissions: contents: read` を書いて既定にし、書き込みが必要な job だけに、job 単位で権限を追加する。
+- `actions/checkout` に `persist-credentials: false` を付ける。後続の step が `.git/config` のトークンを読めないようにするためである。
+- CI の監査と SAST の設定例は `skills/develop/references/hooks.md` 4. にある。
 
 ### 2.5 ログに秘密を出さない
 
