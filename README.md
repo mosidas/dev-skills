@@ -140,7 +140,8 @@ PostToolUse と Stop は日本語文書の検査を行う。発火するのは�
 └── plugin.json            # Codex CLI 向けのマニフェスト
 plugin.json                # Antigravity CLI 向けのマニフェスト
 lefthook.yml                # git hook(pre-commit: plugin validate、pre-push: unittest)
-.github/workflows/ci.yml   # CI(ubuntu-latest で unittest と plugin validate --strict)
+.github/workflows/ci.yml   # CI(ubuntu-latest で unittest と plugin validate --strict、gitleaks)
+.github/dependabot.yml     # GitHub Actions の SHA を週次で更新する
 LICENSE                    # MIT ライセンスの全文
 agents/
 ├── planner.md             # 計画(opus、Write/Edit 不可、ponytail 読み込み。品質がプロダクトのとき secure・observe・recover も、UI を含むタスクでは design-ui も読み込む)
