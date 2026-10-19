@@ -79,7 +79,7 @@ gitleaks git --pre-commit --staged --redact
 osv-scanner scan source -r .
 ```
 
-CI があるリポジトリでは、hook と同じ検査を CI にも入れる。hook は `--no-verify` を付けたときや、hook を入れていない clone では動かない。osv-scanner を入れない条件は hook と同じである。GitHub Actions では次の 2 つの job を追加する。
+CI があるリポジトリでは、hook と同じ検査を CI にも入れる。hook は `--no-verify` を付けたときや、hook を入れていない clone では動かない。osv-scanner を入れない条件は hook と同じである。GitHub Actions では、次の 2 つの job を既存のワークフローの `jobs:` に加える。
 
 ```yaml
 jobs:
@@ -103,9 +103,15 @@ jobs:
       contents: read
       security-events: write
     uses: google/osv-scanner-action/.github/workflows/osv-scanner-reusable.yml@b1d267aea5211fa648d9d442fa64b90dbdcbdd36 # v2.7.0
+    with:
+      upload-sarif: false
 ```
 
-organization のリポジトリでは、gitleaks-action に `GITLEAKS_LICENSE`(無料で発行される)の secret が必要である。
+`upload-sarif` の既定は true であり、結果を code scanning へ送る。code scanning が無い private リポジトリでは、脆弱性が 0 件でも job が失敗する。code scanning が使える public リポジトリでは `upload-sarif` を外してよい。
+
+例の `osv-scanner-reusable.yml` は push と schedule のトリガーで使う。`pull_request` のトリガーでは `osv-scanner-reusable-pr.yml` を使い、PR の差分で増えた脆弱性だけを報告させる。
+
+organization のリポジトリでは、gitleaks-action に `GITLEAKS_LICENSE` の secret が必要である。ライセンスは gitleaks.io で入手する。無料の試用版がある。`env:` に `GITLEAKS_LICENSE: ${{ secrets.GITLEAKS_LICENSE }}` を加える。
 
 品質がプロダクトのとき、CI に SAST を入れる。public リポジトリでは CodeQL(GitHub の code scanning。public は無料)を使い、private リポジトリでは semgrep を使う。CodeQL の job の例を次に示す。`languages:` にはリポジトリの言語を書く。
 
