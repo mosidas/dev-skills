@@ -8,7 +8,7 @@
   "plugins": [
     {
       "name": "dev-skills",
-      "description": "開発作業のスキル集(実装タスクの手順 develop、着想から対話で PRD を書く手順 specify、タスクを順に回す外側のループ build、指摘からのふりかえりの手順 retro、サブエージェント、コードを最小に保つ規範 ponytail、プロダクト品質のセキュリティ規範 secure・オブザーバビリティ規範 observe・失敗時の挙動の規範 recover、日本語の技術文書の作成規範 write-doc、スライド構成 write-slide、短いメッセージを敬語で書く規範 write-message、応答の形の規範 respond、作図の規範 draw-diagram、UI 設計規範と UI モックの作成 design-ui)と検査・注入・セッション URL 拒否の hooks。",
+      "description": "開発作業のスキル集(実装タスクの手順 develop、着想から対話で PRD を書く手順 specify、タスクを順に回す外側のループ build、指摘からのふりかえりの手順 retro、サブエージェント、コードを最小に保つ規範 ponytail、プロダクト品質のセキュリティ規範 secure・オブザーバビリティ規範 observe・失敗時の挙動の規範 recover、日本語の技術文書の作成規範 write-doc、スライド構成 write-slide、短いメッセージを敬語で書く規範 write-message、応答の形の規範 respond、作図の規範 draw-diagram、UI 設計規範と UI モックの作成 design-ui、HTML の説明資料の規範 write-page)と検査・注入・セッション URL 拒否の hooks。",
       "source": "./",
       "category": "productivity"
     }
