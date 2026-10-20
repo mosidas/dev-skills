@@ -217,6 +217,9 @@ class DiagonalSegmentTest(helpers.TempDirTestCase):
     def test_Zの戻り線の斜めを検出する(self) -> None:
         self.assertDiagonal('<path data-edge="A->B" d="M0,0 H10 V10 Z"/>')
 
+    def test_複数サブパスのZは直前のmovetoへ戻る線を検出する(self) -> None:
+        self.assertDiagonal('<path data-edge="A->B" d="M0,0 h10 M20,20 h5 v5 z"/>')
+
     def test_斜めのlineを検出する(self) -> None:
         self.assertDiagonal('<line data-edge="A->B" x1="0" y1="0" x2="10" y2="10"/>')
 
@@ -225,7 +228,7 @@ class DiagonalSegmentTest(helpers.TempDirTestCase):
 
     def test_座標を含む1行の指摘を出す(self) -> None:
         violations = self._violations('<path data-edge="A->B" d="M0,0 L10,10"/>')
-        self.assertEqual(violations, ["data-edge の斜めの線分を検出: A->B (0,0)→(10,10)"])
+        self.assertEqual(violations, ["data-edge の斜めの線分を検出: 'A->B' (0,0)→(10,10)"])
 
     def test_絶対座標の弧は検出しない(self) -> None:
         self.assertClean('<path data-edge="A->B" d="M0,0 H92 A8,8 0 0 1 100,8 V50"/>')
@@ -253,6 +256,9 @@ class DiagonalSegmentTest(helpers.TempDirTestCase):
 
     def test_未知の命令を含むdは解釈できない(self) -> None:
         self.assertUnparsable('<path data-edge="A->B" d="M0,0 X5,5"/>')
+
+    def test_Zの直後の数値は解釈できない(self) -> None:
+        self.assertUnparsable('<path data-edge="A->B" d="M0,0 Z 5,5"/>')
 
     def test_movetoで始まらないdは解釈できない(self) -> None:
         self.assertUnparsable('<path data-edge="A->B" d="L10,10"/>')
@@ -363,7 +369,6 @@ class CliTest(helpers.TempDirTestCase):
         self.assertEqual(proc.returncode, 0)
         self.assertEqual(proc.stderr.strip(), "")
 
-
     def test_斜めの辺でexit_1になる(self) -> None:
         mmd_path = self.write("d.mmd", "flowchart TD\n    A[Start] --> B[End]\n")
         svg_path = self.write("d.svg", _edge_svg('<path data-edge="A->B" d="M0,0 L10,10"/>'))
@@ -376,6 +381,12 @@ class CliTest(helpers.TempDirTestCase):
         examples = helpers.REPO_ROOT / "skills" / "draw-diagram" / "references" / "examples"
         proc = helpers.run_script(SCRIPT, examples / "cache-read.mmd", examples / "cache-read.svg")
         self.assertEqual(proc.returncode, 0, proc.stderr)
+
+    def test_buildの収録例のflowはexit_0になる(self) -> None:
+        refs = helpers.REPO_ROOT / "skills" / "build" / "references"
+        proc = helpers.run_script(SCRIPT, refs / "flow.mmd", refs / "flow.svg")
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+
 
 class ScreenshotTimeoutTest(helpers.TempDirTestCase):
     """Chrome が終了しなくても PNG の出現で撮影を早く終える検査。"""

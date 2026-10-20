@@ -246,10 +246,10 @@ def _diagonal_findings(elem: ET.Element, tag: str, data_edge: str) -> list[str]:
         else:
             segments = [tuple(float(elem.get(k) or 0) for k in ("x1", "y1", "x2", "y2"))]
     except ValueError as e:
-        return [f"data-edge の線の座標を解釈できない: {data_edge}: {e}"]
+        return [f"data-edge の線の座標を解釈できない: {data_edge!r}: {e}"]
     # 相対座標を足し合わせると浮動小数点の誤差が残るため、厳密な不一致では判定しない。
     return [
-        f"data-edge の斜めの線分を検出: {data_edge} ({x0:g},{y0:g})→({x1:g},{y1:g})"
+        f"data-edge の斜めの線分を検出: {data_edge!r} ({x0:g},{y0:g})→({x1:g},{y1:g})"
         for x0, y0, x1, y1 in segments
         if abs(x1 - x0) > 1e-6 and abs(y1 - y0) > 1e-6
     ]
