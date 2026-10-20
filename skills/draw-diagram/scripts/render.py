@@ -10,6 +10,8 @@ SVG の属性の集合を突き合わせる。標準ライブラリのみで動�
 
 対応する記法: flowchart/graph, stateDiagram-v2, sequenceDiagram。
 classDiagram・erDiagram は照合対象外(整形式検査と禁止要素の検査のみ)。
+data-edge を持つ path・line の斜めの線分(L/H/V と相対形、Z の戻り線)を検出する
+(A/Q/C/S/T の曲線は対象外。polyline・polygon・transform は検査しない)。
 """
 
 from __future__ import annotations
@@ -173,6 +175,86 @@ def _local_name(tag: str) -> str:
     return tag.rsplit("}", 1)[-1] if "}" in tag else tag
 
 
+_PATH_SEP_RE = re.compile(r"[\s,]*")
+_PATH_NUM_RE = re.compile(r"[-+]?(?:\d+\.?\d*|\.\d+)(?:[eE][-+]?\d+)?")
+_PATH_FLAG_RE = re.compile(r"[01]")
+_PATH_CMD_RE = re.compile(r"[A-Za-z]")
+_PATH_ARGC = {"M": 2, "L": 2, "T": 2, "H": 1, "V": 1, "Q": 4, "S": 4, "C": 6, "A": 7, "Z": 0}
+
+
+def _straight_segments(d: str) -> list[tuple[float, float, float, float]]:
+    """path の d から直線の線分 (x0, y0, x1, y1) を取り出す。解釈できなければ ValueError。
+
+    L/H/V と Z の戻り線だけを線分とし、A/Q/C/S/T は現在点を終点へ進めるだけにする。
+    """
+    segments: list[tuple[float, float, float, float]] = []
+    x = y = start_x = start_y = 0.0
+    cmd = ""
+    pos = _PATH_SEP_RE.match(d).end()
+    if pos < len(d) and d[pos] not in "Mm":
+        raise ValueError("先頭が M/m でない")
+    while pos < len(d):
+        m = _PATH_CMD_RE.match(d, pos)
+        if m:
+            cmd = m.group()
+            if cmd.upper() not in _PATH_ARGC:
+                raise ValueError(f"未知の命令 {cmd!r}(位置 {pos})")
+            pos = _PATH_SEP_RE.match(d, m.end()).end()
+        elif not cmd or cmd.upper() == "Z":
+            raise ValueError(f"命令の無い引数がある(位置 {pos})")
+        upper = cmd.upper()
+        args: list[float] = []
+        for i in range(_PATH_ARGC[upper]):
+            # 弧の大弧・掃引の旗は `018,8` のように区切りなしで続くため 1 文字で読む。
+            arg_re = _PATH_FLAG_RE if upper == "A" and i in (3, 4) else _PATH_NUM_RE
+            am = arg_re.match(d, pos)
+            if not am:
+                raise ValueError(f"{cmd} の引数が足りない(位置 {pos})")
+            args.append(float(am.group()))
+            pos = _PATH_SEP_RE.match(d, am.end()).end()
+        rel = cmd.islower()
+        ox, oy = (x, y) if rel else (0.0, 0.0)
+        if upper == "M":
+            x = start_x = ox + args[0]
+            y = start_y = oy + args[1]
+            cmd = "l" if rel else "L"  # moveto に続く座標の組は lineto とみなす
+            continue
+        if upper == "Z":
+            segments.append((x, y, start_x, start_y))
+            x, y = start_x, start_y
+            continue
+        if upper == "H":
+            nx, ny = ox + args[0], y
+        elif upper == "V":
+            nx, ny = x, oy + args[0]
+        else:
+            nx, ny = ox + args[-2], oy + args[-1]
+        if upper in ("L", "H", "V"):
+            segments.append((x, y, nx, ny))
+        x, y = nx, ny
+    return segments
+
+
+def _diagonal_findings(elem: ET.Element, tag: str, data_edge: str) -> list[str]:
+    """data-edge を持つ path・line の斜めの線分を 1 本 1 件で返す。解釈できなければその旨を 1 件返す。"""
+    try:
+        if tag == "path":
+            d = elem.get("d")
+            if not d:
+                return []
+            segments = _straight_segments(d)
+        else:
+            segments = [tuple(float(elem.get(k) or 0) for k in ("x1", "y1", "x2", "y2"))]
+    except ValueError as e:
+        return [f"data-edge の線の座標を解釈できない: {data_edge}: {e}"]
+    # 相対座標を足し合わせると浮動小数点の誤差が残るため、厳密な不一致では判定しない。
+    return [
+        f"data-edge の斜めの線分を検出: {data_edge} ({x0:g},{y0:g})→({x1:g},{y1:g})"
+        for x0, y0, x1, y1 in segments
+        if abs(x1 - x0) > 1e-6 and abs(y1 - y0) > 1e-6
+    ]
+
+
 def parse_svg(path: str | Path) -> tuple[set[str], set[tuple[str, str]], list[str]]:
     """SVG を解析し、(data-id の集合, data-edge の集合, 禁止事項の一覧) を返す。"""
     try:
@@ -200,6 +282,8 @@ def parse_svg(path: str | Path) -> tuple[set[str], set[tuple[str, str]], list[st
                 edges.add((src, dst))
             else:
                 violations.append(f"data-edge の形式が不正: {data_edge!r}")
+            if tag in ("path", "line"):
+                violations.extend(_diagonal_findings(elem, tag, data_edge))
 
         for attr_name in ("href", XLINK_HREF):
             value = elem.get(attr_name)

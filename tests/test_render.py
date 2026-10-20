@@ -182,6 +182,85 @@ class ParseSvgTest(helpers.TempDirTestCase):
         self.assertFalse(any("外部参照" in v for v in violations))
 
 
+def _edge_svg(edge_el: str) -> str:
+    """A->B の辺の要素を 1 つだけ持つ SVG を返す。"""
+    nodes = '<rect data-id="A" x="0" y="0" width="1" height="1"/><rect data-id="B" x="0" y="0" width="1" height="1"/>'
+    return f'<svg xmlns="http://www.w3.org/2000/svg">{nodes}{edge_el}</svg>'
+
+
+class DiagonalSegmentTest(helpers.TempDirTestCase):
+    def _violations(self, edge_el: str) -> list[str]:
+        path = self.write("d.svg", _edge_svg(edge_el))
+        _ids, _edges, violations = render.parse_svg(path)
+        return violations
+
+    def assertDiagonal(self, edge_el: str) -> None:
+        violations = self._violations(edge_el)
+        self.assertTrue(any("斜めの線分" in v and "A->B" in v for v in violations), violations)
+
+    def assertClean(self, edge_el: str) -> None:
+        self.assertEqual(self._violations(edge_el), [])
+
+    def assertUnparsable(self, edge_el: str) -> None:
+        violations = self._violations(edge_el)
+        self.assertTrue(any("解釈できない" in v and "A->B" in v for v in violations), violations)
+
+    def test_絶対座標の斜めのlinetoを検出する(self) -> None:
+        self.assertDiagonal('<path data-edge="A->B" d="M0,0 L10,10"/>')
+
+    def test_相対座標の斜めのlinetoを検出する(self) -> None:
+        self.assertDiagonal('<path data-edge="A->B" d="m0,0 l10,10"/>')
+
+    def test_moveto_に続く暗黙のlinetoを検出する(self) -> None:
+        self.assertDiagonal('<path data-edge="A->B" d="M0,0 10,10"/>')
+
+    def test_Zの戻り線の斜めを検出する(self) -> None:
+        self.assertDiagonal('<path data-edge="A->B" d="M0,0 H10 V10 Z"/>')
+
+    def test_斜めのlineを検出する(self) -> None:
+        self.assertDiagonal('<line data-edge="A->B" x1="0" y1="0" x2="10" y2="10"/>')
+
+    def test_弧の後も現在点を追跡して斜めを検出する(self) -> None:
+        self.assertDiagonal('<path data-edge="A->B" d="M0,0 H92 a8,8 0 0 1 8,8 l10,40"/>')
+
+    def test_座標を含む1行の指摘を出す(self) -> None:
+        violations = self._violations('<path data-edge="A->B" d="M0,0 L10,10"/>')
+        self.assertEqual(violations, ["data-edge の斜めの線分を検出: A->B (0,0)→(10,10)"])
+
+    def test_絶対座標の弧は検出しない(self) -> None:
+        self.assertClean('<path data-edge="A->B" d="M0,0 H92 A8,8 0 0 1 100,8 V50"/>')
+
+    def test_二次ベジェは検出しない(self) -> None:
+        self.assertClean('<path data-edge="A->B" d="M0,0 H92 Q100,0 100,8 V50"/>')
+
+    def test_旗を詰めて書いた相対の弧を解釈できる(self) -> None:
+        self.assertClean('<path data-edge="A->B" d="M0,0 H92 a8,8 0 018,8 v42"/>')
+
+    def test_指数表記の座標を解釈できる(self) -> None:
+        self.assertClean('<path data-edge="A->B" d="M0,0 L1e2,0"/>')
+
+    def test_水平のlineは検出しない(self) -> None:
+        self.assertClean('<line data-edge="A->B" x1="0" y1="5" x2="10" y2="5"/>')
+
+    def test_data_edgeを持たない斜めのpathは検出しない(self) -> None:
+        self.assertClean('<path data-edge="A->B" d="M0,0 H10"/><path d="M0,0 L10,10"/>')
+
+    def test_dの無いpathは検出しない(self) -> None:
+        self.assertClean('<path data-edge="A->B"/>')
+
+    def test_引数が足りないdは解釈できない(self) -> None:
+        self.assertUnparsable('<path data-edge="A->B" d="M0,0 L10"/>')
+
+    def test_未知の命令を含むdは解釈できない(self) -> None:
+        self.assertUnparsable('<path data-edge="A->B" d="M0,0 X5,5"/>')
+
+    def test_movetoで始まらないdは解釈できない(self) -> None:
+        self.assertUnparsable('<path data-edge="A->B" d="L10,10"/>')
+
+    def test_数値でない座標のlineは解釈できない(self) -> None:
+        self.assertUnparsable('<line data-edge="A->B" x1="0" y1="0" x2="abc" y2="0"/>')
+
+
 class CompareTest(unittest.TestCase):
     def test_欠けたノードと辺を検出する(self) -> None:
         mmd = ("flowchart", {"A", "B"}, {("A", "B")})
@@ -284,6 +363,19 @@ class CliTest(helpers.TempDirTestCase):
         self.assertEqual(proc.returncode, 0)
         self.assertEqual(proc.stderr.strip(), "")
 
+
+    def test_斜めの辺でexit_1になる(self) -> None:
+        mmd_path = self.write("d.mmd", "flowchart TD\n    A[Start] --> B[End]\n")
+        svg_path = self.write("d.svg", _edge_svg('<path data-edge="A->B" d="M0,0 L10,10"/>'))
+        proc = helpers.run_script(SCRIPT, mmd_path, svg_path)
+        self.assertEqual(proc.returncode, 1)
+        self.assertAnyContains([proc.stderr], "斜めの線分")
+        self.assertAnyContains([proc.stderr], "A->B")
+
+    def test_収録例のcache_readはexit_0になる(self) -> None:
+        examples = helpers.REPO_ROOT / "skills" / "draw-diagram" / "references" / "examples"
+        proc = helpers.run_script(SCRIPT, examples / "cache-read.mmd", examples / "cache-read.svg")
+        self.assertEqual(proc.returncode, 0, proc.stderr)
 
 class ScreenshotTimeoutTest(helpers.TempDirTestCase):
     """Chrome が終了しなくても PNG の出現で撮影を早く終える検査。"""
