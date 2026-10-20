@@ -1908,6 +1908,27 @@ def run_lint(
 SEVERITY_LABEL = {"info": "情報", "warn": "警告", "critical": "重大"}
 
 
+# 見出しがこの数を超える文書は、1 つのエージェントが全観点を一度に見ると観点が漏れる
+# (references/inspection.md 4.)。lint の出力の先頭で、観点別・章別の分担を促す。
+REVIEW_DELEGATION_HEADING_THRESHOLD = 10
+
+
+def count_headings(raw_text: str) -> int:
+    """コードブロック・フロントマターを除いた Markdown の見出し行を数える。"""
+    masked = mask_markdown_structure(raw_text, keep_structure_text=True)
+    return sum(1 for line in masked.split("\n") if _HEADING_RE.match(line))
+
+
+def review_delegation_notice(heading_count: int) -> str | None:
+    """見出しが閾値を超える文書に出す通知。超えなければ None。"""
+    if heading_count <= REVIEW_DELEGATION_HEADING_THRESHOLD:
+        return None
+    return (
+        f"見出しが {heading_count} 個(10 超)の文書である。推敲は観点別または章別に"
+        "別のエージェントへ分担してレビューさせる(references/inspection.md 4.・5.)。"
+    )
+
+
 STATUS_LABEL = {"new": "新規", "persisting": "継続"}
 
 
@@ -1918,6 +1939,9 @@ def print_human_report(
     baseline_summary: dict[str, int] | None = None,
 ) -> None:
     print(f"=== lint: {path} ===")
+    notice = review_delegation_notice(stats.get("heading_count", 0))
+    if notice:
+        print(f"[分担] {notice}")
     print(f"検出件数: {stats['total_findings']}")
     if stats["by_category"]:
         print("カテゴリ別内訳:")
@@ -2066,6 +2090,7 @@ def main() -> int:
             print(f"警告: {w}", file=sys.stderr)
 
     findings, stats = run_lint(text, genre=args.genre, experimental=args.experimental)
+    stats["heading_count"] = count_headings(text)
 
     resolved: list[dict] = []
     baseline_summary: dict[str, int] | None = None
@@ -2087,6 +2112,9 @@ def main() -> int:
                 "resolved": resolved,
             }
         output["paragraphs"] = split_units(text)
+        notice = review_delegation_notice(stats["heading_count"])
+        if notice:
+            output["notice"] = notice
         print(json.dumps(output, ensure_ascii=False, indent=2))
     else:
         print_human_report(args.file, findings, stats, baseline_summary)
