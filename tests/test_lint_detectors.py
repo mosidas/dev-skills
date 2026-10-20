@@ -282,3 +282,7 @@ class ReviewDelegationNoticeTest(unittest.TestCase):
     def test_コードブロックの中の井桁は見出しに数えない(self) -> None:
         text = "## 1. 節\n\n```sh\n# コメント\n## これも見出しではない\n```\n"
         self.assertEqual(lint.count_headings(text), 1)
+
+    def test_インデントコードの井桁は見出しに数えない(self) -> None:
+        text = "## 1. 節\n\n本文。\n\n    # コメント\n    ## これも見出しではない\n\t# タブのコード\n"
+        self.assertEqual(lint.count_headings(text), 1)

@@ -1911,12 +1911,15 @@ SEVERITY_LABEL = {"info": "情報", "warn": "警告", "critical": "重大"}
 # 見出しがこの数を超える文書は、1 つのエージェントが全観点を一度に見ると観点が漏れる
 # (references/inspection.md 4.)。lint の出力の先頭で、観点別・章別の分担を促す。
 REVIEW_DELEGATION_HEADING_THRESHOLD = 10
+_GFM_HEADING_RE = re.compile(r"^ {0,3}#")
 
 
 def count_headings(raw_text: str) -> int:
     """コードブロック・フロントマターを除いた Markdown の見出し行を数える。"""
     masked = mask_markdown_structure(raw_text, keep_structure_text=True)
-    return sum(1 for line in masked.split("\n") if _HEADING_RE.match(line))
+    # _HEADING_RE は行頭の空白を許すため、4 スペース・タブで始まるインデントコードの
+    # `# コメント` も拾う。GFM の見出しは行頭の空白 3 つまでなので、それより深い行は除く。
+    return sum(1 for line in masked.split("\n") if _HEADING_RE.match(line) and _GFM_HEADING_RE.match(line))
 
 
 def review_delegation_notice(heading_count: int) -> str | None:

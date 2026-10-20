@@ -13,7 +13,7 @@
 torch + sentence-transformers(cl-nagoya/ruri-v3-310m、初回~1GB級のHFダウンロード)に
 依存するため、lint.py にも既定の検査ループにも組み込まない。実行したい人だけが
 明示的に `uv run <スキルのディレクトリ>/scripts/semantic.py` を叩く。
-使いどころは `references/inspection.md` 2.4 に従う。
+使いどころは `references/inspection.md` 2. に従う。
 
 背景・設計思想(原典 coji/natural-japanese の corpus/reports/nn-detector-sweep.md §B 参照):
     perplexity・教師あり分類器・GiNZA係り受けの3系統は、コーパス実測の結果
