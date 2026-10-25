@@ -41,7 +41,7 @@ description: Web・iOS・Android・デスクトップの画面・コンポーネ
 
 ## 4. スケール
 
-値は次の段階から選ぶ。新しい値を都度作らない。出典は Refactoring UI(Wathan & Schoger)。
+値は次の段階から選ぶ。新しい値を都度作らない。
 
 - 間隔: `4 8 12 16 24 32 48 64 96 128 192 256 384 512 640 768`(px)。小さい側の値では隣接する値どうしの差を約 25% 以上空ける。
 - 文字サイズ: `12 14 16 18 20 24 30 36 48 60 72`(px または rem。em は使わない)。
@@ -77,12 +77,3 @@ description: Web・iOS・Android・デスクトップの画面・コンポーネ
 - UI モックは、specify の PRD と組で build に渡すか、単独で develop に渡す。planner は UI モックの決定を決め直さない。
 - 画面内の日本語の文言は `references/text.md` 8. に従う。語の選び方と文の組み立ては `../write-doc/references/sentence.md` に従い(漢語基調の項を除く)、文体は text.md 8. を優先する。
 - 失敗の状態の洗い出しと、失敗時にシステムがすること(タイムアウト・再試行・二重送信の防止・エラーページ)は、品質がプロダクトのとき recover に従う。本スキルは各状態の見せ方と文言を定める。
-
-## 9. 出典
-
-- [anthropics/skills frontend-design](https://github.com/anthropics/skills/tree/main/skills/frontend-design)(Apache-2.0)
-- [pbakaus/impeccable](https://github.com/pbakaus/impeccable)(Apache-2.0)
-- [nextlevelbuilder/ui-ux-pro-max-skill](https://github.com/nextlevelbuilder/ui-ux-pro-max-skill)(MIT)
-- [vercel-labs/web-interface-guidelines](https://github.com/vercel-labs/web-interface-guidelines)(MIT。`vercel-labs/agent-skills` の `skills/web-design-guidelines` 経由)
-- [s0xDk/refactoring-ui-skill](https://github.com/s0xDk/refactoring-ui-skill)(MIT。原典 Wathan & Schoger, *Refactoring UI*)
-- [NN/g](https://www.nngroup.com/articles/)、[Apple Human Interface Guidelines](https://developer.apple.com/design/human-interface-guidelines/)、[Material Design 3](https://m3.material.io/)
