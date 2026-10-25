@@ -229,6 +229,7 @@ $ agy plugin validate .
 - 雛形は、コピーするとそのまま下書きになる形で提供する。節ごとの書き方の説明は各節の見出しの直下に HTML コメントで書き、使う人は、すべての節を書き終えてからコメントを削除する。write-doc の lint は HTML コメントを検査しないため、説明の文面は検出の対象にならない。例は `skills/specify/references/prd.md` である。
 - 節番号での参照は節を追加・削除すると別の節を指すため、複数のスキルが同じ規則を「develop 2.」のような節番号で参照するときは、その規則を、参照される側のスキルの `references/<name>.md` に抜き出す。参照する側は、そのファイル名で参照する。抜き出すのは規則の定義だけにし、手順(誰が・いつ確かめるか)は元のスキルに残す。例は `skills/develop/references/requirements.md`(要件の 4 行の形式)である。
 - 上流の資料(yomiyasu など)にある条件付きの規則(文脈で言い換え先が変わる比喩動詞など)を write-doc へ取り込むときは、語ごとに、システム開発の文書で字義どおりの正当な用法があるかを確かめる。条件付きの規則は lint が検出しないため、正当な用法が無い語は `skills/write-doc/scripts/forbidden_phrases.json` に禁止語として登録し、lint で検出する。開発文書でも正当な用法と言い換えるべき用法の両方がある語(引き返す・契約・正本など)だけを、`skills/write-doc/references/sentence.md` に条件付きの規則として書く。
+- 上流の資料を取り込んだときは、出典(資料名・URL・ライセンス・版とコミット SHA・取り込んだ範囲)をスキルの `SKILL.md` と `references/` に書かず、README の 9. に書く。CLI がスキルを読み込むたびに出典の文面もコンテキストに入るためである。
 
 ## 7. 評価
 
@@ -256,3 +257,266 @@ $ claude plugin eval . --trust-plugin --allow-tools Write Edit -j 4 --max-cost-u
 ## 8. ライセンス
 
 MIT ライセンスで公開する。全文は `LICENSE` にある。
+
+## 9. 出典
+
+この節は、各スキルが取り込んだ上流の資料の出典をまとめる。版とコミットは取り込んだ時点の値であり、上流の更新を調べるときは、この値からの差分を見る。この節は、取り込んだ資料のライセンスが求める帰属表示も兼ねる。9.3 以降の各小節で文中と括弧内に出る節番号は、ファイルを示した小節ではそのファイルの節を、示していない小節では `skills/<スキル名>/SKILL.md` の節を指す。
+
+### 9.1. 一覧
+
+ライセンスの列の「明示なし」は資料にライセンスの表記が無いことを、「未確認」はライセンスを確かめていないことを示す。
+
+| 出典 | ライセンス | 取り込んだ版・コミット | 反映先 |
+| :-- | :-- | :-- | :-- |
+| [cursor/plugins](https://github.com/cursor/plugins) の pstack | MIT | コミット 997ffc7(2026-10-12 時点) | specify |
+| [mattpocock/skills](https://github.com/mattpocock/skills) | MIT | コミット 49dd158(2026-10-12 時点) | specify |
+| [DietrichGebert/ponytail](https://github.com/DietrichGebert/ponytail) | MIT | v5.1.0 | ponytail |
+| [coji/natural-japanese](https://github.com/coji/natural-japanese) | MIT | v1.5.0(9a78a42)・v1.6.0(03bc944) | write-doc(`inspection.md`・`paragraph.md`・`sentence.md`)・write-slide・write-message(`SKILL.md`) |
+| [nanaism/yomiyasu](https://github.com/nanaism/yomiyasu) | MIT | v1.1.1(373356e)・v2.0.1(84e1f5b) | write-doc(`inspection.md`・`paragraph.md`・`readers.md`・`sentence.md`)・write-message(`SKILL.md`・`keigo.md`) |
+| [mizchi/explainer](https://github.com/mizchi/explainer) | MIT | 版の記載なし | write-doc(`paragraph.md`・`readers.md`) |
+| [heygen-com/hyperframes](https://github.com/heygen-com/hyperframes) | Apache-2.0 | 版の記載なし | write-doc(`paragraph.md`・`readers.md`。explainer を経由) |
+| [carnot-tech/consulting-pptx-skill](https://github.com/carnot-tech/consulting-pptx-skill) | MIT | コミット bc9a587 | write-slide・draw-diagram(`SKILL.md`) |
+| [iKora128/stop-ai-slop-jp](https://github.com/iKora128/stop-ai-slop-jp) | MIT | コミット e09d327 | write-message(`SKILL.md`) |
+| [ayghri/i-have-adhd](https://github.com/ayghri/i-have-adhd) | MIT | 版の記載なし | respond |
+| [cathrynlavery/diagram-design](https://github.com/cathrynlavery/diagram-design) | MIT | v2.6.115(f2f4d49) | draw-diagram(`svg.md`・`render.py`) |
+| [anthropics/skills frontend-design](https://github.com/anthropics/skills/tree/main/skills/frontend-design) | Apache-2.0 | 版の記載なし | design-ui(`SKILL.md`・`anti-ai.md`・`text.md`) |
+| [pbakaus/impeccable](https://github.com/pbakaus/impeccable) | Apache-2.0 | 版の記載なし | design-ui(`SKILL.md`・`anti-ai.md`・`checklist.md`・`native.md`・`text.md`) |
+| [nextlevelbuilder/ui-ux-pro-max-skill](https://github.com/nextlevelbuilder/ui-ux-pro-max-skill) | MIT | 版の記載なし | design-ui(`SKILL.md`・`checklist.md`) |
+| [vercel-labs/web-interface-guidelines](https://github.com/vercel-labs/web-interface-guidelines) | MIT | 版の記載なし | design-ui(`SKILL.md`・`checklist.md`) |
+| `vercel-labs/agent-skills` の `skills/web-design-guidelines` | 未確認 | 版の記載なし | design-ui(`SKILL.md`・`checklist.md`。web-interface-guidelines の経由先) |
+| [s0xDk/refactoring-ui-skill](https://github.com/s0xDk/refactoring-ui-skill) | MIT | 版の記載なし | design-ui(`SKILL.md`・`text.md`) |
+| [misskey-dev/misskey のバグ報告テンプレート](https://github.com/misskey-dev/misskey/blob/develop/.github/ISSUE_TEMPLATE/01_bug-report.yml) | AGPL-3.0 | 版の記載なし | write-message(`places.md`) |
+| [asciidwango/js-primer](https://github.com/asciidwango/js-primer) | CC BY 4.0 | 版の記載なし | write-message(`places.md`) |
+| [vim-jp/vimdoc-ja](https://github.com/vim-jp/vimdoc-ja) | 未確認 | 版の記載なし | write-message(`places.md`。コメントの集計) |
+| [textlint-ja/textlint-rule-preset-ja-technical-writing](https://github.com/textlint-ja/textlint-rule-preset-ja-technical-writing) | 未確認 | 版の記載なし | write-message(`places.md`。コメントの集計) |
+| [OpenTelemetry Semantic Conventions](https://opentelemetry.io/docs/specs/semconv/) | Apache-2.0 | 1.44.0 | observe |
+| Google『Site Reliability Engineering』 | CC BY-NC-ND 4.0 | 2017 年版の第 6 章・第 15 章・第 22 章 | observe・recover・retro |
+| [W3C Trace Context Level 1](https://www.w3.org/TR/trace-context/) | W3C Software and Document License | W3C 勧告(2021-11-23) | observe |
+| [Kubernetes の liveness/readiness probe](https://kubernetes.io/docs/concepts/configuration/liveness-readiness-startup-probes/) | 未確認 | 版の記載なし | observe |
+| [Amazon Builders' Library "Timeouts, retries, and backoff with jitter"](https://builder.aws.com/content/3EumjoZascWd1oZiEgL8ORlv3qE/timeouts-retries-and-backoff-with-jitter) | 明示なし | 版の記載なし | recover |
+| [RFC 9110 HTTP Semantics](https://www.rfc-editor.org/rfc/rfc9110.html) | IETF Trust Legal Provisions | 2022-06(STD 97) | recover |
+| [RFC 6585 Additional HTTP Status Codes](https://www.rfc-editor.org/rfc/rfc6585.html) | IETF Trust Legal Provisions | 2012-04 | recover |
+| [Stripe API Reference "Idempotent requests"](https://docs.stripe.com/api/idempotent_requests) | 明示なし | 版の記載なし | recover |
+| [Google Search Central "How HTTP status codes, and network and DNS errors affect Google Search"](https://developers.google.com/search/docs/crawling-indexing/http-network-errors) | CC BY 4.0 | 2026-02-04 更新 | recover |
+| Michael T. Nygard『Release It! Second Edition』 | 未確認 | 2018 年 | recover |
+| [OWASP Application Security Verification Standard](https://owasp.org/www-project-application-security-verification-standard/) | CC BY-SA 4.0 | 5.0.0(2025-05-30 公開) | secure |
+| [OWASP Cheat Sheet Series](https://cheatsheetseries.owasp.org/) | CC BY-SA 4.0 | 版番号なし | secure |
+| 木下是雄『理科系の作文技術』 | 未確認 | 版の記載なし | write-doc(`paragraph.md`・`sentence.md`) |
+| 結城浩『数学文章作法 基礎編・推敲編』 | 未確認 | 版の記載なし | write-doc(`paragraph.md`) |
+| Wathan & Schoger『Refactoring UI』 | 未確認 | 版の記載なし | design-ui(`SKILL.md`・`text.md`。refactoring-ui-skill の原典) |
+| [敬語の指針](https://www.bunka.go.jp/seisaku/bunkashingikai/kokugo/hokoku/pdf/keigo_tosin.pdf) | 未確認 | 平成 19 年 2 月 2 日 | write-message(`keigo.md`) |
+| [公用文作成の考え方](https://www.bunka.go.jp/seisaku/bunkashingikai/kokugo/hokoku/pdf/93651301_01.pdf) | 未確認 | 令和 4 年 1 月 7 日 | write-message(`keigo.md`) |
+| [分かり合うための言語コミュニケーション(報告)](https://www.bunka.go.jp/seisaku/bunkashingikai/kokugo/hokoku/wakariau/pdf/r1403493_01.pdf) | 未確認 | 平成 30 年 3 月 2 日 | write-message(`keigo.md`) |
+| [平成 25 年度「国語に関する世論調査」報告書](https://www.bunka.go.jp/tokei_hakusho_shuppan/tokeichosa/kokugo_yoronchosa/pdf/92701201_06.pdf) | 未確認 | 平成 25 年度 | write-message(`keigo.md`) |
+| [洞澤伸・岡江里子「「バイト敬語」を使う若者たち」](https://gifu-u.repo.nii.ac.jp/record/68522/files/reg_030019001.pdf) | 未確認 | 2006 年 | write-message(`keigo.md`) |
+| [ビジネスメールの基本構成(マイナビニュース)](https://news.mynavi.jp/article/businessmail-6/) | 明示なし | 版の記載なし | write-message(`places.md`) |
+| [メールの書き方について(神田外語大学 学生課)](https://www.kandagaigo.ac.jp/kuis/cms/wp-content/uploads/2020/04/c7fa5f7a72fa9eb5d79262912a336d08.pdf) | 明示なし | 版の記載なし | write-message(`places.md`) |
+| [Slack 公式ブログのチャットのエチケット](https://slack.com/intl/ja-jp/blog/collaboration/etiquette-tips-in-slack) | 明示なし | 版の記載なし | write-message(`places.md`) |
+| [ITmedia NEWS の Slack マナーの記事](https://www.itmedia.co.jp/news/articles/2001/09/news073.html) | 明示なし | 版の記載なし | write-message(`places.md`) |
+| [How to Report Bugs Effectively(Simon Tatham)](https://www.chiark.greenend.org.uk/~sgtatham/bugs.html) | OpenContent License | 版の記載なし | write-message(`places.md`) |
+| [OSS Issue投稿ガイド(Zenn)](https://zenn.dev/immedio/articles/15c1b953696841) | 明示なし | 版の記載なし | write-message(`places.md`) |
+| [OSS に Issue 報告する際の作法(DevelopersIO)](https://dev.classmethod.jp/articles/issue-report-to-oss/) | 明示なし | 版の記載なし | write-message(`places.md`) |
+| [How to write code review comments(Google Engineering Practices)](https://google.github.io/eng-practices/review/reviewer/comments.html) | CC BY 3.0 | 版の記載なし | write-message(`places.md`) |
+| [Conventional Comments](https://conventionalcomments.org/) | CC BY 3.0 | 版の記載なし | write-message(`places.md`) |
+| [レビューコメントで頻繁に使うプレフィックス(DevelopersIO)](https://dev.classmethod.jp/articles/prefixes-for-frequently-used-review-comments/) | 明示なし | 版の記載なし | write-message(`places.md`) |
+| [Wikipedia:Signs of AI writing](https://en.wikipedia.org/wiki/Wikipedia:Signs_of_AI_writing) | CC BY-SA 4.0 | 版の記載なし | write-message(`SKILL.md`) |
+| [大西夢「AI 生成文からみた「自然な日本語」についての研究」(広島大学文学部、卒業論文)](https://home.hiroshima-u.ac.jp/jshira/papers/AI生成文からみた「自然な日本語」についての研究（大西夢）.pdf) | 明示なし | 令和 7 年度 | write-message(`SKILL.md`) |
+| [マナーべるの記事](https://mannerbell.com/ai-email-revise-manner/) | 明示なし | 2026-04-17 の記事 | write-message(`SKILL.md`) |
+| [KDDI のコラム](https://biz.kddi.com/content/column/smb/making-of-sentence/) | 明示なし | 版の記載なし | write-message(`SKILL.md`) |
+| [プレジデントオンラインの記事](https://news.yahoo.co.jp/articles/032bcc2f342a768b8ff275e43fa98dbc14febb1a) | 明示なし | 版の記載なし | write-message(`SKILL.md`) |
+| [NN/g](https://www.nngroup.com/articles/) の記事(Tooltip Guidelines・Icon Usability・Progressive Disclosure・Error-Message Guidelines) | 未確認 | 版の記載なし | design-ui(`SKILL.md`・`text.md`) |
+| [Apple Human Interface Guidelines](https://developer.apple.com/design/human-interface-guidelines/) | 未確認 | 版の記載なし | design-ui(`SKILL.md`・`native.md`・`text.md`) |
+| [Material Design 3](https://m3.material.io/) と developer.android.com の文書 | 未確認 | 版の記載なし | design-ui(`SKILL.md`・`native.md`・`text.md`) |
+| [Flutter: Platform adaptations](https://docs.flutter.dev/platform-integration/platform-adaptations) | 未確認 | 版の記載なし | design-ui(`native.md`) |
+| [React Native: Platform-specific code](https://reactnative.dev/docs/platform-specific-code) | 未確認 | 版の記載なし | design-ui(`native.md`) |
+| [developersdigest](https://www.developersdigest.tech/blog/ai-design-slop-and-how-to-spot-it)・[925studios](https://www.925studios.co/blog/ai-slop-design-tells)・[mania.design](https://www.mania.design/blog/spot-the-slop-a-ui-designers-guide-to-fixing-ai-defaults/)・[dev.to](https://dev.to/james_anderson_h/the-purple-gradient-problem-why-ai-ui-all-looks-alike-and-how-to-fix-it-3j65) の記事 | 未確認 | 版の記載なし | design-ui(`anti-ai.md`) |
+
+### 9.2. specify
+
+specify は、次の 2 つのリポジトリにある 3 つの手法(grill-me、to-spec と to-tickets、pstack)を参考にした。取り込んだのは dev-skills のコミット 59cac98 であり、手法を specify の文体で書き直した。
+
+- cursor/plugins の pstack(MIT ライセンス、Copyright (c) 2026 Lauren Tan、https://github.com/cursor/plugins)。2026-10-12 時点のコミット 997ffc7 の `pstack/skills/figure-it-out/SKILL.md` と `pstack/skills/poteto-mode/playbooks/multi-phase-plan.md` を参考にした。
+- mattpocock/skills(MIT ライセンス、Copyright (c) 2026 Matt Pocock、https://github.com/mattpocock/skills)。2026-10-12 時点のコミット 49dd158 の `skills/productivity/grill-me/SKILL.md`・`skills/engineering/to-spec/SKILL.md`・`skills/engineering/to-tickets/SKILL.md` を参考にした。
+
+取り込んだ範囲は次の 8 点である。文中と括弧内の節番号は `skills/specify/SKILL.md` の節を指す。
+
+- 調べて分かることは、聞かずに先に調べる(2.)。
+- 要求一覧は、1 件ずつ深さ優先で聞く(2.)。
+- 問いを 5 つの型から選ぶ(2.)。
+- 5〜8 問ごとに、埋まった節と未決の問いをユーザーに示す(2.)。
+- 1 つの要求を、単独で確かめられる縦の一切れにする(3.)。
+- 依存の制約を満たす範囲で、不確かさの大きい要求を先に並べる(3.)。
+- 承認の前に、要求の粒度・依存・分割と統合の 3 点を聞く(4.)。
+- PRD の雛形 `references/prd.md` に、制約と決定事項の節を設ける。
+
+### 9.3. retro
+
+retro は次の資料を参照し、要点を自分の言葉でまとめた。文面は転載していない。2026-10-15 に公式ページで版とライセンスを確かめた。
+
+- Google『Site Reliability Engineering』(2017)第 15 章 "Postmortem Culture: Learning from Failure"(John Lunney・Sue Lueder)。CC BY-NC-ND 4.0。https://sre.google/sre-book/postmortem-culture/ 。参照した要点と、retro で対応する箇所は次の 3 つである。
+  - ふりかえりを実施する条件を、事前に決めておく。retro では 1. の「本人の指摘が 1 回以上」にあたる。
+  - 個人を責めず、仕組みと工程を直す。retro では 1. の指摘の扱いと、5.6 の対処の型にあたる。
+  - 再発を防ぐ対策を記録に含める。retro では 6. の起票にあたる。
+
+4\. の分類と 5. の原因の分類は外部の出典を持たず、2026-10-14 の事例(`references/example.md`)に基づく。
+
+### 9.4. ponytail
+
+ponytail は ponytail(MIT ライセンス、Copyright (c) 2026 DietrichGebert、https://github.com/DietrichGebert/ponytail)v5.1.0 の `skills/ponytail/SKILL.md` を元にする。強度の切り替え(lite・ultra)は取り込まず、既定の強度の規範だけを残した。
+
+### 9.5. secure
+
+secure は次の資料を参照し、要点を自分の言葉でまとめた。文面は転載していない。いずれも 2026-10-11 に公式ページで版とライセンスを確かめた。
+
+- OWASP Application Security Verification Standard(ASVS)5.0.0(2025-05-30 公開)。CC BY-SA 4.0。https://owasp.org/www-project-application-security-verification-standard/
+- OWASP Cheat Sheet Series(版番号なし)。CC BY-SA 4.0。https://cheatsheetseries.owasp.org/ 。参照したのは次の 7 本である。
+  - Input Validation・Authentication・Authorization・Secrets Management・Logging・Error Handling・Vulnerable Dependency Management(各 `cheatsheets/<名前>_Cheat_Sheet.html`)
+
+### 9.6. observe
+
+observe は次の資料を参照し、要点を自分の言葉でまとめた。文面は転載していない。いずれも 2026-10-11 に公式ページで版とライセンスを確かめた。
+
+- OpenTelemetry Semantic Conventions 1.44.0。Apache-2.0(リポジトリ open-telemetry/semantic-conventions)。https://opentelemetry.io/docs/specs/semconv/
+- Google『Site Reliability Engineering』(2017)第 6 章 "Monitoring Distributed Systems"。CC BY-NC-ND 4.0。https://sre.google/sre-book/monitoring-distributed-systems/
+- W3C Trace Context Level 1(W3C 勧告、2021-11-23)。W3C Software and Document License。https://www.w3.org/TR/trace-context/
+
+2.5 は Kubernetes の liveness/readiness probe の慣習に基づく。https://kubernetes.io/docs/concepts/configuration/liveness-readiness-startup-probes/
+
+### 9.7. recover
+
+recover は次の資料を参照し、要点を自分の言葉でまとめた。文面は転載していない。Release It! を除き、いずれも 2026-10-14 に公式ページで版とライセンスを確かめた。
+
+- Google『Site Reliability Engineering』(2017)第 22 章 "Addressing Cascading Failures"。CC BY-NC-ND 4.0。https://sre.google/sre-book/addressing-cascading-failures/
+- Amazon Builders' Library "Timeouts, retries, and backoff with jitter"(Marc Brooker)。ライセンスの明示は無い(© Amazon Web Services, Inc.)ため、要点の要約にとどめた。https://builder.aws.com/content/3EumjoZascWd1oZiEgL8ORlv3qE/timeouts-retries-and-backoff-with-jitter
+- RFC 9110 HTTP Semantics(2022-06、STD 97)。IETF Trust Legal Provisions。https://www.rfc-editor.org/rfc/rfc9110.html 。参照した節は 9.2.2(冪等なメソッド)・10.2.3(Retry-After)・15.5.5(404)・15.5.6(405 と Allow)・15.6.1(500)・15.6.4(503。Retry-After は MAY)である。
+- RFC 6585 Additional HTTP Status Codes(2012-04)。IETF Trust Legal Provisions。https://www.rfc-editor.org/rfc/rfc6585.html 。参照した節は 4.(429)である。
+- Stripe API Reference "Idempotent requests"。ライセンスの明示は無いため、要点の要約にとどめた。https://docs.stripe.com/api/idempotent_requests
+- Google Search Central "How HTTP status codes, and network and DNS errors affect Google Search"(2026-02-04 更新)。CC BY 4.0。https://developers.google.com/search/docs/crawling-indexing/http-network-errors
+- Michael T. Nygard『Release It! Second Edition』(Pragmatic Bookshelf、2018)。Timeouts・Fail Fast の背景として書名だけを挙げる。
+
+2.6 の noindex と 2.7 は外部の出典を持たない。2.7 は、結果ページを直接開くと置換前の印がそのまま見えたという実装の事例に基づき、2.6 の noindex は、エラーページを独立した URL で配信すると直接開いたときに 200 で返るという本文の理由に基づく。
+
+NN/g Error-Message Guidelines は design-ui の `references/text.md` の出典(README 9.13.5)にある。
+
+### 9.8. write-doc
+
+#### 9.8.1. `skills/write-doc/references/inspection.md`
+
+- [coji/natural-japanese](https://github.com/coji/natural-japanese)(MIT ライセンス): スクリプト 5 本(textcore.py・lint.py・outline.py・terms.py・semantic.py)と、検査手順・判断台帳・収束条件の原典。write-doc の構成に合わせて再構成した。v1.6.0(コミット 03bc944)からは、文末の打ち消しの多用の検出器(`negation_repetition`)、文中の太字の多用の既定化と行頭のラベルの除外、誤検出の削減(語の境目・文頭の反復・段落の具体性・画像と URL とタグの除外・英字だけの行の除外)、BOM 付きファイルの読み込み、段落ごとの確かめの一覧と、読み手の手間を増やす 5 種(4.)を取り込んだ。段落の分割は、上流の `scripts/paragraphs.py` を持ち込まず、lint.py の中に書いた。
+- [nanaism/yomiyasu](https://github.com/nanaism/yomiyasu)(MIT ライセンス): v2.0.1(コミット 84e1f5b)の `references/rephrase-test.md`・`references/fact-recovery.md` からは、言い直しテストの 6 点と削る案の比べ方、補いと訂正の根拠の範囲(4.)を取り込んだ。同じ版の `references/lists/fact-gaps.txt` の程度の語・比喩の語と、`references/slop-catalog.md` の定型導入・文末の付け足し・定型の結びは、lint の NG/OK カタログと前置フィラーの検出へ取り込んだ。同じ版の `references/slop-catalog.md` の仮置きの残り(4.)を取り込んだ。【要確認】を仮置きとして扱う部分は、確信度ラベルと衝突するため取り込んでいない。
+- lint の閾値・severity は、原典が 2026-07 に実施したコーパス校正(人間 103 文書 + AI 81 文書)の結果を引き継いでいる。
+
+#### 9.8.2. `skills/write-doc/references/paragraph.md`
+
+- 木下是雄『理科系の作文技術』中公新書: パラグラフとトピックセンテンスの一次出典。
+- 結城浩『数学文章作法 基礎編・推敲編』ちくま学芸文庫: 読者の負荷を下げる原則の一次出典。
+- [coji/natural-japanese](https://github.com/coji/natural-japanese)(MIT ライセンス): トピックセンテンス・箇条書きの扱い、節の濃淡、前置きの禁止、結びの再統合、スケルトン通読、接地の原典。write-doc の書式に合わせて再構成した。v1.6.0(コミット 03bc944)の `SKILL.md` からは冒頭の要約の条件と要約の節(3.)を、`references/doctypes/report.md` からは調査の結びの検証と選択肢(3.)を取り込んだ。
+- [nanaism/yomiyasu](https://github.com/nanaism/yomiyasu)(MIT ライセンス): v2.0.1(コミット 84e1f5b)の `skills/yomiyasu/SKILL.md`・`references/slop-catalog.md` から、AI への指示の残り(3.)と、括弧の中の手順(4.)を取り込んだ。
+- [mizchi/explainer](https://github.com/mizchi/explainer)(MIT ライセンス): `skills/explainer/SKILL.md`・`skills/explainer/references/writing.md` が、伝えたいことの 1 文・節の役割の表・削除テストの原典。explainer はこれらを [HyperFrames](https://github.com/heygen-com/hyperframes)(Apache-2.0)の `story-spine.md`・`brief-contract.md` を参考に書いた。write-doc の書式に合わせて再構成した。
+
+#### 9.8.3. `skills/write-doc/references/readers.md`
+
+- [mizchi/explainer](https://github.com/mizchi/explainer)(MIT ライセンス): `skills/explainer/SKILL.md`・`skills/explainer/references/persona.md` が、確認できないときに依頼文にあったことと推測したことを分けて書く規則の原典。explainer はこれを [HyperFrames](https://github.com/heygen-com/hyperframes)(Apache-2.0)の `brief-contract.md` を参考に書いた。write-doc の書式に合わせて再構成した。
+- [nanaism/yomiyasu](https://github.com/nanaism/yomiyasu)(MIT ライセンス): v2.0.1(コミット 84e1f5b)の `references/audience.md`・`references/persona.md` から、説明の無い用語を書き手に返す規則(3.)を取り込んだ。
+
+#### 9.8.4. `skills/write-doc/references/sentence.md`
+
+- 木下是雄『理科系の作文技術』中公新書: 事実と意見の峻別の一次出典。
+- [coji/natural-japanese](https://github.com/coji/natural-japanese)(MIT ライセンス): 読みやすさの原則・悪文の型・カタログと例文の原典。write-doc の書式に合わせて再構成した。v1.5.0 までの references は、v1.6.0 で `SKILL.md`・`references/manual-checklist.md`・`references/diagnose.md`・`references/doctypes/` に再編された。v1.6.0(コミット 03bc944)の `SKILL.md`・`references/manual-checklist.md` からは、先回りの打ち消しと残す打ち消しの 3 種(2.)、演出の語、読み手が何のことか取れない言い回しの型と確かめ方、比喩の読み方の報告(3.)、英語の逐語訳(5.)を取り込んだ。硬い漢語への置き換えを避ける規則は漢語基調(3.)と衝突し、技術の言い方として定着した比喩(「キャッシュが効く」)を直さない例外は 3. の比喩の規則(「効く」)とカタログの語と衝突するため、どちらも取り込んでいない。同じ版の `SKILL.md` からは文を分けるときの接続語(2.)と、数字・引用と改行(4.)を、`references/doctypes/memo.md` からは対象外の範囲(4.)を取り込んだ。
+- [nanaism/yomiyasu](https://github.com/nanaism/yomiyasu)(MIT ライセンス): 要請と機能説明の書き分け、リライト時の情報増補の禁止、質感・認知を装う語と比喩動詞のカタログ、前置フィラー・定型クロージングの原典。write-doc の書式に合わせて再構成した。v1.1.1(コミット 373356e)の `skills/yomiyasu/SKILL.md`・`references/slop-catalog.md` からは、条件付きの比喩動詞(うち `壊れる`・`静かに`・`黙って`・`沈黙`・`逃がす` は、カタログの禁止語にした)、定着した慣用句、大げさな名詞、文末の立場、言い直しの締め、文頭の「もちろん、」、否定対比の条件を取り込んだ。同じ版の見出しの規則は、`format.md` 1. へ取り込んだ。v2.0.1(コミット 84e1f5b)の `skills/yomiyasu/SKILL.md`・`references/rephrase-test.md`・`references/fact-recovery.md` からは、2 文に分けた否定対比(2.)、文の種類の保持と、リライトで使ってよい根拠の範囲(4.)を取り込んだ。本文に【要確認】を挟まない規則は、確信度ラベル(4.)と衝突するため取り込んでいない。同じ版の `skills/yomiyasu/SKILL.md`・`references/slop-catalog.md`・`references/domains/business.md` からは、`format.md` の見出しの括弧と「〜について」・短い動作の見出し・題・議事録の見出し(1.)、補助動詞と形式名詞のひらがな(2.)、読点とラベルのコロン(3.)を取り込んだ。同じ 3 ファイルからは、「〜するには」・詰めた漢語の句・使役・前後の語での補い・指示語・予定を述べる結び(2.)、確度の語(3.)、論文調と「これにより」(5.)も取り込んだ。
+
+### 9.9. write-slide
+
+プレゼン型の原型は [coji/natural-japanese](https://github.com/coji/natural-japanese)(MIT ライセンス)にある。v1.6.0(コミット 03bc944)の `references/doctypes/slide.md` からは §2 のメッセージラインの長さと §5 のラベルの太字を、`references/doctypes/memo.md` からは §4 の当てはまらないマスを取り込んだ。
+
+§1・§2・§4〜§6 の一部は [consulting-pptx-skill](https://github.com/carnot-tech/consulting-pptx-skill)(MIT ライセンス)の `references/slide-rules.md`(コミット bc9a587 時点)を元にする。同じ版の `references/slide-rules.md` からは、社外の資料の敬称(§5)、「できる」と「行う」の区別、表紙・タイトル・章名の略語、見出しの種類を指すだけの語、同じ見せ方の連続、2 軸マトリクス、図の選び方、操作画面とロゴ(§4)、定型ページ、ページの増減後の番号の照合、消した要素の全ページでの確かめ(§6)を、`SKILL.md` の手順 9 からは見たページの番号の報告(§6)を取り込んだ。同じ版の `references/slide-rules.md` の §8 からは、draw-diagram §2 の括弧・矢印・三角の向きと矢尻の目視も取り込んだ。
+
+### 9.10. write-message
+
+#### 9.10.1. `skills/write-message/SKILL.md`
+
+- [nanaism/yomiyasu](https://github.com/nanaism/yomiyasu)(MIT ライセンス): v2.0.1(コミット 84e1f5b)の `references/slop-catalog.md` から、チャット応答の名残(謝辞・同意・申し出)、数の宣言、定型の結びの分類を取り込んだ。同じ版の `references/doc-types/mail.md` から、頼みごとの分割と期限の掛かり先(3.)、詫び・礼を減らす条件(5.)を取り込み、`references/persona.md`・`docs/usage.md` から `references/keigo.md` の規則を取り込んだ。
+- [coji/natural-japanese](https://github.com/coji/natural-japanese)(MIT ライセンス): v1.5.0(コミット 9a78a42)の `references/forbidden-patterns.md` から、同意の演出の例を取り込んだ。
+- [iKora128/stop-ai-slop-jp](https://github.com/iKora128/stop-ai-slop-jp)(MIT ライセンス): コミット e09d327 の `references/phrases.md` から、ヘッジを 1 段落に 1 つまでとする上限を、1 つのメッセージに 1 つまでとして取り込んだ。
+- [Wikipedia:Signs of AI writing](https://en.wikipedia.org/wiki/Wikipedia:Signs_of_AI_writing)(CC BY-SA 4.0): コメントに特有の兆候(見出し付きの長いコメント、事実のない謝罪、確認したことの主張、装飾の絵文字)を、文面を訳さずに規則として取り込んだ。日本語の表現への対応づけは write-message の判断である。
+- [AI 生成文からみた「自然な日本語」についての研究(大西夢、広島大学文学部、令和 7 年度卒業論文)](https://home.hiroshima-u.ac.jp/jshira/papers/AI生成文からみた「自然な日本語」についての研究（大西夢）.pdf)(ライセンス表記なし): 柔らかい文体ほど AI らしさに気付かれやすいという結果を、5. の理由として使った。査読を経ていないため、規則の根拠にはしていない。
+- 次の記事は、テンプレート的な構成と固有の一文の欠如を AI らしさとして挙げている。ライセンス表記が無いため文面は取り込まず、URL だけを示す: [マナーべる(2026-04-17 の記事)](https://mannerbell.com/ai-email-revise-manner/)、[生成AIの文章はなぜ「バレる」？ 自然に仕上げるテクニックを解説(KDDI)](https://biz.kddi.com/content/column/smb/making-of-sentence/)、[｢～ことを示している｣と書いた瞬間にバレる…(プレジデントオンライン)](https://news.yahoo.co.jp/articles/032bcc2f342a768b8ff275e43fa98dbc14febb1a)
+- 出典の無い設計上の判断: 依頼の前置きの上限(1 つ)、長さの目安(3 文・10 文)、固有の語を含める規則、検出を残す範囲は、write-message の設計で決めた。
+
+#### 9.10.2. `skills/write-message/references/keigo.md`
+
+- [敬語の指針(文化審議会答申、平成 19 年 2 月 2 日)](https://www.bunka.go.jp/seisaku/bunkashingikai/kokugo/hokoku/pdf/keigo_tosin.pdf)(ライセンス表記は未確認): 二重敬語と定着した例(p.30)、相手の動作への謙譲語の誤用(【10】【11】)、自分側と物を尊敬語で立てる誤用(【16】【34】)、「させていただく」の 2 条件(【18】)、依頼の表現(【31】【33】)、「御苦労様」(【27】)を取り込んだ。
+- [公用文作成の考え方(文化審議会建議、令和 4 年 1 月 7 日)](https://www.bunka.go.jp/seisaku/bunkashingikai/kokugo/hokoku/pdf/93651301_01.pdf)(ライセンス表記は未確認): 敬体の文末の基準と、「(ら)れる」程度を標準とする基準を、1. へ転用した。
+- [分かり合うための言語コミュニケーション(報告)(文化審議会国語分科会、平成 30 年 3 月 2 日)](https://www.bunka.go.jp/seisaku/bunkashingikai/kokugo/hokoku/wakariau/pdf/r1403493_01.pdf)(ライセンス表記は未確認): 曖昧な断り、期限のある依頼の「幸いです」「助かります」、目上への評価、疑問符を取り込んだ。
+- [平成 25 年度「国語に関する世論調査」報告書(文化庁文化部国語課)](https://www.bunka.go.jp/tokei_hakusho_shuppan/tokeichosa/kokugo_yoronchosa/pdf/92701201_06.pdf)(ライセンス表記は未確認): 二重敬語と謙譲語の誤用の例を、3. と 2. の確認に使った。
+- [洞澤伸・岡江里子「「バイト敬語」を使う若者たち: 話し手の心理と聞き手の印象」(岐阜大学地域科学部研究報告 第 19 号、2006)](https://gifu-u.repo.nii.ac.jp/record/68522/files/reg_030019001.pdf)(ライセンス表記は未確認): 「〜になります」「〜のほう」を気になるとした割合(平成 14 年度の世論調査からの二次引用)を、5. の根拠にした。敬語の指針には、この 2 つの表現の記述が無い。
+- [nanaism/yomiyasu](https://github.com/nanaism/yomiyasu)(MIT ライセンス): v2.0.1(コミット 84e1f5b)の `references/persona.md`・`docs/usage.md` から、重い依頼の組み立て(1.)、読み手の行為への謙譲語(3.)、「教えてください」と「〜し直してください」(6.)、お詫びと約束の言い回し(10.)を取り込んだ。
+- Before と After の例文は、出典の例文を参考に write-message で作った。
+
+#### 9.10.3. `skills/write-message/references/places.md`
+
+- [ビジネスメールの基本構成(日本ビジネスメール協会、マイナビニュース)](https://news.mynavi.jp/article/businessmail-6/)と[メールの書き方について(神田外語大学 学生課)](https://www.kandagaigo.ac.jp/kuis/cms/wp-content/uploads/2020/04/c7fa5f7a72fa9eb5d79262912a336d08.pdf)(どちらもライセンス表記なし): メールの宛名・挨拶・名乗り・要旨・詳細・結び・署名の構成と、挨拶・結びの定型句を 1. と 2. に取り込んだ。文面は転載していない。
+- [Slack 公式ブログのチャットのエチケット](https://slack.com/intl/ja-jp/blog/collaboration/etiquette-tips-in-slack)と[ネットで叩かれている「Slackマナー」は本当にアホらしいのか?(ITmedia NEWS)](https://www.itmedia.co.jp/news/articles/2001/09/news073.html)(どちらもライセンス表記なし): チャットで挨拶だけのメッセージを送らないこと、宛名・所属・署名を書かないことを取り込んだ。文面は転載していない。
+- [How to Report Bugs Effectively(Simon Tatham)](https://www.chiark.greenend.org.uk/~sgtatham/bugs.html)(OpenContent License)、[misskey-dev/misskey のバグ報告テンプレート](https://github.com/misskey-dev/misskey/blob/develop/.github/ISSUE_TEMPLATE/01_bug-report.yml)(AGPL-3.0)、[asciidwango/js-primer のバグ報告テンプレート](https://github.com/asciidwango/js-primer/blob/master/.github/ISSUE_TEMPLATE/bug_report.md)(CC BY 4.0): バグ報告の項目と、症状と推測を分けることを取り込んだ。テンプレートの文面は取り込んでいない。
+- 次の記事から、1 つの issue に 1 つの話題、賛同はリアクションで示すこと、公開してよい情報だけを書くことを取り込んだ。ライセンス表記が無いため URL だけを示す: [OSS Issue投稿ガイド(Zenn)](https://zenn.dev/immedio/articles/15c1b953696841)、[OSS に Issue 報告する際の作法(DevelopersIO)](https://dev.classmethod.jp/articles/issue-report-to-oss/)
+- [How to write code review comments(Google Engineering Practices)](https://google.github.io/eng-practices/review/reviewer/comments.html)(CC BY 3.0)と [Conventional Comments](https://conventionalcomments.org/)(CC BY 3.0): コードについて書くこと、理由を書くこと、重大度のラベル、確信が無いときは質問にすることを取り込んだ。Before の例文は Google の悪い例を日本語にした。
+- [レビューコメントで頻繁に使うプレフィックス(DevelopersIO)](https://dev.classmethod.jp/articles/prefixes-for-frequently-used-review-comments/)(ライセンス表記なし): 日本のチームのラベル(`[must]` `[imo]`)の例として URL だけを示す。
+- 出典の無い設計上の判断: issue・PR のコメントで宛名・挨拶・名乗り・結びを書かない規則は、日本語の OSS 3 リポジトリ([vim-jp/vimdoc-ja](https://github.com/vim-jp/vimdoc-ja)、[asciidwango/js-primer](https://github.com/asciidwango/js-primer)、[textlint-ja/textlint-rule-preset-ja-technical-writing](https://github.com/textlint-ja/textlint-rule-preset-ja-technical-writing))のコメント 106 件を数えた結果から一般化した。チャットの結びを 1 回までとする規則と、ラベルの慣習が読み取れないときに確かめる規則も、write-message の判断である。
+
+### 9.11. respond
+
+respond は i-have-adhd(MIT ライセンス、Copyright (c) 2026 Ayoub Ghriss、https://github.com/ayghri/i-have-adhd)の規則を元にする。冒頭の段落・1.・2. の 1〜2・3.1・3.3・3.5・5. は、本人の特性(複数の作業を並行し、最後の行から読む)に合わせて 2026-10-20 に書き換えた。3.11〜3.13 は workspace の `AGENTS.md` の原則を、3.14 は workspace の運用で得た指摘を反映する。
+
+### 9.12. draw-diagram
+
+#### 9.12.1. `skills/draw-diagram/references/svg.md`
+
+9\. の規則は、[cathrynlavery/diagram-design](https://github.com/cathrynlavery/diagram-design)(MIT ライセンス、Copyright (c) 2025 Cathryn Lavery)v2.6.115(コミット f2f4d49)の `skills/diagram-design/references/primitives-core.md` にある接続線の規則 6 項目と、`SKILL.md` 6. にある描く順序の 1 項目を元にする。draw-diagram の語と書式(CSS で矢尻を付ける、ラベルに背景を付けない)に合わせて書き直した。`render.py` の斜めの線分の検出は、同リポジトリの `scripts/verify-geometry.py` の検出項目の 1 つを参考にし、`data-edge` を持つ要素を対象として書き直した。
+
+### 9.13. design-ui
+
+#### 9.13.1. `skills/design-ui/SKILL.md`
+
+スケール(4.)は Refactoring UI(Wathan & Schoger)を出典とする。
+
+- [anthropics/skills frontend-design](https://github.com/anthropics/skills/tree/main/skills/frontend-design)(Apache-2.0)
+- [pbakaus/impeccable](https://github.com/pbakaus/impeccable)(Apache-2.0)
+- [nextlevelbuilder/ui-ux-pro-max-skill](https://github.com/nextlevelbuilder/ui-ux-pro-max-skill)(MIT)
+- [vercel-labs/web-interface-guidelines](https://github.com/vercel-labs/web-interface-guidelines)(MIT。`vercel-labs/agent-skills` の `skills/web-design-guidelines` 経由)
+- [s0xDk/refactoring-ui-skill](https://github.com/s0xDk/refactoring-ui-skill)(MIT。原典 Wathan & Schoger, *Refactoring UI*)
+- [NN/g](https://www.nngroup.com/articles/)、[Apple Human Interface Guidelines](https://developer.apple.com/design/human-interface-guidelines/)、[Material Design 3](https://m3.material.io/)
+
+#### 9.13.2. `skills/design-ui/references/anti-ai.md`
+
+- [anthropics/skills frontend-design](https://github.com/anthropics/skills/tree/main/skills/frontend-design)(Apache-2.0)
+- [pbakaus/impeccable](https://github.com/pbakaus/impeccable)(Apache-2.0)、`skill/reference/craft-floor.md`
+- [developersdigest: AI design slop and how to spot it](https://www.developersdigest.tech/blog/ai-design-slop-and-how-to-spot-it)
+- [925studios: AI slop design tells](https://www.925studios.co/blog/ai-slop-design-tells)
+- [mania.design: spot the slop](https://www.mania.design/blog/spot-the-slop-a-ui-designers-guide-to-fixing-ai-defaults/)
+- [dev.to: the purple gradient problem](https://dev.to/james_anderson_h/the-purple-gradient-problem-why-ai-ui-all-looks-alike-and-how-to-fix-it-3j65)
+
+#### 9.13.3. `skills/design-ui/references/checklist.md`
+
+- [vercel-labs/web-interface-guidelines](https://github.com/vercel-labs/web-interface-guidelines)(MIT。`vercel-labs/agent-skills` の `skills/web-design-guidelines` 経由)
+- [nextlevelbuilder/ui-ux-pro-max-skill](https://github.com/nextlevelbuilder/ui-ux-pro-max-skill)(MIT)
+- [pbakaus/impeccable](https://github.com/pbakaus/impeccable)(Apache-2.0)、`skill/reference/craft-floor.md`
+
+#### 9.13.4. `skills/design-ui/references/native.md`
+
+- [Apple Human Interface Guidelines: Layout](https://developer.apple.com/design/human-interface-guidelines/layout)、[Typography](https://developer.apple.com/design/human-interface-guidelines/typography)、[Accessibility](https://developer.apple.com/design/human-interface-guidelines/accessibility)、[VoiceOver](https://developer.apple.com/design/human-interface-guidelines/voiceover)、[Tab bars](https://developer.apple.com/design/human-interface-guidelines/tab-bars)、[Toolbars](https://developer.apple.com/design/human-interface-guidelines/toolbars)、[Modality](https://developer.apple.com/design/human-interface-guidelines/modality)、[Sheets](https://developer.apple.com/design/human-interface-guidelines/sheets)、[Alerts](https://developer.apple.com/design/human-interface-guidelines/alerts)、[Privacy](https://developer.apple.com/design/human-interface-guidelines/privacy)、[Dark Mode](https://developer.apple.com/design/human-interface-guidelines/dark-mode)、[Playing haptics](https://developer.apple.com/design/human-interface-guidelines/playing-haptics)、[Virtual keyboards](https://developer.apple.com/design/human-interface-guidelines/virtual-keyboards)、[Offering help](https://developer.apple.com/design/human-interface-guidelines/offering-help)
+- Material Design 3(developer.android.com での裏取り)。[Accessibility for apps](https://developer.android.com/guide/topics/ui/accessibility/apps)、[Use window size classes](https://developer.android.com/develop/ui/compose/layouts/adaptive/use-window-size-classes)、[Navigation bar](https://developer.android.com/develop/ui/compose/components/navigation-bar)、[Predictive back gesture](https://developer.android.com/guide/navigation/custom-back/predictive-back-gesture)、[Edge to edge](https://developer.android.com/develop/ui/views/layout/edge-to-edge)、[Tooltips](https://developer.android.com/develop/ui/compose/components/tooltip)、[Dynamic color](https://developer.android.com/develop/ui/views/theming/dynamic-colors)
+- [Flutter: Platform adaptations](https://docs.flutter.dev/platform-integration/platform-adaptations)
+- [React Native: Platform-specific code](https://reactnative.dev/docs/platform-specific-code)
+- [pbakaus/impeccable](https://github.com/pbakaus/impeccable)(Apache-2.0)、`skill/reference/ios.md`・`android.md`・`adapt.native.md`
+
+#### 9.13.5. `skills/design-ui/references/text.md`
+
+- [NN/g: Tooltip Guidelines](https://www.nngroup.com/articles/tooltip-guidelines/)
+- [NN/g: Icon Usability](https://www.nngroup.com/articles/icon-usability/)
+- [NN/g: Progressive Disclosure](https://www.nngroup.com/articles/progressive-disclosure/)
+- [NN/g: Error-Message Guidelines](https://www.nngroup.com/articles/error-message-guidelines/)
+- [Apple Human Interface Guidelines: Offering help](https://developer.apple.com/design/human-interface-guidelines/offering-help)
+- [Material Design 3: Tooltips](https://m3.material.io/components/tooltips)
+- [pbakaus/impeccable](https://github.com/pbakaus/impeccable)(Apache-2.0)、`skill/reference/clarify.md`
+- [s0xDk/refactoring-ui-skill](https://github.com/s0xDk/refactoring-ui-skill)(MIT。原典 Wathan & Schoger, *Refactoring UI*)
+- [anthropics/skills frontend-design](https://github.com/anthropics/skills/tree/main/skills/frontend-design)(Apache-2.0)
