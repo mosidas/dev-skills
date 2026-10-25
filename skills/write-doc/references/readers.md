@@ -36,8 +36,3 @@
 ## 4. 文書の形式
 
 - 見出し構成・必須要素・雛形はスキルで定めない。読み手の分類と文書の目的から候補を提案し、ユーザーと合意して決める。
-
-## 5. 参考文献
-
-- [mizchi/explainer](https://github.com/mizchi/explainer)(MIT ライセンス): `skills/explainer/SKILL.md`・`skills/explainer/references/persona.md` が、確認できないときに依頼文にあったことと推測したことを分けて書く規則の原典。explainer はこれを [HyperFrames](https://github.com/heygen-com/hyperframes)(Apache-2.0)の `brief-contract.md` を参考に書いた。本スキルの書式に合わせて再構成した。
-- [nanaism/yomiyasu](https://github.com/nanaism/yomiyasu)(MIT ライセンス): v2.0.1(コミット 84e1f5b)の `references/audience.md`・`references/persona.md` から、説明の無い用語を書き手に返す規則(3.)を取り込んだ。

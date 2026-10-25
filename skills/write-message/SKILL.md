@@ -85,13 +85,3 @@ lint が検出する 5. の項目は、定型の結びの一部だけである�
 | :-- | :-- | :-- |
 | `references/keigo.md` | 敬体の上限、二重敬語、敬語の取り違え、「させていただく」、依頼・断り・ねぎらいの表現、お詫びと約束 | 本文を書く・直すとき |
 | `references/places.md` | 場ごとの形、残す定型句と削る定型句、バグ報告、レビューコメント | 宛先と場を確かめた後 |
-
-## 8. 出典
-
-- [nanaism/yomiyasu](https://github.com/nanaism/yomiyasu)(MIT ライセンス): v2.0.1(コミット 84e1f5b)の `references/slop-catalog.md` から、チャット応答の名残(謝辞・同意・申し出)、数の宣言、定型の結びの分類を取り込んだ。同じ版の `references/doc-types/mail.md` から、頼みごとの分割と期限の掛かり先(3.)、詫び・礼を減らす条件(5.)を取り込み、`references/persona.md`・`docs/usage.md` から `references/keigo.md` の規則を取り込んだ。
-- [coji/natural-japanese](https://github.com/coji/natural-japanese)(MIT ライセンス): v1.5.0(コミット 9a78a42)の `references/forbidden-patterns.md` から、同意の演出の例を取り込んだ。
-- [iKora128/stop-ai-slop-jp](https://github.com/iKora128/stop-ai-slop-jp)(MIT ライセンス): コミット e09d327 の `references/phrases.md` から、ヘッジを 1 段落に 1 つまでとする上限を、1 つのメッセージに 1 つまでとして取り込んだ。
-- [Wikipedia:Signs of AI writing](https://en.wikipedia.org/wiki/Wikipedia:Signs_of_AI_writing)(CC BY-SA 4.0): コメントに特有の兆候(見出し付きの長いコメント、事実のない謝罪、確認したことの主張、装飾の絵文字)を、文面を訳さずに規則として取り込んだ。日本語の表現への対応づけは本スキルの判断である。
-- [AI 生成文からみた「自然な日本語」についての研究(大西夢、広島大学文学部、令和 7 年度卒業論文)](https://home.hiroshima-u.ac.jp/jshira/papers/AI生成文からみた「自然な日本語」についての研究（大西夢）.pdf)(ライセンス表記なし): 柔らかい文体ほど AI らしさに気付かれやすいという結果を、5. の理由として使った。査読を経ていないため、規則の根拠にはしていない。
-- 次の記事は、テンプレート的な構成と固有の一文の欠如を AI らしさとして挙げている。ライセンス表記が無いため文面は取り込まず、URL だけを示す: [マナーべる(2026-04-17 の記事)](https://mannerbell.com/ai-email-revise-manner/)、[生成AIの文章はなぜ「バレる」？ 自然に仕上げるテクニックを解説(KDDI)](https://biz.kddi.com/content/column/smb/making-of-sentence/)、[｢～ことを示している｣と書いた瞬間にバレる…(プレジデントオンライン)](https://news.yahoo.co.jp/articles/032bcc2f342a768b8ff275e43fa98dbc14febb1a)
-- 出典の無い設計上の判断: 依頼の前置きの上限(1 つ)、長さの目安(3 文・10 文)、固有の語を含める規則、検出を残す範囲は、本スキルの設計で決めた。

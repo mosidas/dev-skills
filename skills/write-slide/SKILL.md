@@ -153,7 +153,3 @@ After:
 ## 7. 扱わないこと
 
 配色・文字サイズ(pt)・版面の寸法と、HTML・PPTX・Marp での実装(テーマ・CSS クラス・PDF の生成)は本スキルが扱わない。
-
-プレゼン型の原型は [coji/natural-japanese](https://github.com/coji/natural-japanese)(MIT ライセンス)にある。v1.6.0(コミット 03bc944)の `references/doctypes/slide.md` からは §2 のメッセージラインの長さと §5 のラベルの太字を、`references/doctypes/memo.md` からは §4 の当てはまらないマスを取り込んだ。
-
-§1・§2・§4〜§6 の一部は [consulting-pptx-skill](https://github.com/carnot-tech/consulting-pptx-skill)(MIT ライセンス)の `references/slide-rules.md`(コミット bc9a587 時点)を元にする。同じ版の `references/slide-rules.md` からは、社外の資料の敬称(§5)、「できる」と「行う」の区別、表紙・タイトル・章名の略語、見出しの種類を指すだけの語、同じ見せ方の連続、2 軸マトリクス、図の選び方、操作画面とロゴ(§4)、定型ページ、ページの増減後の番号の照合、消した要素の全ページでの確かめ(§6)を、`SKILL.md` の手順 9 からは見たページの番号の報告(§6)を取り込んだ。同じ版の `references/slide-rules.md` の §8 からは、draw-diagram §2 の括弧・矢印・三角の向きと矢尻の目視も取り込んだ。
