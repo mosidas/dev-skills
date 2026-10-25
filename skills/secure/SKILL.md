@@ -65,11 +65,3 @@ description: コードの安全性の規範。信頼境界での入力検証、�
 
 - ponytail 5. はセキュリティ対策を単純化の対象から外す。何を対策すれば十分かは本規範が定め、どう書くか(既存の部品を優先し、差分を最小にする)は ponytail が定める。
 - ログの形式と相関 ID は observe(`skills/observe/SKILL.md`)に従う。秘密をログに出さない規則は本規範が持つ。
-
-## 4. 出典
-
-本規範は次の資料を参照し、要点を自分の言葉でまとめた。文面は転載していない。いずれも 2026-10-11 に公式ページで版とライセンスを確かめた。
-
-- OWASP Application Security Verification Standard(ASVS)5.0.0(2025-05-30 公開)。CC BY-SA 4.0。https://owasp.org/www-project-application-security-verification-standard/
-- OWASP Cheat Sheet Series(版番号なし)。CC BY-SA 4.0。https://cheatsheetseries.owasp.org/ 。参照したのは次の 7 本である。
-  - Input Validation・Authentication・Authorization・Secrets Management・Logging・Error Handling・Vulnerable Dependency Management(各 `cheatsheets/<名前>_Cheat_Sheet.html`)
