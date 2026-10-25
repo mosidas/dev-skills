@@ -154,14 +154,3 @@ description: タスクで受けた本人の指摘とレビューの指摘から�
 | `references/report.md` | 表と起票の案の雛形。節ごとの書き方を、各節の直下のコメントに書いている | 表にするとき |
 | `references/example.md` | 2026-10-14 の事例に手順を当てはめた表と、行のまとめ方 | 分類や原因の判定に迷ったとき |
 | `../develop/references/requirements.md` | 要件の 4 行の形式と品質の決め方 | 起票の本文を書くとき |
-
-## 9. 出典
-
-本規範は次の資料を参照し、要点を自分の言葉でまとめた。文面は転載していない。2026-10-15 に公式ページで版とライセンスを確かめた。
-
-- Google『Site Reliability Engineering』(2017)第 15 章 "Postmortem Culture: Learning from Failure"(John Lunney・Sue Lueder)。CC BY-NC-ND 4.0。https://sre.google/sre-book/postmortem-culture/ 。参照した要点と、本スキルで対応する箇所は次の 3 つである。
-  - ふりかえりを実施する条件を、事前に決めておく。本スキルでは 1. の「本人の指摘が 1 回以上」にあたる。
-  - 個人を責めず、仕組みと工程を直す。本スキルでは 1. の指摘の扱いと、5.6 の対処の型にあたる。
-  - 再発を防ぐ対策を記録に含める。本スキルでは 6. の起票にあたる。
-
-4. の分類と 5. の原因の分類は外部の出典を持たず、2026-10-14 の事例(`references/example.md`)に基づく。

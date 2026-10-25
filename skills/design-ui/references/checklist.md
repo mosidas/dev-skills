@@ -56,9 +56,3 @@
 - 画像には `width`・`height` を明示し、読み込み中のレイアウトのずれ(CLS)を防ぐ。
 - ビューポート外の画像は `loading="lazy"` にする。上部の主要な画像は先読みする。
 - 50 件を超える一覧は仮想化するか、`content-visibility: auto` で描画範囲を絞る。
-
-## 9. 出典
-
-- [vercel-labs/web-interface-guidelines](https://github.com/vercel-labs/web-interface-guidelines)(MIT。`vercel-labs/agent-skills` の `skills/web-design-guidelines` 経由)
-- [nextlevelbuilder/ui-ux-pro-max-skill](https://github.com/nextlevelbuilder/ui-ux-pro-max-skill)(MIT)
-- [pbakaus/impeccable](https://github.com/pbakaus/impeccable)(Apache-2.0)、`skill/reference/craft-floor.md`

@@ -154,7 +154,3 @@ M x,y+r v h-2r a w/2,r 0 0 0 w,0 v -(h-2r) a w/2,r 0 0 0 -w,0 a w/2,r 0 0 0 w,0
 5. 始点・終点でない箱の裏を通らないように、線を迂回させる。迂回できないときだけ線を破線にし、ラベルを見える側の端に配置する。破線で間の箱を通すときは、矢尻を終点の箱にだけ付け、間の箱の縁に置かない。
 6. 辺のラベルを、始点・終点を含むノードの箱に重ねない。ラベルは箱より後に描くため、重なると箱の上に文字が載る。
 7. 線を箱より先に描く。SVG の要素は、辺の線、箱とノード名、辺のラベル、凡例の順に並べ、線が箱の裏に隠れる重なり順にする。
-
-## 10. 出典
-
-9. の規則は、[cathrynlavery/diagram-design](https://github.com/cathrynlavery/diagram-design)(MIT ライセンス、Copyright (c) 2025 Cathryn Lavery)v2.6.115(コミット f2f4d49)の `skills/diagram-design/references/primitives-core.md` にある接続線の規則 6 項目と、`SKILL.md` 6. にある描く順序の 1 項目を元にする。draw-diagram の語と書式(CSS で矢尻を付ける、ラベルに背景を付けない)に合わせて書き直した。`render.py` の斜めの線分の検出は、同リポジトリの `scripts/verify-geometry.py` の検出項目の 1 つを参考にし、`data-edge` を持つ要素を対象として書き直した。

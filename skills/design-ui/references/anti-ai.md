@@ -46,12 +46,3 @@
 ## 4. 判断の仕方
 
 一覧は禁止の目録ではない。既定を疑う対象の目録である。ブリーフがその見た目を名指しで求めていれば、そのまま採用する。軸が空いているときだけ描き直す。仕上げの段階では、際立たせたい要素を 1 つだけ残し、周囲のあしらいを一段ずつ弱め、それでも目立ってしまう装飾を見つけたら削るという、最後の引き算を繰り返し行う。
-
-## 5. 出典
-
-- [anthropics/skills frontend-design](https://github.com/anthropics/skills/tree/main/skills/frontend-design)(Apache-2.0)
-- [pbakaus/impeccable](https://github.com/pbakaus/impeccable)(Apache-2.0)、`skill/reference/craft-floor.md`
-- [developersdigest: AI design slop and how to spot it](https://www.developersdigest.tech/blog/ai-design-slop-and-how-to-spot-it)
-- [925studios: AI slop design tells](https://www.925studios.co/blog/ai-slop-design-tells)
-- [mania.design: spot the slop](https://www.mania.design/blog/spot-the-slop-a-ui-designers-guide-to-fixing-ai-defaults/)
-- [dev.to: the purple gradient problem](https://dev.to/james_anderson_h/the-purple-gradient-problem-why-ai-ui-all-looks-alike-and-how-to-fix-it-3j65)

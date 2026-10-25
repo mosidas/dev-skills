@@ -61,15 +61,3 @@
 | :-- | :-- | :-- | :-- |
 | 悪い例(常体の依頼・受付番号・保存の有無の説明・戻るリンク) | 送信に失敗した | 入力内容は保存されていないため、時間をおいて再度送信してほしい。受付番号: 3f9a2c1e | お問い合わせのページへ戻る |
 | 良い例 | 送信に失敗しました | 時間をおいて、もう一度お試しください。 | なし |
-
-## 9. 出典
-
-- [NN/g: Tooltip Guidelines](https://www.nngroup.com/articles/tooltip-guidelines/)
-- [NN/g: Icon Usability](https://www.nngroup.com/articles/icon-usability/)
-- [NN/g: Progressive Disclosure](https://www.nngroup.com/articles/progressive-disclosure/)
-- [NN/g: Error-Message Guidelines](https://www.nngroup.com/articles/error-message-guidelines/)
-- [Apple Human Interface Guidelines: Offering help](https://developer.apple.com/design/human-interface-guidelines/offering-help)
-- [Material Design 3: Tooltips](https://m3.material.io/components/tooltips)
-- [pbakaus/impeccable](https://github.com/pbakaus/impeccable)(Apache-2.0)、`skill/reference/clarify.md`
-- [s0xDk/refactoring-ui-skill](https://github.com/s0xDk/refactoring-ui-skill)(MIT。原典 Wathan & Schoger, *Refactoring UI*)
-- [anthropics/skills frontend-design](https://github.com/anthropics/skills/tree/main/skills/frontend-design)(Apache-2.0)

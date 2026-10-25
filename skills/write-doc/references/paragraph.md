@@ -71,11 +71,3 @@
 
 1. 根拠(例・出力・図)をすべて消す。残った文だけで伝えたいことが言えなければ、主張が書けていない。
 2. 主張(読み手にとって何が変わるか)を述べた文をすべて消す。それでも文書が成り立って見えるなら、根拠を読み上げているだけである。
-
-## 6. 参考文献
-
-- 木下是雄『理科系の作文技術』中公新書: パラグラフとトピックセンテンスの一次出典。
-- 結城浩『数学文章作法 基礎編・推敲編』ちくま学芸文庫: 読者の負荷を下げる原則の一次出典。
-- [coji/natural-japanese](https://github.com/coji/natural-japanese)(MIT ライセンス): トピックセンテンス・箇条書きの扱い、節の濃淡、前置きの禁止、結びの再統合、スケルトン通読、接地の原典。本スキルの書式に合わせて再構成した。v1.6.0(コミット 03bc944)の `SKILL.md` からは冒頭の要約の条件と要約の節(3.)を、`references/doctypes/report.md` からは調査の結びの検証と選択肢(3.)を取り込んだ。
-- [nanaism/yomiyasu](https://github.com/nanaism/yomiyasu)(MIT ライセンス): v2.0.1(コミット 84e1f5b)の `skills/yomiyasu/SKILL.md`・`references/slop-catalog.md` から、AI への指示の残り(3.)と、括弧の中の手順(4.)を取り込んだ。
-- [mizchi/explainer](https://github.com/mizchi/explainer)(MIT ライセンス): `skills/explainer/SKILL.md`・`skills/explainer/references/writing.md` が、伝えたいことの 1 文・節の役割の表・削除テストの原典。explainer はこれらを [HyperFrames](https://github.com/heygen-com/hyperframes)(Apache-2.0)の `story-spine.md`・`brief-contract.md` を参考に書いた。本スキルの書式に合わせて再構成した。
