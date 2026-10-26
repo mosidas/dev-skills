@@ -135,7 +135,7 @@ description: タスクで受けた本人の指摘とレビューの指摘から�
 
    表の直す場所の列には、宛先プロファイルを一般名(例: 宛先プロファイル(顧客 A))で書き、顧客名を書かない(表と起票は public の dev-skills に写ることがある)。
 2. 束を決める。次の順に当てはめ、最初に当たった 1 つに加える。
-   1. 文書の種類(手順書・仕様書など)で決まるなら、write-doc の `references/types/` に加える。
+   1. 文書の種類で決まるなら、write-doc の `references/types/README.md` の表の種類のファイルの 3.(足す規則)か 4.(外してよい規則)に加える。表に無い種類は 2.・3. へ進む。
    2. 特定の形式にだけ当てはまる(GFM の記法など)なら、write-doc の `references/format/<形式>.md`(`markdown`・`html`・`slide`)に加える。
    3. それ以外は、write-doc の SKILL.md の束の表の「扱う規範」の列で選ぶ。語・文・段落・見出し・表なら言語の束(`references/sentence.md`・`references/paragraph.md`)、読み手の分類・工程・点検なら読み手と工程の束(`references/readers.md`・`references/process.md`・`references/inspection.md`)に加える。
 
