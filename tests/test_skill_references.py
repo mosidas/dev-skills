@@ -106,6 +106,12 @@ class SkillReferencesTest(unittest.TestCase):
         if missing:
             self.fail("存在しない相対参照:\n" + "\n".join(missing))
 
+    def test_write_slideのSKILL_mdが60行以下(self) -> None:
+        # 規則の正本は write-doc に置き、write-slide は読む表と形式固有の工程だけを持つ。
+        path = REPO_ROOT / "skills" / "write-slide" / "SKILL.md"
+        lines = len(_read(path).splitlines())
+        self.assertLessEqual(lines, 60, f"{_rel(path)} が {lines} 行ある")
+
 
 if __name__ == "__main__":
     unittest.main()
