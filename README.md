@@ -273,8 +273,8 @@ MIT ライセンスで公開する。全文は `LICENSE` にある。
 | [cursor/plugins](https://github.com/cursor/plugins) の pstack | MIT | コミット 997ffc7(2026-10-12 時点) | specify |
 | [mattpocock/skills](https://github.com/mattpocock/skills) | MIT | コミット 49dd158(2026-10-12 時点) | specify |
 | [DietrichGebert/ponytail](https://github.com/DietrichGebert/ponytail) | MIT | v5.1.0 | ponytail |
-| [coji/natural-japanese](https://github.com/coji/natural-japanese) | MIT | v1.5.0(9a78a42)・v1.6.0(03bc944) | write-doc(`inspection.md`・`paragraph.md`・`sentence.md`・`format/slide.md`)・write-slide・write-message(`SKILL.md`) |
-| [nanaism/yomiyasu](https://github.com/nanaism/yomiyasu) | MIT | v1.1.1(373356e)・v2.0.1(84e1f5b) | write-doc(`inspection.md`・`paragraph.md`・`readers.md`・`sentence.md`)・write-message(`SKILL.md`・`keigo.md`) |
+| [coji/natural-japanese](https://github.com/coji/natural-japanese) | MIT | v1.5.0(9a78a42)・v1.6.0(03bc944) | write-doc(`inspection.md`・`paragraph.md`・`sentence.md`・`format/slide.md`・`types/report.md`)・write-slide・write-message(`SKILL.md`) |
+| [nanaism/yomiyasu](https://github.com/nanaism/yomiyasu) | MIT | v1.1.1(373356e)・v2.0.1(84e1f5b) | write-doc(`inspection.md`・`paragraph.md`・`readers.md`・`sentence.md`・`types/minutes.md`)・write-message(`SKILL.md`・`keigo.md`) |
 | [mizchi/explainer](https://github.com/mizchi/explainer) | MIT | 版の記載なし | write-doc(`paragraph.md`・`readers.md`) |
 | [heygen-com/hyperframes](https://github.com/heygen-com/hyperframes) | Apache-2.0 | 版の記載なし | write-doc(`paragraph.md`・`readers.md`。explainer を経由) |
 | [carnot-tech/consulting-pptx-skill](https://github.com/carnot-tech/consulting-pptx-skill) | MIT | コミット bc9a587 | write-doc(`format/slide.md`・`paragraph.md`・`sentence.md`・`process.md`・`inspection.md`)・write-slide・draw-diagram(`SKILL.md`) |
