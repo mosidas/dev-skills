@@ -163,7 +163,7 @@ skills/retro/
 └── references/            # report.md・example.md(表と起票案の雛形・2026-10-14 の事例)
 skills/write-doc/
 ├── SKILL.md               # 規範の入口(工程と参照ファイル)
-├── references/            # 読み手・表記・文・段落・検査の規範
+├── references/            # 読み手・文と表記・段落と見出し・検査の規範、format/(Markdown・HTML の形式)
 └── scripts/               # lint.py・outline.py・terms.py・semantic.py と動詞・名詞の NG/OK カタログ
 skills/write-slide/
 └── SKILL.md               # スライド構成の規範
@@ -423,7 +423,7 @@ NN/g Error-Message Guidelines は design-ui の `references/text.md` の出典(R
 
 - 木下是雄『理科系の作文技術』中公新書: 事実と意見の峻別の一次出典。
 - [coji/natural-japanese](https://github.com/coji/natural-japanese)(MIT ライセンス): 読みやすさの原則・悪文の型・カタログと例文の原典。write-doc の書式に合わせて再構成した。v1.5.0 までの references は、v1.6.0 で `SKILL.md`・`references/manual-checklist.md`・`references/diagnose.md`・`references/doctypes/` に再編された。v1.6.0(コミット 03bc944)の `SKILL.md`・`references/manual-checklist.md` からは、先回りの打ち消しと残す打ち消しの 3 種(2.)、演出の語、読み手が何のことか取れない言い回しの型と確かめ方、比喩の読み方の報告(3.)、英語の逐語訳(5.)を取り込んだ。硬い漢語への置き換えを避ける規則は漢語基調(3.)と衝突し、技術の言い方として定着した比喩(「キャッシュが効く」)を直さない例外は 3. の比喩の規則(「効く」)とカタログの語と衝突するため、どちらも取り込んでいない。同じ版の `SKILL.md` からは文を分けるときの接続語(2.)と、数字・引用と改行(4.)を、`references/doctypes/memo.md` からは対象外の範囲(4.)を取り込んだ。
-- [nanaism/yomiyasu](https://github.com/nanaism/yomiyasu)(MIT ライセンス): 要請と機能説明の書き分け、リライト時の情報増補の禁止、質感・認知を装う語と比喩動詞のカタログ、前置フィラー・定型クロージングの原典。write-doc の書式に合わせて再構成した。v1.1.1(コミット 373356e)の `skills/yomiyasu/SKILL.md`・`references/slop-catalog.md` からは、条件付きの比喩動詞(うち `壊れる`・`静かに`・`黙って`・`沈黙`・`逃がす` は、カタログの禁止語にした)、定着した慣用句、大げさな名詞、文末の立場、言い直しの締め、文頭の「もちろん、」、否定対比の条件を取り込んだ。同じ版の見出しの規則は、`format.md` 1. へ取り込んだ。v2.0.1(コミット 84e1f5b)の `skills/yomiyasu/SKILL.md`・`references/rephrase-test.md`・`references/fact-recovery.md` からは、2 文に分けた否定対比(2.)、文の種類の保持と、リライトで使ってよい根拠の範囲(4.)を取り込んだ。本文に【要確認】を挟まない規則は、確信度ラベル(4.)と衝突するため取り込んでいない。同じ版の `skills/yomiyasu/SKILL.md`・`references/slop-catalog.md`・`references/domains/business.md` からは、`format.md` の見出しの括弧と「〜について」・短い動作の見出し・題・議事録の見出し(1.)、補助動詞と形式名詞のひらがな(2.)、読点とラベルのコロン(3.)を取り込んだ。同じ 3 ファイルからは、「〜するには」・詰めた漢語の句・使役・前後の語での補い・指示語・予定を述べる結び(2.)、確度の語(3.)、論文調と「これにより」(5.)も取り込んだ。
+- [nanaism/yomiyasu](https://github.com/nanaism/yomiyasu)(MIT ライセンス): 要請と機能説明の書き分け、リライト時の情報増補の禁止、質感・認知を装う語と比喩動詞のカタログ、前置フィラー・定型クロージングの原典。write-doc の書式に合わせて再構成した。v1.1.1(コミット 373356e)の `skills/yomiyasu/SKILL.md`・`references/slop-catalog.md` からは、条件付きの比喩動詞(うち `壊れる`・`静かに`・`黙って`・`沈黙`・`逃がす` は、カタログの禁止語にした)、定着した慣用句、大げさな名詞、文末の立場、言い直しの締め、文頭の「もちろん、」、否定対比の条件を取り込んだ。同じ版の見出しの規則は、`paragraph.md` 6. へ取り込んだ。v2.0.1(コミット 84e1f5b)の `skills/yomiyasu/SKILL.md`・`references/rephrase-test.md`・`references/fact-recovery.md` からは、2 文に分けた否定対比(2.)、文の種類の保持と、リライトで使ってよい根拠の範囲(4.)を取り込んだ。本文に【要確認】を挟まない規則は、確信度ラベル(4.)と衝突するため取り込んでいない。同じ版の `skills/yomiyasu/SKILL.md`・`references/slop-catalog.md`・`references/domains/business.md` からは、`paragraph.md` の見出しの括弧と「〜について」・短い動作の見出し・題・議事録の見出し(6.)、`sentence.md` の補助動詞と形式名詞のひらがな(6.)と読点とラベルのコロン(7.)を取り込んだ。同じ 3 ファイルからは、「〜するには」・詰めた漢語の句・使役・前後の語での補い・指示語・予定を述べる結び(2.)、確度の語(3.)、論文調と「これにより」(5.)も取り込んだ。
 
 ### 9.9. write-slide
 

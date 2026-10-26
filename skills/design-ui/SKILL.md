@@ -75,5 +75,5 @@ description: Web・iOS・Android・デスクトップの画面・コンポーネ
 - コード自体の最小化は ponytail に従う。依存の選定・抽象化の要否も含む。
 - 図・ポンチ絵を作るときは draw-diagram に従う。UI モックの撮影には draw-diagram の `render.py` を使う。
 - UI モックは、specify の PRD と組で build に渡すか、単独で develop に渡す。planner は UI モックの決定を決め直さない。
-- 画面内の日本語の文言は `references/text.md` 8. に従う。語の選び方と文の組み立ては `../write-doc/references/sentence.md` に従い(漢語基調の項を除く)、文体は text.md 8. を優先する。
+- 画面内の日本語の文言は `references/text.md` 8. に従う。語の選び方と文の組み立ては `../write-doc/references/sentence.md` の 1.〜5. に従い(漢語基調の項を除く)、同 6.〜8. と `../write-doc/references/format/` は適用しない。文体は text.md 8. を優先する。
 - 失敗の状態の洗い出しと、失敗時にシステムがすること(タイムアウト・再試行・二重送信の防止・エラーページ)は、品質がプロダクトのとき recover に従う。本スキルは各状態の見せ方と文言を定める。

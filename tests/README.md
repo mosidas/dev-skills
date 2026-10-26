@@ -29,6 +29,7 @@ python3 -m unittest discover -s tests -t tests -p test_phrase_catalog.py
 | `test_render.py` | `skills/draw-diagram/scripts/render.py` | `.mmd` と SVG の id・辺の対応照合、禁止要素(`script`・`foreignObject`・`image`・外部参照)・整形式の検査、`data-edge` を持つ path・line の斜めの線分の検出、`classDiagram`/`erDiagram` の照合対象外扱い |
 | `test_build_loop.py` | `skills/build/scripts/loop.py` | 進捗ファイルの解析(見出し・区切りの行と `失敗(解決済み)` を数えない、停止の行と失敗の上限の検証)、停止の判定(全 Done で 0・要判断で起動しない・同一タスクの失敗が上限に達したら止まり別タスクの合計では止まらない)、進捗ファイルが更新されないとき・非 0 終了・反復の上限での停止、`--` より後ろの引数の受け渡し |
 | `test_yomiyasu_edge_cases.py` | `tests/corpus/yomiyasu_edge_cases/` | yomiyasu 由来の語と定型句(前置フィラー・定型クロージング)が、日常語の境界値 48 本のうち字義どおりの `壊れる` を含む 5 本では `壊れ` だけを検出し、残りの 43 本には発火しないこと |
+| `test_skill_references.py` | `skills/`・`agents/`・`hooks/`・`README.md`・`tests/README.md`・`evals/` | `write-doc/references/` へのパスと、write-doc 内の相対参照(`sentence.md`・`references/format/html.md` など)が実在すること |
 | `test_manifest_version.py` | `.claude-plugin/plugin.json`・`.codex-plugin/plugin.json` | version が両方にあり一致すること |
 | `corpus/yomiyasu_edge_cases/` | — | 境界値コーパス 48 本(出典 nanaism/yomiyasu の `tests/corpus/edge_cases`、MIT、`LICENSE` 同梱) |
 
