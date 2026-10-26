@@ -112,6 +112,12 @@ class SkillReferencesTest(unittest.TestCase):
         lines = len(_read(path).splitlines())
         self.assertLessEqual(lines, 60, f"{_rel(path)} が {lines} 行ある")
 
+    def test_write_pageのSKILL_mdが60行以下(self) -> None:
+        # 規則の正本は write-doc に置き、write-page は読む表と HTML 固有の工程だけを持つ。
+        path = REPO_ROOT / "skills" / "write-page" / "SKILL.md"
+        lines = len(_read(path).splitlines())
+        self.assertLessEqual(lines, 60, f"{_rel(path)} が {lines} 行ある")
+
 
 if __name__ == "__main__":
     unittest.main()
