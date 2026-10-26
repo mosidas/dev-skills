@@ -431,7 +431,7 @@ write-slide の規則は write-doc の `references/format/slide.md` と言語の
 
 プレゼン型の原型は [coji/natural-japanese](https://github.com/coji/natural-japanese)(MIT ライセンス)にある。v1.6.0(コミット 03bc944)の `references/doctypes/slide.md` からは `format/slide.md` 2. のメッセージラインの長さと 6. のラベルの太字を、`references/doctypes/memo.md` からは `paragraph.md` 7. の当てはまらないマスを取り込んだ。
 
-`format/slide.md` 1.〜5. と、`paragraph.md` 7.・`process.md` の一部は [consulting-pptx-skill](https://github.com/carnot-tech/consulting-pptx-skill)(MIT ライセンス)の `references/slide-rules.md`(コミット bc9a587 時点)を元にする。同じ版の `references/slide-rules.md` からは、社外の資料の敬称(`sentence.md` 6.)、「できる」と「行う」の区別(`sentence.md` 4.)、表紙・タイトル・章名の略語と同じ見せ方の連続(`format/slide.md` 5.)、見出しの種類を指すだけの語・2 軸マトリクス・図の選び方・操作画面とロゴ(`paragraph.md` 7.)、定型ページ(`process.md` 5.)、ページの増減後の番号の照合(`inspection.md` 4.)、消した要素の全ページでの確かめ(`process.md` 7.)を、`SKILL.md` の手順 9 からは見たページの番号の報告(`process.md` 7.)を取り込んだ。同じ版の `references/slide-rules.md` の §8 からは、draw-diagram §2 の括弧・矢印・三角の向きと矢尻の目視も取り込んだ。
+`format/slide.md` 1.・2.・4.〜6. と、`sentence.md`・`paragraph.md` に移した項(1.〜4.・7.)、`process.md`・`inspection.md` の一部は [consulting-pptx-skill](https://github.com/carnot-tech/consulting-pptx-skill)(MIT ライセンス)の `references/slide-rules.md`(コミット bc9a587 時点)を元にする。同じ版の `references/slide-rules.md` からは、社外の資料の敬称(`sentence.md` 6.)、「できる」と「行う」の区別(`sentence.md` 4.)、表紙・タイトル・章名の略語と同じ見せ方の連続(`format/slide.md` 5.)、見出しの種類を指すだけの語・2 軸マトリクス・図の選び方・操作画面とロゴ(`paragraph.md` 7.)、定型ページ(`process.md` 5.)、ページの増減後の番号の照合(`inspection.md` 4.)、消した要素の全ページでの確かめ(`process.md` 7.)を、`SKILL.md` の手順 9 からは見たページの番号の報告(`process.md` 7.)を取り込んだ。同じ版の `references/slide-rules.md` の §8 からは、draw-diagram §2 の括弧・矢印・三角の向きと矢尻の目視も取り込んだ。
 
 ### 9.10. write-message
 
