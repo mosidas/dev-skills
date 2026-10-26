@@ -162,8 +162,8 @@ skills/retro/
 ├── SKILL.md               # 指摘からの規範の改善の工程(集める・分類する・原因を判定する・表にして起票する)
 └── references/            # report.md・example.md(表と起票案の雛形・2026-10-14 の事例)
 skills/write-doc/
-├── SKILL.md               # 規範の入口(工程と参照ファイル)
-├── references/            # 読み手・文と表記・段落と見出し・検査の規範、format/(Markdown・HTML の形式)
+├── SKILL.md               # 規範の入口(束と参照ファイルの表)
+├── references/            # 読み手・工程(process.md)・文と表記・段落と見出し・検査の規範、format/(Markdown・HTML の形式)、types/(文書の種類)
 └── scripts/               # lint.py・outline.py・terms.py・semantic.py と動詞・名詞の NG/OK カタログ
 skills/write-slide/
 └── SKILL.md               # スライド構成の規範

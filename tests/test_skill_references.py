@@ -18,10 +18,39 @@ WRITE_DOC_REFERENCES = WRITE_DOC / "references"
 
 REFERENCE_PATH = re.compile(r"write-doc/references/([\w/.-]+?\.md)")
 RELATIVE_REFERENCE = re.compile(
-    r"(?<![\w.-])(?:\.\./)*(?:references/)?(?:format/|types/)?[a-z]+\.md"
+    r"(?<![A-Za-z0-9_./-])(?:\.\./)*(?:references/)?(?:format/|types/)?[a-z][\w-]*\.md"
 )
-IGNORED_NAMES = {"file.md", "SKILL.md", "README.md"}
+IGNORED_NAMES = {
+    "file.md",
+    "SKILL.md",
+    "README.md",
+    # lint.py・forbidden_phrases.json が出典として挙げる上流のコーパスの報告。本リポジトリには無い。
+    "deep-analysis.md",
+    "antithesis-recalibration.md",
+    "sweep_nested_attributive.md",
+    # retro の事例が挙げる利用側の memory のファイル名。本リポジトリには無い。
+    "site-user-facing-text-polite.md",
+    "no-session-url-in-pr.md",
+}
 IGNORED_PREFIXES = ("slop", "phrases")
+# write-doc の references を前置き(`../write-doc/references/`)なしで引くことがある他スキル。
+SKILLS_CITING_WRITE_DOC = (
+    "write-message",
+    "design-ui",
+    "write-slide",
+    "write-page",
+    "respond",
+    "retro",
+    "draw-diagram",
+    "specify",
+)
+
+SKILL_BASES = tuple(
+    base
+    for skill in sorted((REPO_ROOT / "skills").iterdir())
+    if skill.is_dir()
+    for base in (skill, skill / "references")
+)
 
 
 def _repo_files() -> list[Path]:
@@ -64,21 +93,27 @@ class SkillReferencesTest(unittest.TestCase):
         if missing:
             self.fail("存在しない write-doc の references への参照:\n" + "\n".join(missing))
 
-    def test_write_doc内の相対参照が実在する(self) -> None:
+    def test_相対参照が実在する(self) -> None:
+        targets = sorted(WRITE_DOC.rglob("*"))
+        for name in SKILLS_CITING_WRITE_DOC:
+            skill = REPO_ROOT / "skills" / name
+            targets += [skill / "SKILL.md", *sorted((skill / "references").rglob("*.md"))]
         missing = []
-        for path in sorted(WRITE_DOC.rglob("*")):
+        for path in targets:
             if path.suffix not in {".md", ".py", ".json"} or "__pycache__" in path.parts:
                 continue
+            # scripts/ は references/ をスキルの直下から引き、他スキルは別のスキルの references/ を
+            # 表の見出しで前置きして引くため、各スキルの直下と references/ も基準にする。
+            bases = (path.parent, WRITE_DOC_REFERENCES, *SKILL_BASES)
             for ref in RELATIVE_REFERENCE.findall(_read(path)):
                 name = ref.rsplit("/", 1)[-1]
                 if name in IGNORED_NAMES or name.startswith(IGNORED_PREFIXES):
                     continue
-                # scripts/ は references/ をスキルの直下から引くため、スキルの直下も基準にする。
-                if any((base / ref).is_file() for base in (path.parent, WRITE_DOC_REFERENCES, WRITE_DOC)):
+                if any((base / ref).is_file() for base in bases):
                     continue
                 missing.append(f"{_rel(path)}: {ref}")
         if missing:
-            self.fail("存在しない write-doc 内の相対参照:\n" + "\n".join(missing))
+            self.fail("存在しない相対参照:\n" + "\n".join(missing))
 
 
 if __name__ == "__main__":
