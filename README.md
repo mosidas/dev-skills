@@ -9,18 +9,18 @@ Claude Code・Codex CLI・Antigravity CLI のプラグインである。開発�
 | `develop` | スキル | 実装タスクを要件の確認から PR まで進める統括の手順。要件(目的・完了条件・対象外・品質(簡易 / プロダクト))の壁打ち、Backlog.md のタスク、GitHub flow、git hook(lefthook・husky)、planner・implementer・reviewer による実装と点検のループ、gate-reviewer によるブランチ全体の点検、push 後の CI 確認を定める。品質がプロダクトのときは secure・observe・recover を適用し、git hook と CI にシークレット検知(gitleaks)と依存監査(osv-scanner)を、CI に SAST(CodeQL か semgrep)を追加し、Claude Code ではゲートの前に `/security-review` を実行する。新しい Web の画面・フォームを作るタスクで UI モックの行が無ければ、要件の確認で UI モックを先に作るか不要かを 1 問聞き、先に作るなら design-ui の工程を示して止まる。UI モックの行は planner に渡す。計画の未確定事項のうち事実で決まるものは統括が調べて決め、調べても決まらないものと本人の判断が必要なものは依存するステップの前に 1 問ずつ聞く。本人の指摘があったタスクでは、閉じる工程で retro を実行する(build の反復を除く) |
 | `specify` | スキル | 曖昧な着想から、ユーザーとの対話で「何を作るか」を 1 問ずつ聞き出し、build がそのまま 1 要求 = 1 タスクで分解できる PRD(製品要求仕様書)を書く手順。PRD は雛形 `references/prd.md` から書き、要求ごとに目的・完了条件・対象外・品質の 4 行と、検証できる受け入れ条件を持たせる。PRD の 4.(制約と決定事項)には UI モックの行(brief.md のパス・`未作成`・`不要` のいずれか)を書き、新しい Web の画面・フォームを作る要求で UI モックの行が `未作成` なら、次の一手に design-ui で UI モックを作るかを示す。PRD のタスクへの分解と実装は build が行う |
 | `build` | スキル | PRD から起こした複数のタスクを develop で 1 つずつ PR まで進める外側のループ。PRD を受け入れ条件つきの backlog のタスクに分解する工程と、未完了のタスクを 1 つ取って develop で PR まで進め、受け入れ条件を検証して Done にする反復を定める。新しい Web の画面・フォームを作る要求で PRD の UI モックの行が `未作成` か無ければ、分解の前に UI モックを先に作るか不要かを 1 問だけ聞き、タスク本文に UI モックの行を書く。反復ではこの問いで止まらない。状態は backlog と進捗ファイルだけに持ち、全タスクの Done・要判断・同じタスクの失敗の上限・反復の回数の上限などで止まる。`scripts/loop.py` が反復ごとに新しい `claude -p` を起動する(Claude Code) |
-| `retro` | スキル | 本人とレビューの指摘を 4 分類(文言・挙動・手順・委譲)に分け、原因を 3 分類(守られなかった・無かった・矛盾)と個別で判定して根拠付きの表にし、個別を除く行を本人の承認を得て dev-skills の改善タスクとして起票する手順。表の雛形 `references/report.md` と事例 `references/example.md` を持つ。Google の SRE 本 15 章を出典とする |
+| `retro` | スキル | 本人とレビューの指摘を 4 分類(文言・挙動・手順・委譲)に分け、原因を 3 分類(守られなかった・無かった・矛盾)と個別で判定して根拠付きの表にし、個別を除く行を本人の承認を得て dev-skills の改善タスクとして起票する手順。原因が「無かった」で直す場所が文書の規範なら、規範にするか(案件の記録・宛先プロファイルに残すか)と、write-doc のどの束に加えるかを判定する。本人の指摘の回数と往復の回数を記録する。表の雛形 `references/report.md` と事例 `references/example.md` を持つ。Google の SRE 本 15 章を出典とする |
 | `planner`・`implementer`・`reviewer`・`gate-reviewer` | サブエージェント(`agents/`) | develop が起動する 4 つの役割。planner は計画(Write/Edit 不可)、implementer はステップ 1 つ分の実装とコミット、reviewer はステップの適合・テスト・欠陥・簡潔さの点検(Write/Edit 不可)、gate-reviewer は push 前のブランチ全体の点検(要件の充足・ステップ間の整合・残骸・PR 本文。Write/Edit 不可)。このうち planner・implementer・reviewer は起動時に ponytail を読み込み、品質がプロダクトのときは secure・observe・recover も読み込み、UI を含むタスクでは design-ui も読み込む。planner は未確定事項に決め方(事実 / 本人の判断)を付けて既定を置かずに書き、品質がプロダクトのとき入口ごとの失敗を「失敗の一覧」の表として計画に書き、UI を含むタスクで状態ごとの見出し・本文・操作と、管理画面の項目名・選択肢の値と並びを「利用者に見せる文言」の表として計画に書く。reviewer と gate-reviewer は実装の文言が「利用者に見せる文言」の表と文言の規範に合うかを点検する |
 | `ponytail` | スキル | コードを最小に保つ規範。そもそも作るかを問い、標準ライブラリと既存のもの、利用する外部サービスの組み込み機能を先に使い、動く最小の差分で終える。planner・implementer・reviewer が起動時に読み込む |
 | `secure` | スキル | プロダクト品質のコードの安全性の規範。信頼境界での入力検証、認証・認可、シークレットと設定、依存の脆弱性、GitHub Actions の供給網(SHA 固定・最小権限)、ログへの秘密の出力、エラー応答からの情報漏えいについて、何を対策すれば十分かを定める。OWASP ASVS と OWASP Cheat Sheet Series を出典とする |
 | `observe` | スキル | プロダクト品質のコードの可観測性の規範。構造化ログ、相関 ID、メトリクス、トレース、ヘルスチェック、エラーの分類、計画の完了条件に書く観測の内容を定める。OpenTelemetry のセマンティック規約、Google の SRE 本、W3C Trace Context を出典とする |
 | `recover` | スキル | プロダクト品質のコードの失敗時の挙動の規範。入口ごとの失敗の列挙、タイムアウト、リトライと冪等(移行・投入のスクリプトを空の環境から 1 回の実行で最終状態にし、再実行で変えないことを含む)、二重送信の防止、段階的なフォールバック、エラーページ、中間状態の露出防止、計画の完了条件に書く失敗時の挙動を定める。Google の SRE 本、Amazon Builders' Library、RFC 9110 などを出典とする |
-| `write-doc` | スキル | 仕様書・手順書・調査レポート・議事録・記事などの日本語文書を書く・推敲する・リライトするときの規範。読み手・表記・文・段落・検査の規範と、検査スクリプト(`lint.py` ほか)を持つ。他者向けの文書は、本人に見せる前に、書いたエージェントと別のエージェントにレビューさせる。見出しが 10 を超える文書では `lint.py` が分担の通知を出す |
-| `write-slide` | スキル | プレゼン資料・説明資料のスライド構成を作る・点検するときの規範。型の選択、メッセージライン、ページの役割分担、文体と強調を定める |
+| `write-doc` | スキル | 仕様書・手順書・調査レポート・議事録・記事などの日本語文書を書く・推敲する・リライトするときの規範。`references/` を 4 つの束(言語・読み手と工程・形式・種類)に分け、SKILL.md は束と参照ファイルの表だけを持つ。工程の規範 `process.md` に、着手時の brief、骨組みの合意、レビュー役に渡す物を定める。形式の束は `format/`(Markdown・HTML・スライド)、種類の束は `types/` のファイルである。検査スクリプト(`lint.py` ほか)を持つ。他者向けの文書は、本人に見せる前に、書いたエージェントと別のエージェントにレビューさせる。見出しが 10 を超える文書では `lint.py` が分担の通知を出す |
+| `write-slide` | スキル | プレゼン資料・説明資料のスライド構成を作る・点検するときの入口。読む write-doc のファイル(`format/slide.md` と言語の束)と、型の確認・ページ単位の骨組み・スケルトン通読の工程を定める |
 | `write-message` | スキル | issue・PR のコメント、レビューコメント、業務チャット、短いメールなど、他者へ送る短い日本語メッセージを敬語で書く・直すときの規範。宛先・場・用件を確かめ、用件から書き、定型の謝辞・結び・申し出と敬語の誤用を除く。敬語の規範(`references/keigo.md`)と場ごとの規範(`references/places.md`)を持つ |
 | `respond` | スキル | 会話の応答の形を定める規範。読み手の認知負荷を下げるため、最初の行に答えを書く・最後の行に読み手の次の行動を 1 つ書く・複数手順に番号を振る・状態を毎回書き直す・調べた事実に根拠となるソースを示すなどの規則を定める |
 | `draw-diagram` | スキル | `.mmd` で構造を固めてから人間が見やすい SVG を描く作図の規範。埋め込み先の幅で横スクロールを出さない寸法、辺の端点、帯の連続、軸と帯の説明、原典の工程を写す図では箱をまとめない規則、接続線の規則(水平・垂直の線分と角丸の曲がり、線を箱より先に描く。出典は diagram-design)を持つ。`render.py` で `.mmd` と SVG の対応照合・禁止要素の検査・斜めの接続線の検出・Chrome headless の PNG 出力を行う |
-| `write-page` | スキル | HTML で配布する説明資料(図・表・切り替えの UI を持つ 1 ページの文書)を作る・直すときの規範と工程。構成とモックの往復、本文と図の作成、HTML の生成、検査、別のエージェントによるレビューの順に進め、本文は write-doc、図は draw-diagram、見た目は design-ui の閲読モードを参照する。HTML 固有の規則(表・一覧・切り替えの UI・折りたたみ・行幅・図の幅・前版の参照)を持つ |
+| `write-page` | スキル | HTML で配布する説明資料(図・表・切り替えの UI を持つ 1 ページの文書)を作る・直すときの入口。読む write-doc のファイル(HTML 固有の規則を持つ `format/html.md` と、工程・言語の束)と、モックの往復・本文と図の作成・HTML の生成・検査の HTML 固有の工程を定める。図は draw-diagram、見た目は design-ui の閲読モードを参照する |
 | `design-ui` | スキル | Web・iOS・Android・デスクトップの画面・コンポーネント・ページを設計・実装するときの規範。題材からトークン案を書き、汎用の既定と照合してから実装し、有限回の検証で止める工程を定める。利用者向けの日本語の文言の規範(敬体で書く、利用者が行動を変えられない情報を出さない、管理画面の項目名・選択肢は利用者の画面の見出しと同じ語を既定にする)を `references/text.md` に持つ。新しい Web の画面・フォームの実装の前に、UI モックを本人と往復して作る工程を `references/session.md` に持つ。往復は HTML のモック・headless Chrome で撮った PNG・文言の表で 1 案ずつ行い(1 往復に質問 1 つ、3 往復まで)、合意を brief.md にまとめる(既定の置き場所は `docs/ui-mock/<slug>/`)。UI モックは PRD と組で build に渡すか、単独で develop に渡す |
 | `hooks/inject_respond.py` | hook(SessionStart、Claude Code のみ) | セッション開始時に `skills/respond/SKILL.md` の本文を注入する |
 | `hooks/guard_session_url.py` | hook(PreToolUse、Claude Code のみ) | コミットと PR 本文に入るセッション URL を実行前に止める |
@@ -162,11 +162,13 @@ skills/retro/
 ├── SKILL.md               # 指摘からの規範の改善の工程(集める・分類する・原因を判定する・表にして起票する)
 └── references/            # report.md・example.md(表と起票案の雛形・2026-10-14 の事例)
 skills/write-doc/
-├── SKILL.md               # 規範の入口(工程と参照ファイル)
-├── references/            # 読み手・表記・文・段落・検査の規範
+├── SKILL.md               # 規範の入口(束と参照ファイルの表)
+├── references/            # 4 つの束。言語: sentence.md・paragraph.md(文と表記・段落と見出し)、読み手と工程: readers.md・process.md・inspection.md(読み手・brief と骨組みの合意とレビュー役に渡す物・検査)
+│   ├── format/            # 形式の束: markdown.md・html.md・slide.md
+│   └── types/             # 種類の束: 文書の種類ごとの決まり(README.md)
 └── scripts/               # lint.py・outline.py・terms.py・semantic.py と動詞・名詞の NG/OK カタログ
 skills/write-slide/
-└── SKILL.md               # スライド構成の規範
+└── SKILL.md               # スライド構成の規範の入口(読むファイルの表とスライド固有の工程)
 skills/write-message/
 ├── SKILL.md               # 短いメッセージの規範の入口(工程・構成・書式・AI らしさの抑制・検査)
 └── references/            # keigo.md・places.md(敬語の規範・場ごとの規範)
@@ -185,7 +187,7 @@ skills/draw-diagram/
 ├── references/            # mermaid.md・svg.md・examples/(`.mmd` の書き方・SVG の書式と寸法・サンプル)
 └── scripts/render.py      # `.mmd` と SVG の対応照合・禁止要素の検査・斜めの接続線の検出・Chrome headless の PNG 出力
 skills/write-page/
-└── SKILL.md               # HTML の説明資料の規範(適用範囲・工程・HTML 固有の規則・参照する規範)
+└── SKILL.md               # HTML の説明資料の規範の入口(読むファイルの表と HTML 固有の工程)
 skills/design-ui/
 ├── SKILL.md               # UI 設計規範の入口(モードの選択・工程・スケール)
 └── references/            # anti-ai.md・text.md・checklist.md・native.md・session.md・brief.md(汎用の既定の一覧・UI テキストの最小化と利用者向けの文言の規範・実装の品質床・ネイティブアプリ固有の規範・UI モックを作る工程・UI モックの brief の雛形)
@@ -271,11 +273,11 @@ MIT ライセンスで公開する。全文は `LICENSE` にある。
 | [cursor/plugins](https://github.com/cursor/plugins) の pstack | MIT | コミット 997ffc7(2026-10-12 時点) | specify |
 | [mattpocock/skills](https://github.com/mattpocock/skills) | MIT | コミット 49dd158(2026-10-12 時点) | specify |
 | [DietrichGebert/ponytail](https://github.com/DietrichGebert/ponytail) | MIT | v5.1.0 | ponytail |
-| [coji/natural-japanese](https://github.com/coji/natural-japanese) | MIT | v1.5.0(9a78a42)・v1.6.0(03bc944) | write-doc(`inspection.md`・`paragraph.md`・`sentence.md`)・write-slide・write-message(`SKILL.md`) |
+| [coji/natural-japanese](https://github.com/coji/natural-japanese) | MIT | v1.5.0(9a78a42)・v1.6.0(03bc944) | write-doc(`inspection.md`・`paragraph.md`・`sentence.md`・`format/slide.md`)・write-slide・write-message(`SKILL.md`) |
 | [nanaism/yomiyasu](https://github.com/nanaism/yomiyasu) | MIT | v1.1.1(373356e)・v2.0.1(84e1f5b) | write-doc(`inspection.md`・`paragraph.md`・`readers.md`・`sentence.md`)・write-message(`SKILL.md`・`keigo.md`) |
 | [mizchi/explainer](https://github.com/mizchi/explainer) | MIT | 版の記載なし | write-doc(`paragraph.md`・`readers.md`) |
 | [heygen-com/hyperframes](https://github.com/heygen-com/hyperframes) | Apache-2.0 | 版の記載なし | write-doc(`paragraph.md`・`readers.md`。explainer を経由) |
-| [carnot-tech/consulting-pptx-skill](https://github.com/carnot-tech/consulting-pptx-skill) | MIT | コミット bc9a587 | write-slide・draw-diagram(`SKILL.md`) |
+| [carnot-tech/consulting-pptx-skill](https://github.com/carnot-tech/consulting-pptx-skill) | MIT | コミット bc9a587 | write-doc(`format/slide.md`・`paragraph.md`・`sentence.md`・`process.md`・`inspection.md`)・write-slide・draw-diagram(`SKILL.md`) |
 | [iKora128/stop-ai-slop-jp](https://github.com/iKora128/stop-ai-slop-jp) | MIT | コミット e09d327 | write-message(`SKILL.md`) |
 | [ayghri/i-have-adhd](https://github.com/ayghri/i-have-adhd) | MIT | 版の記載なし | respond |
 | [cathrynlavery/diagram-design](https://github.com/cathrynlavery/diagram-design) | MIT | v2.6.115(f2f4d49) | draw-diagram(`svg.md`・`render.py`) |
@@ -423,13 +425,15 @@ NN/g Error-Message Guidelines は design-ui の `references/text.md` の出典(R
 
 - 木下是雄『理科系の作文技術』中公新書: 事実と意見の峻別の一次出典。
 - [coji/natural-japanese](https://github.com/coji/natural-japanese)(MIT ライセンス): 読みやすさの原則・悪文の型・カタログと例文の原典。write-doc の書式に合わせて再構成した。v1.5.0 までの references は、v1.6.0 で `SKILL.md`・`references/manual-checklist.md`・`references/diagnose.md`・`references/doctypes/` に再編された。v1.6.0(コミット 03bc944)の `SKILL.md`・`references/manual-checklist.md` からは、先回りの打ち消しと残す打ち消しの 3 種(2.)、演出の語、読み手が何のことか取れない言い回しの型と確かめ方、比喩の読み方の報告(3.)、英語の逐語訳(5.)を取り込んだ。硬い漢語への置き換えを避ける規則は漢語基調(3.)と衝突し、技術の言い方として定着した比喩(「キャッシュが効く」)を直さない例外は 3. の比喩の規則(「効く」)とカタログの語と衝突するため、どちらも取り込んでいない。同じ版の `SKILL.md` からは文を分けるときの接続語(2.)と、数字・引用と改行(4.)を、`references/doctypes/memo.md` からは対象外の範囲(4.)を取り込んだ。
-- [nanaism/yomiyasu](https://github.com/nanaism/yomiyasu)(MIT ライセンス): 要請と機能説明の書き分け、リライト時の情報増補の禁止、質感・認知を装う語と比喩動詞のカタログ、前置フィラー・定型クロージングの原典。write-doc の書式に合わせて再構成した。v1.1.1(コミット 373356e)の `skills/yomiyasu/SKILL.md`・`references/slop-catalog.md` からは、条件付きの比喩動詞(うち `壊れる`・`静かに`・`黙って`・`沈黙`・`逃がす` は、カタログの禁止語にした)、定着した慣用句、大げさな名詞、文末の立場、言い直しの締め、文頭の「もちろん、」、否定対比の条件を取り込んだ。同じ版の見出しの規則は、`format.md` 1. へ取り込んだ。v2.0.1(コミット 84e1f5b)の `skills/yomiyasu/SKILL.md`・`references/rephrase-test.md`・`references/fact-recovery.md` からは、2 文に分けた否定対比(2.)、文の種類の保持と、リライトで使ってよい根拠の範囲(4.)を取り込んだ。本文に【要確認】を挟まない規則は、確信度ラベル(4.)と衝突するため取り込んでいない。同じ版の `skills/yomiyasu/SKILL.md`・`references/slop-catalog.md`・`references/domains/business.md` からは、`format.md` の見出しの括弧と「〜について」・短い動作の見出し・題・議事録の見出し(1.)、補助動詞と形式名詞のひらがな(2.)、読点とラベルのコロン(3.)を取り込んだ。同じ 3 ファイルからは、「〜するには」・詰めた漢語の句・使役・前後の語での補い・指示語・予定を述べる結び(2.)、確度の語(3.)、論文調と「これにより」(5.)も取り込んだ。
+- [nanaism/yomiyasu](https://github.com/nanaism/yomiyasu)(MIT ライセンス): 要請と機能説明の書き分け、リライト時の情報増補の禁止、質感・認知を装う語と比喩動詞のカタログ、前置フィラー・定型クロージングの原典。write-doc の書式に合わせて再構成した。v1.1.1(コミット 373356e)の `skills/yomiyasu/SKILL.md`・`references/slop-catalog.md` からは、条件付きの比喩動詞(うち `壊れる`・`静かに`・`黙って`・`沈黙`・`逃がす` は、カタログの禁止語にした)、定着した慣用句、大げさな名詞、文末の立場、言い直しの締め、文頭の「もちろん、」、否定対比の条件を取り込んだ。同じ版の見出しの規則は、`paragraph.md` 6. へ取り込んだ。v2.0.1(コミット 84e1f5b)の `skills/yomiyasu/SKILL.md`・`references/rephrase-test.md`・`references/fact-recovery.md` からは、2 文に分けた否定対比(2.)、文の種類の保持と、リライトで使ってよい根拠の範囲(4.)を取り込んだ。本文に【要確認】を挟まない規則は、確信度ラベル(4.)と衝突するため取り込んでいない。同じ版の `skills/yomiyasu/SKILL.md`・`references/slop-catalog.md`・`references/domains/business.md` からは、`paragraph.md` の見出しの括弧と「〜について」・短い動作の見出し・題・議事録の見出し(6.)、`sentence.md` の補助動詞と形式名詞のひらがな(6.)と読点とラベルのコロン(7.)を取り込んだ。同じ 3 ファイルからは、「〜するには」・詰めた漢語の句・使役・前後の語での補い・指示語・予定を述べる結び(2.)、確度の語(3.)、論文調と「これにより」(5.)も取り込んだ。
 
 ### 9.9. write-slide
 
-プレゼン型の原型は [coji/natural-japanese](https://github.com/coji/natural-japanese)(MIT ライセンス)にある。v1.6.0(コミット 03bc944)の `references/doctypes/slide.md` からは §2 のメッセージラインの長さと §5 のラベルの太字を、`references/doctypes/memo.md` からは §4 の当てはまらないマスを取り込んだ。
+write-slide の規則は write-doc の `references/format/slide.md` と言語の束(`sentence.md`・`paragraph.md`)・工程の束(`process.md`・`inspection.md`)へ移した。以下の出典は、移した先のファイルと節で示す。
 
-§1・§2・§4〜§6 の一部は [consulting-pptx-skill](https://github.com/carnot-tech/consulting-pptx-skill)(MIT ライセンス)の `references/slide-rules.md`(コミット bc9a587 時点)を元にする。同じ版の `references/slide-rules.md` からは、社外の資料の敬称(§5)、「できる」と「行う」の区別、表紙・タイトル・章名の略語、見出しの種類を指すだけの語、同じ見せ方の連続、2 軸マトリクス、図の選び方、操作画面とロゴ(§4)、定型ページ、ページの増減後の番号の照合、消した要素の全ページでの確かめ(§6)を、`SKILL.md` の手順 9 からは見たページの番号の報告(§6)を取り込んだ。同じ版の `references/slide-rules.md` の §8 からは、draw-diagram §2 の括弧・矢印・三角の向きと矢尻の目視も取り込んだ。
+プレゼン型の原型は [coji/natural-japanese](https://github.com/coji/natural-japanese)(MIT ライセンス)にある。v1.6.0(コミット 03bc944)の `references/doctypes/slide.md` からは `format/slide.md` 2. のメッセージラインの長さと 6. のラベルの太字を、`references/doctypes/memo.md` からは `paragraph.md` 7. の当てはまらないマスを取り込んだ。
+
+`format/slide.md` 1.・2.・4.〜6. と、`sentence.md`・`paragraph.md` に移した項(1.〜4.・7.)、`process.md`・`inspection.md` の一部は [consulting-pptx-skill](https://github.com/carnot-tech/consulting-pptx-skill)(MIT ライセンス)の `references/slide-rules.md`(コミット bc9a587 時点)を元にする。同じ版の `references/slide-rules.md` からは、社外の資料の敬称(`sentence.md` 6.)、「できる」と「行う」の区別(`sentence.md` 4.)、表紙・タイトル・章名の略語と同じ見せ方の連続(`format/slide.md` 5.)、見出しの種類を指すだけの語・2 軸マトリクス・図の選び方・操作画面とロゴ(`paragraph.md` 7.)、定型ページ(`process.md` 5.)、ページの増減後の番号の照合(`inspection.md` 4.)、消した要素の全ページでの確かめ(`process.md` 7.)を、`SKILL.md` の手順 9 からは見たページの番号の報告(`process.md` 7.)を取り込んだ。同じ版の `references/slide-rules.md` の §8 からは、draw-diagram §2 の括弧・矢印・三角の向きと矢尻の目視も取り込んだ。
 
 ### 9.10. write-message
 
