@@ -9,13 +9,13 @@ Claude Code・Codex CLI・Antigravity CLI のプラグインである。開発�
 | `develop` | スキル | 実装タスクを要件の確認から PR まで進める統括の手順。要件(目的・完了条件・対象外・品質(簡易 / プロダクト))の壁打ち、Backlog.md のタスク、GitHub flow、git hook(lefthook・husky)、planner・implementer・reviewer による実装と点検のループ、gate-reviewer によるブランチ全体の点検、push 後の CI 確認を定める。品質がプロダクトのときは secure・observe・recover を適用し、git hook と CI にシークレット検知(gitleaks)と依存監査(osv-scanner)を、CI に SAST(CodeQL か semgrep)を追加し、Claude Code ではゲートの前に `/security-review` を実行する。新しい Web の画面・フォームを作るタスクで UI モックの行が無ければ、要件の確認で UI モックを先に作るか不要かを 1 問聞き、先に作るなら design-ui の工程を示して止まる。UI モックの行は planner に渡す。計画の未確定事項のうち事実で決まるものは統括が調べて決め、調べても決まらないものと本人の判断が必要なものは依存するステップの前に 1 問ずつ聞く。本人の指摘があったタスクでは、閉じる工程で retro を実行する(build の反復を除く) |
 | `specify` | スキル | 曖昧な着想から、ユーザーとの対話で「何を作るか」を 1 問ずつ聞き出し、build がそのまま 1 要求 = 1 タスクで分解できる PRD(製品要求仕様書)を書く手順。PRD は雛形 `references/prd.md` から書き、要求ごとに目的・完了条件・対象外・品質の 4 行と、検証できる受け入れ条件を持たせる。PRD の 4.(制約と決定事項)には UI モックの行(brief.md のパス・`未作成`・`不要` のいずれか)を書き、新しい Web の画面・フォームを作る要求で UI モックの行が `未作成` なら、次の一手に design-ui で UI モックを作るかを示す。PRD のタスクへの分解と実装は build が行う |
 | `build` | スキル | PRD から起こした複数のタスクを develop で 1 つずつ PR まで進める外側のループ。PRD を受け入れ条件つきの backlog のタスクに分解する工程と、未完了のタスクを 1 つ取って develop で PR まで進め、受け入れ条件を検証して Done にする反復を定める。新しい Web の画面・フォームを作る要求で PRD の UI モックの行が `未作成` か無ければ、分解の前に UI モックを先に作るか不要かを 1 問だけ聞き、タスク本文に UI モックの行を書く。反復ではこの問いで止まらない。状態は backlog と進捗ファイルだけに持ち、全タスクの Done・要判断・同じタスクの失敗の上限・反復の回数の上限などで止まる。`scripts/loop.py` が反復ごとに新しい `claude -p` を起動する(Claude Code) |
-| `retro` | スキル | 本人とレビューの指摘を 4 分類(文言・挙動・手順・委譲)に分け、原因を 3 分類(守られなかった・無かった・矛盾)と個別で判定して根拠付きの表にし、個別を除く行を本人の承認を得て dev-skills の改善タスクとして起票する手順。表の雛形 `references/report.md` と事例 `references/example.md` を持つ。Google の SRE 本 15 章を出典とする |
+| `retro` | スキル | 本人とレビューの指摘を 4 分類(文言・挙動・手順・委譲)に分け、原因を 3 分類(守られなかった・無かった・矛盾)と個別で判定して根拠付きの表にし、個別を除く行を本人の承認を得て dev-skills の改善タスクとして起票する手順。原因が「無かった」で直す場所が文書の規範なら、規範にするか(案件の記録・宛先プロファイルに残すか)と、write-doc のどの束に加えるかを判定する。本人の指摘の回数と往復の回数を記録する。表の雛形 `references/report.md` と事例 `references/example.md` を持つ。Google の SRE 本 15 章を出典とする |
 | `planner`・`implementer`・`reviewer`・`gate-reviewer` | サブエージェント(`agents/`) | develop が起動する 4 つの役割。planner は計画(Write/Edit 不可)、implementer はステップ 1 つ分の実装とコミット、reviewer はステップの適合・テスト・欠陥・簡潔さの点検(Write/Edit 不可)、gate-reviewer は push 前のブランチ全体の点検(要件の充足・ステップ間の整合・残骸・PR 本文。Write/Edit 不可)。このうち planner・implementer・reviewer は起動時に ponytail を読み込み、品質がプロダクトのときは secure・observe・recover も読み込み、UI を含むタスクでは design-ui も読み込む。planner は未確定事項に決め方(事実 / 本人の判断)を付けて既定を置かずに書き、品質がプロダクトのとき入口ごとの失敗を「失敗の一覧」の表として計画に書き、UI を含むタスクで状態ごとの見出し・本文・操作と、管理画面の項目名・選択肢の値と並びを「利用者に見せる文言」の表として計画に書く。reviewer と gate-reviewer は実装の文言が「利用者に見せる文言」の表と文言の規範に合うかを点検する |
 | `ponytail` | スキル | コードを最小に保つ規範。そもそも作るかを問い、標準ライブラリと既存のもの、利用する外部サービスの組み込み機能を先に使い、動く最小の差分で終える。planner・implementer・reviewer が起動時に読み込む |
 | `secure` | スキル | プロダクト品質のコードの安全性の規範。信頼境界での入力検証、認証・認可、シークレットと設定、依存の脆弱性、GitHub Actions の供給網(SHA 固定・最小権限)、ログへの秘密の出力、エラー応答からの情報漏えいについて、何を対策すれば十分かを定める。OWASP ASVS と OWASP Cheat Sheet Series を出典とする |
 | `observe` | スキル | プロダクト品質のコードの可観測性の規範。構造化ログ、相関 ID、メトリクス、トレース、ヘルスチェック、エラーの分類、計画の完了条件に書く観測の内容を定める。OpenTelemetry のセマンティック規約、Google の SRE 本、W3C Trace Context を出典とする |
 | `recover` | スキル | プロダクト品質のコードの失敗時の挙動の規範。入口ごとの失敗の列挙、タイムアウト、リトライと冪等(移行・投入のスクリプトを空の環境から 1 回の実行で最終状態にし、再実行で変えないことを含む)、二重送信の防止、段階的なフォールバック、エラーページ、中間状態の露出防止、計画の完了条件に書く失敗時の挙動を定める。Google の SRE 本、Amazon Builders' Library、RFC 9110 などを出典とする |
-| `write-doc` | スキル | 仕様書・手順書・調査レポート・議事録・記事などの日本語文書を書く・推敲する・リライトするときの規範。読み手・表記・文・段落・検査の規範と、検査スクリプト(`lint.py` ほか)を持つ。他者向けの文書は、本人に見せる前に、書いたエージェントと別のエージェントにレビューさせる。見出しが 10 を超える文書では `lint.py` が分担の通知を出す |
+| `write-doc` | スキル | 仕様書・手順書・調査レポート・議事録・記事などの日本語文書を書く・推敲する・リライトするときの規範。`references/` を 4 つの束(言語・読み手と工程・形式・種類)に分け、SKILL.md は束と参照ファイルの表だけを持つ。工程の規範 `process.md` に、着手時の brief、骨組みの合意、レビュー役に渡す物を定める。形式の束は `format/`(Markdown・HTML・スライド)、種類の束は `types/` のファイルである。検査スクリプト(`lint.py` ほか)を持つ。他者向けの文書は、本人に見せる前に、書いたエージェントと別のエージェントにレビューさせる。見出しが 10 を超える文書では `lint.py` が分担の通知を出す |
 | `write-slide` | スキル | プレゼン資料・説明資料のスライド構成を作る・点検するときの入口。読む write-doc のファイル(`format/slide.md` と言語の束)と、型の確認・ページ単位の骨組み・スケルトン通読の工程を定める |
 | `write-message` | スキル | issue・PR のコメント、レビューコメント、業務チャット、短いメールなど、他者へ送る短い日本語メッセージを敬語で書く・直すときの規範。宛先・場・用件を確かめ、用件から書き、定型の謝辞・結び・申し出と敬語の誤用を除く。敬語の規範(`references/keigo.md`)と場ごとの規範(`references/places.md`)を持つ |
 | `respond` | スキル | 会話の応答の形を定める規範。読み手の認知負荷を下げるため、最初の行に答えを書く・最後の行に読み手の次の行動を 1 つ書く・複数手順に番号を振る・状態を毎回書き直す・調べた事実に根拠となるソースを示すなどの規則を定める |
@@ -163,7 +163,9 @@ skills/retro/
 └── references/            # report.md・example.md(表と起票案の雛形・2026-10-14 の事例)
 skills/write-doc/
 ├── SKILL.md               # 規範の入口(束と参照ファイルの表)
-├── references/            # 読み手・工程(process.md)・文と表記・段落と見出し・検査の規範、format/(Markdown・HTML・スライドの形式)、types/(文書の種類)
+├── references/            # 4 つの束。言語: sentence.md・paragraph.md(文と表記・段落と見出し)、読み手と工程: readers.md・process.md・inspection.md(読み手・brief と骨組みの合意とレビュー役に渡す物・検査)
+│   ├── format/            # 形式の束: markdown.md・html.md・slide.md
+│   └── types/             # 種類の束: 文書の種類ごとの決まり(README.md)
 └── scripts/               # lint.py・outline.py・terms.py・semantic.py と動詞・名詞の NG/OK カタログ
 skills/write-slide/
 └── SKILL.md               # スライド構成の規範の入口(読むファイルの表とスライド固有の工程)

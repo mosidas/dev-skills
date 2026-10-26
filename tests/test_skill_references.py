@@ -16,14 +16,21 @@ from helpers import REPO_ROOT
 WRITE_DOC = REPO_ROOT / "skills" / "write-doc"
 WRITE_DOC_REFERENCES = WRITE_DOC / "references"
 
+SKILLS = REPO_ROOT / "skills"
+SKILL_NAMES = sorted(p.name for p in SKILLS.iterdir() if p.is_dir())
+
 REFERENCE_PATH = re.compile(r"write-doc/references/([\w/.-]+?\.md)")
+# 自スキル内の参照(`sentence.md`・`../readers.md`)と、他スキルの SKILL.md・references への参照
+# (`../draw-diagram/references/svg.md`・`../../../draw-diagram/references/svg.md`)を拾う。
 RELATIVE_REFERENCE = re.compile(
-    r"(?<![A-Za-z0-9_./-])(?:\.\./)*(?:references/)?(?:format/|types/)?[a-z][\w-]*\.md"
+    r"(?<![A-Za-z0-9_./-])(?:\.\./)*"
+    rf"(?:(?:{'|'.join(map(re.escape, SKILL_NAMES))})/)?"
+    r"(?:references/)?(?:format/|types/)?(?:[a-z][\w-]*|SKILL|README)\.md"
 )
+# スキル名もディレクトリも付かない SKILL.md・README.md は、どのスキルのものか決まらない。
+UNQUALIFIED_NAMES = {"SKILL.md", "README.md"}
 IGNORED_NAMES = {
     "file.md",
-    "SKILL.md",
-    "README.md",
     # lint.py・forbidden_phrases.json が出典として挙げる上流のコーパスの報告。本リポジトリには無い。
     "deep-analysis.md",
     "antithesis-recalibration.md",
@@ -34,10 +41,7 @@ IGNORED_NAMES = {
 }
 IGNORED_PREFIXES = ("slop", "phrases")
 SKILL_BASES = tuple(
-    base
-    for skill in sorted((REPO_ROOT / "skills").iterdir())
-    if skill.is_dir()
-    for base in (skill, skill / "references")
+    base for name in SKILL_NAMES for base in (SKILLS / name, SKILLS / name / "references")
 )
 
 
@@ -93,12 +97,12 @@ class SkillReferencesTest(unittest.TestCase):
             # write-doc の scripts/ は references/ をスキルの直下から引く。他スキルは write-doc や
             # 別のスキルの references/ を表の見出しで前置きして引くため、全スキルを基準にする。
             if WRITE_DOC in path.parents:
-                bases = (path.parent, WRITE_DOC_REFERENCES, WRITE_DOC)
+                bases = (path.parent, WRITE_DOC_REFERENCES, WRITE_DOC, SKILLS)
             else:
-                bases = (path.parent, WRITE_DOC_REFERENCES, *SKILL_BASES)
+                bases = (path.parent, WRITE_DOC_REFERENCES, *SKILL_BASES, SKILLS)
             for ref in RELATIVE_REFERENCE.findall(_read(path)):
                 name = ref.rsplit("/", 1)[-1]
-                if name in IGNORED_NAMES or name.startswith(IGNORED_PREFIXES):
+                if ref in UNQUALIFIED_NAMES or name in IGNORED_NAMES or name.startswith(IGNORED_PREFIXES):
                     continue
                 if any((base / ref).is_file() for base in bases):
                     continue
