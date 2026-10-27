@@ -163,6 +163,17 @@ class ThinEvaluationTest(unittest.TestCase):
                 self.assertEqual(self.findings(text), [])
         self.assertEqual(len(lint.THIN_EVALUATION_PAIRS), 15)
 
+    def test_前置きは_20_字まで(self) -> None:
+        self.assertEqual(len(self.findings("あ" * 20 + "操作性が高い。")), 1)
+        self.assertEqual(self.findings("あ" * 21 + "操作性が高い。"), [])
+
+    def test_元の行を渡すと_excerpt_はカギ括弧を含む元の文になる(self) -> None:
+        text = "「設定」の操作性が高い。"
+        lines = lint.iter_lines_with_no(lint.mask_markdown_structure(text, keep_structure_text=True))
+        found = lint.detect_thin_evaluation(lines, {1: text})
+        self.assertEqual(len(found), 1)
+        self.assertEqual(found[0].excerpt, "「設定」の操作性が高い")
+
     def test_重大カテゴリに入れない(self) -> None:
         config = json.loads((helpers.REPO_ROOT / "hooks" / "inspection.config.json").read_text(encoding="utf-8"))
         categories = {rule["category"] for rule in config["blocking"]}
