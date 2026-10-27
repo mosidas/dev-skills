@@ -15,7 +15,7 @@ Claude Code・Codex CLI・Antigravity CLI のプラグインである。開発�
 | `secure` | スキル | プロダクト品質のコードの安全性の規範。信頼境界での入力検証、認証・認可、シークレットと設定、依存の脆弱性、GitHub Actions の供給網(SHA 固定・最小権限)、ログへの秘密の出力、エラー応答からの情報漏えいについて、何を対策すれば十分かを定める。OWASP ASVS と OWASP Cheat Sheet Series を出典とする |
 | `observe` | スキル | プロダクト品質のコードの可観測性の規範。構造化ログ、相関 ID、メトリクス、トレース、ヘルスチェック、エラーの分類、計画の完了条件に書く観測の内容を定める。OpenTelemetry のセマンティック規約、Google の SRE 本、W3C Trace Context を出典とする |
 | `recover` | スキル | プロダクト品質のコードの失敗時の挙動の規範。入口ごとの失敗の列挙、タイムアウト、リトライと冪等(移行・投入のスクリプトを空の環境から 1 回の実行で最終状態にし、再実行で変えないことを含む)、二重送信の防止、段階的なフォールバック、エラーページ、中間状態の露出防止、計画の完了条件に書く失敗時の挙動を定める。Google の SRE 本、Amazon Builders' Library、RFC 9110 などを出典とする |
-| `write-doc` | スキル | 仕様書・手順書・調査レポート・議事録・記事などの日本語文書を書く・推敲する・リライトするときの規範。`references/` を 4 つの束(言語・読み手と工程・形式・種類)に分け、SKILL.md は束と参照ファイルの表だけを持つ。工程の規範 `process.md` に、着手時の brief、骨組みの合意、レビュー役に渡す物を定める。形式の束は `format/`(Markdown・HTML・スライド)、種類の束は `types/` のファイルである。検査スクリプト(`lint.py` ほか)を持つ。他者向けの文書は、本人に見せる前に、書いたエージェントと別のエージェントにレビューさせる。見出しが 10 を超える文書では `lint.py` が分担の通知を出す |
+| `write-doc` | スキル | 仕様書・手順書・調査レポート・議事録・記事などの日本語文書を書く・推敲する・リライトするときの規範。`references/` を 4 つの束(言語・読み手と工程・形式・種類)に分け、SKILL.md は束と参照ファイルの表だけを持つ。工程の規範 `process.md` に、着手時の brief、骨組みの合意、レビュー役に渡す物を定める。形式の束は `format/`(Markdown・HTML・スライド)、種類の束は `types/` の手順書・仕様書と規約・議事録・調査レポート・技術記事・企画書と PRD の 6 種類のファイルである。検査スクリプト(`lint.py` ほか)を持つ。他者向けの文書は、本人に見せる前に、書いたエージェントと別のエージェントにレビューさせる。見出しが 10 を超える文書では `lint.py` が分担の通知を出す |
 | `write-slide` | スキル | プレゼン資料・説明資料のスライド構成を作る・点検するときの入口。読む write-doc のファイル(`format/slide.md` と言語の束)と、型の確認・ページ単位の骨組み・スケルトン通読の工程を定める |
 | `write-message` | スキル | issue・PR のコメント、レビューコメント、業務チャット、短いメールなど、他者へ送る短い日本語メッセージを敬語で書く・直すときの規範。宛先・場・用件を確かめ、用件から書き、定型の謝辞・結び・申し出と敬語の誤用を除く。敬語の規範(`references/keigo.md`)と場ごとの規範(`references/places.md`)を持つ |
 | `respond` | スキル | 会話の応答の形を定める規範。読み手の認知負荷を下げるため、最初の行に答えを書く・最後の行に読み手の次の行動を 1 つ書く・複数手順に番号を振る・状態を毎回書き直す・調べた事実に根拠となるソースを示すなどの規則を定める |
@@ -165,7 +165,7 @@ skills/write-doc/
 ├── SKILL.md               # 規範の入口(束と参照ファイルの表)
 ├── references/            # 4 つの束。言語: sentence.md・paragraph.md(文と表記・段落と見出し)、読み手と工程: readers.md・process.md・inspection.md(読み手・brief と骨組みの合意とレビュー役に渡す物・検査)
 │   ├── format/            # 形式の束: markdown.md・html.md・slide.md
-│   └── types/             # 種類の束: 文書の種類ごとの決まり(README.md)
+│   └── types/             # 種類の束: procedure.md・spec.md・minutes.md・report.md・article.md・proposal.md と一覧の README.md
 └── scripts/               # lint.py・outline.py・terms.py・semantic.py と動詞・名詞の NG/OK カタログ
 skills/write-slide/
 └── SKILL.md               # スライド構成の規範の入口(読むファイルの表とスライド固有の工程)
@@ -273,8 +273,8 @@ MIT ライセンスで公開する。全文は `LICENSE` にある。
 | [cursor/plugins](https://github.com/cursor/plugins) の pstack | MIT | コミット 997ffc7(2026-10-12 時点) | specify |
 | [mattpocock/skills](https://github.com/mattpocock/skills) | MIT | コミット 49dd158(2026-10-12 時点) | specify |
 | [DietrichGebert/ponytail](https://github.com/DietrichGebert/ponytail) | MIT | v5.1.0 | ponytail |
-| [coji/natural-japanese](https://github.com/coji/natural-japanese) | MIT | v1.5.0(9a78a42)・v1.6.0(03bc944) | write-doc(`inspection.md`・`paragraph.md`・`sentence.md`・`format/slide.md`)・write-slide・write-message(`SKILL.md`) |
-| [nanaism/yomiyasu](https://github.com/nanaism/yomiyasu) | MIT | v1.1.1(373356e)・v2.0.1(84e1f5b) | write-doc(`inspection.md`・`paragraph.md`・`readers.md`・`sentence.md`)・write-message(`SKILL.md`・`keigo.md`) |
+| [coji/natural-japanese](https://github.com/coji/natural-japanese) | MIT | v1.5.0(9a78a42)・v1.6.0(03bc944) | write-doc(`inspection.md`・`paragraph.md`・`sentence.md`・`format/slide.md`・`types/report.md`)・write-slide・write-message(`SKILL.md`) |
+| [nanaism/yomiyasu](https://github.com/nanaism/yomiyasu) | MIT | v1.1.1(373356e)・v2.0.1(84e1f5b) | write-doc(`inspection.md`・`paragraph.md`・`readers.md`・`sentence.md`・`types/minutes.md`)・write-message(`SKILL.md`・`keigo.md`) |
 | [mizchi/explainer](https://github.com/mizchi/explainer) | MIT | 版の記載なし | write-doc(`paragraph.md`・`readers.md`) |
 | [heygen-com/hyperframes](https://github.com/heygen-com/hyperframes) | Apache-2.0 | 版の記載なし | write-doc(`paragraph.md`・`readers.md`。explainer を経由) |
 | [carnot-tech/consulting-pptx-skill](https://github.com/carnot-tech/consulting-pptx-skill) | MIT | コミット bc9a587 | write-doc(`format/slide.md`・`paragraph.md`・`sentence.md`・`process.md`・`inspection.md`)・write-slide・draw-diagram(`SKILL.md`) |
@@ -412,7 +412,7 @@ NN/g Error-Message Guidelines は design-ui の `references/text.md` の出典(R
 
 - 木下是雄『理科系の作文技術』中公新書: パラグラフとトピックセンテンスの一次出典。
 - 結城浩『数学文章作法 基礎編・推敲編』ちくま学芸文庫: 読者の負荷を下げる原則の一次出典。
-- [coji/natural-japanese](https://github.com/coji/natural-japanese)(MIT ライセンス): トピックセンテンス・箇条書きの扱い、節の濃淡、前置きの禁止、結びの再統合、スケルトン通読、接地の原典。write-doc の書式に合わせて再構成した。v1.6.0(コミット 03bc944)の `SKILL.md` からは冒頭の要約の条件と要約の節(3.)を、`references/doctypes/report.md` からは調査の結びの検証と選択肢(3.)を取り込んだ。
+- [coji/natural-japanese](https://github.com/coji/natural-japanese)(MIT ライセンス): トピックセンテンス・箇条書きの扱い、節の濃淡、前置きの禁止、スケルトン通読、接地の原典。write-doc の書式に合わせて再構成した。v1.6.0(コミット 03bc944)の `SKILL.md` からは冒頭の要約の条件と要約の節(3.)を取り込んだ。
 - [nanaism/yomiyasu](https://github.com/nanaism/yomiyasu)(MIT ライセンス): v2.0.1(コミット 84e1f5b)の `skills/yomiyasu/SKILL.md`・`references/slop-catalog.md` から、AI への指示の残り(3.)と、括弧の中の手順(4.)を取り込んだ。
 - [mizchi/explainer](https://github.com/mizchi/explainer)(MIT ライセンス): `skills/explainer/SKILL.md`・`skills/explainer/references/writing.md` が、伝えたいことの 1 文・節の役割の表・削除テストの原典。explainer はこれらを [HyperFrames](https://github.com/heygen-com/hyperframes)(Apache-2.0)の `story-spine.md`・`brief-contract.md` を参考に書いた。write-doc の書式に合わせて再構成した。
 
@@ -425,7 +425,15 @@ NN/g Error-Message Guidelines は design-ui の `references/text.md` の出典(R
 
 - 木下是雄『理科系の作文技術』中公新書: 事実と意見の峻別の一次出典。
 - [coji/natural-japanese](https://github.com/coji/natural-japanese)(MIT ライセンス): 読みやすさの原則・悪文の型・カタログと例文の原典。write-doc の書式に合わせて再構成した。v1.5.0 までの references は、v1.6.0 で `SKILL.md`・`references/manual-checklist.md`・`references/diagnose.md`・`references/doctypes/` に再編された。v1.6.0(コミット 03bc944)の `SKILL.md`・`references/manual-checklist.md` からは、先回りの打ち消しと残す打ち消しの 3 種(2.)、演出の語、読み手が何のことか取れない言い回しの型と確かめ方、比喩の読み方の報告(3.)、英語の逐語訳(5.)を取り込んだ。硬い漢語への置き換えを避ける規則は漢語基調(3.)と衝突し、技術の言い方として定着した比喩(「キャッシュが効く」)を直さない例外は 3. の比喩の規則(「効く」)とカタログの語と衝突するため、どちらも取り込んでいない。同じ版の `SKILL.md` からは文を分けるときの接続語(2.)と、数字・引用と改行(4.)を、`references/doctypes/memo.md` からは対象外の範囲(4.)を取り込んだ。
-- [nanaism/yomiyasu](https://github.com/nanaism/yomiyasu)(MIT ライセンス): 要請と機能説明の書き分け、リライト時の情報増補の禁止、質感・認知を装う語と比喩動詞のカタログ、前置フィラー・定型クロージングの原典。write-doc の書式に合わせて再構成した。v1.1.1(コミット 373356e)の `skills/yomiyasu/SKILL.md`・`references/slop-catalog.md` からは、条件付きの比喩動詞(うち `壊れる`・`静かに`・`黙って`・`沈黙`・`逃がす` は、カタログの禁止語にした)、定着した慣用句、大げさな名詞、文末の立場、言い直しの締め、文頭の「もちろん、」、否定対比の条件を取り込んだ。同じ版の見出しの規則は、`paragraph.md` 6. へ取り込んだ。v2.0.1(コミット 84e1f5b)の `skills/yomiyasu/SKILL.md`・`references/rephrase-test.md`・`references/fact-recovery.md` からは、2 文に分けた否定対比(2.)、文の種類の保持と、リライトで使ってよい根拠の範囲(4.)を取り込んだ。本文に【要確認】を挟まない規則は、確信度ラベル(4.)と衝突するため取り込んでいない。同じ版の `skills/yomiyasu/SKILL.md`・`references/slop-catalog.md`・`references/domains/business.md` からは、`paragraph.md` の見出しの括弧と「〜について」・短い動作の見出し・題・議事録の見出し(6.)、`sentence.md` の補助動詞と形式名詞のひらがな(6.)と読点とラベルのコロン(7.)を取り込んだ。同じ 3 ファイルからは、「〜するには」・詰めた漢語の句・使役・前後の語での補い・指示語・予定を述べる結び(2.)、確度の語(3.)、論文調と「これにより」(5.)も取り込んだ。
+- [nanaism/yomiyasu](https://github.com/nanaism/yomiyasu)(MIT ライセンス): 要請と機能説明の書き分け、リライト時の情報増補の禁止、質感・認知を装う語と比喩動詞のカタログ、前置フィラー・定型クロージングの原典。write-doc の書式に合わせて再構成した。v1.1.1(コミット 373356e)の `skills/yomiyasu/SKILL.md`・`references/slop-catalog.md` からは、条件付きの比喩動詞(うち `壊れる`・`静かに`・`黙って`・`沈黙`・`逃がす` は、カタログの禁止語にした)、定着した慣用句、大げさな名詞、文末の立場、言い直しの締め、文頭の「もちろん、」、否定対比の条件を取り込んだ。同じ版の見出しの規則は、`paragraph.md` 6. へ取り込んだ。v2.0.1(コミット 84e1f5b)の `skills/yomiyasu/SKILL.md`・`references/rephrase-test.md`・`references/fact-recovery.md` からは、2 文に分けた否定対比(2.)、文の種類の保持と、リライトで使ってよい根拠の範囲(4.)を取り込んだ。本文に【要確認】を挟まない規則は、確信度ラベル(4.)と衝突するため取り込んでいない。同じ版の `skills/yomiyasu/SKILL.md`・`references/slop-catalog.md`・`references/domains/business.md` からは、`paragraph.md` の見出しの括弧と「〜について」・短い動作の見出し・題(6.)と `types/minutes.md` の議事録の推敲(3.)、`sentence.md` の補助動詞と形式名詞のひらがな(6.)と読点とラベルのコロン(7.)を取り込んだ。同じ 3 ファイルからは、「〜するには」・詰めた漢語の句・使役・前後の語での補い・指示語・予定を述べる結び(2.)、確度の語(3.)、論文調と「これにより」(5.)も取り込んだ。
+
+#### 9.8.5. `skills/write-doc/references/types/minutes.md`
+
+- [nanaism/yomiyasu](https://github.com/nanaism/yomiyasu)(MIT ライセンス): v2.0.1(コミット 84e1f5b)の `references/domains/business.md` から、議事録の推敲で話題の順と見出しを変えない規則(3.)を取り込んだ。この規則は `paragraph.md` 6. から移した。
+
+#### 9.8.6. `skills/write-doc/references/types/report.md`
+
+- [coji/natural-japanese](https://github.com/coji/natural-japanese)(MIT ライセンス): 結びの再統合と、v1.6.0(コミット 03bc944)の `references/doctypes/report.md` からの調査の結びの検証と選択肢(3.)の原典。いずれも `paragraph.md` 3. から移した。
 
 ### 9.9. write-slide
 
