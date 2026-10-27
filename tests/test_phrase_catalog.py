@@ -172,7 +172,7 @@ class PhraseCatalogTest(unittest.TestCase):
         self.assertEqual(lint.detect_forbidden_phrases([(1, "列を最大幅に広げる。")]), [])
 
     def test_natural_japanese_由来の動きの動詞を検出する(self) -> None:
-        for sentence in ["エラーログを吐く。", "障害でサーバーが死んだ。", "設定ファイルが育っていく。"]:
+        for sentence in ["エラーログを吐く。", "障害でサーバーが死んだ。", "設定ファイルが育っていく。", "ナレッジが育たない。"]:
             with self.subTest(sentence=sentence):
                 findings = lint.detect_forbidden_phrases([(1, sentence)])
                 self.assertEqual(len(findings), 1)
