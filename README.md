@@ -361,7 +361,7 @@ retro は次の資料を参照し、要点を自分の言葉でまとめた。�
   - 個人を責めず、仕組みと工程を直す。retro では 1. の指摘の扱いと、5.6 の対処の型にあたる。
   - 再発を防ぐ対策を記録に含める。retro では 6. の起票にあたる。
 
-4\. の分類と 5. の原因の分類は外部の出典を持たず、2026-10-14 の事例(`references/example.md`)に基づく。
+4\. の分類と 5. の原因の分類は外部の出典を持たず、2026-10-14 の事例(`references/example.md`)に基づく。ただし 5.6 の表の後の段落(規則を足す前の確認と考えで書くこと)は pstack を元にする(9.14)。
 
 ### 9.4. ponytail
 
@@ -398,6 +398,8 @@ recover は次の資料を参照し、要点を自分の言葉でまとめた。
 - Michael T. Nygard『Release It! Second Edition』(Pragmatic Bookshelf、2018)。Timeouts・Fail Fast の背景として書名だけを挙げる。
 
 2.6 の noindex と 2.7 は外部の出典を持たない。2.7 は、結果ページを直接開くと置換前の印がそのまま見えたという実装の事例に基づき、2.6 の noindex は、エラーページを独立した URL で配信すると直接開いたときに 200 で返るという本文の理由に基づく。
+
+2.3 の再実行される操作の箇条は pstack を元にする(9.14)。
 
 NN/g Error-Message Guidelines は design-ui の `references/text.md` の出典(README 9.13.5)にある。
 
@@ -535,7 +537,7 @@ respond は i-have-adhd(MIT ライセンス、Copyright (c) 2026 Ayoub Ghriss、
 - [s0xDk/refactoring-ui-skill](https://github.com/s0xDk/refactoring-ui-skill)(MIT。原典 Wathan & Schoger, *Refactoring UI*)
 - [anthropics/skills frontend-design](https://github.com/anthropics/skills/tree/main/skills/frontend-design)(Apache-2.0)
 
-### 9.14. pstack の原則(develop・ponytail・build・recover・retro・agents)
+### 9.14. pstack(develop・ponytail・build・recover・retro・agents)
 
 次の箇所は cursor/plugins の pstack(MIT ライセンス、Copyright (c) 2026 Lauren Tan、https://github.com/cursor/plugins)を元にする。版は 0.15.36 である。2026-10-28 時点のコミット 1ba91fc から取り込んだ。specify の取り込み(コミット 997ffc7)は 9.2 のとおりである。
 
@@ -548,6 +550,6 @@ respond は i-have-adhd(MIT ライセンス、Copyright (c) 2026 Ayoub Ghriss、
 - `pstack/skills/ketchup/SKILL.md` の判断依頼の形。推奨・根拠・リスクの示し方・案ごとの得るものと費用・不明なことの書き方・本人を待つものを完了と書かない規則を指す。`agents/planner.md` の未確定事項・develop 5.・build の要判断の節に反映した。
 - `pstack/skills/poteto-mode/SKILL.md` の「Match the model to the job」にある推論の強さの 4 文。develop 6. に反映した。
 
-上流は 2026-10-12 に原則を書き直した。書き直しでは手段の列挙をやめて判定を導く考えを書いた。周辺の節も削った。この書き直しの方針を README 6.2 と retro 5.6 に取り込んだ。
+上流は 2026-10-15 のコミット e5136d8 で 4 つの原則を書き直した。書き直しでは手段の列挙をやめて判定を導く考えを書いた。同日のコミット 99743e9 で 4 つのスキルの周辺の節も削った。この書き直しの方針を README 6.2 と retro 5.6 に取り込んだ。
 
-fast モード・モデル族と slug の扱い・ketchup の視覚の規則・ハッシュやパスの省略・fix-root-causes の安価な常時の信号・不変条件のテストは取り込まなかった。
+poteto-mode の fast モードとモデル族・slug の扱いは取り込まなかった。ketchup の視覚の規則とハッシュ・パスを省く規則も取り込まなかった。ハッシュ・パスを省く規則は respond の「調べた事実には根拠となるソースを示す」と衝突するためである。fix-root-causes の安価な常時の信号も取り込まなかった。test-behavior-not-implementation の不変条件のテストも取り込まなかった。
