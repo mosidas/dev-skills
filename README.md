@@ -539,17 +539,12 @@ respond は i-have-adhd(MIT ライセンス、Copyright (c) 2026 Ayoub Ghriss、
 
 ### 9.14. pstack(develop・ponytail・build・recover・retro・agents)
 
-次の箇所は cursor/plugins の pstack(MIT ライセンス、Copyright (c) 2026 Lauren Tan、https://github.com/cursor/plugins)を元にする。版は 0.15.36 である。2026-10-28 時点のコミット 1ba91fc から取り込んだ。specify の取り込み(コミット 997ffc7)は 9.2 のとおりである。
+次の箇所は cursor/plugins の pstack(MIT ライセンス、Copyright (c) 2026 Lauren Tan、https://github.com/cursor/plugins)0.15.36(2026-10-28 時点のコミット 1ba91fc)を元にする。パスは上流のリポジトリ内のものである。specify の出典は 9.2 にある。
 
-取り込んだ範囲と反映先は次の 6 つである。パスは上流のリポジトリ内のものである。
-
-- `pstack/skills/principle-test-behavior-not-implementation/SKILL.md` の挙動と実装の定義・2 つの想像上の編集・残す条件・契約が決めること。ponytail 5. のテストの判定・`agents/reviewer.md` のテストの観点・`agents/implementer.md` の進め方 2 に反映した。
-- `pstack/skills/principle-fix-root-causes/SKILL.md` の状態の正当性の問い・隠す常用手段・永続状態。ponytail 2. に反映した。
-- `pstack/skills/principle-make-operations-idempotent/SKILL.md` の今ある状態から導くこと・残すものを古いと判定できる形にすること。recover 2.3 に反映した。
-- `pstack/skills/principle-attack-the-premise/SKILL.md` の前提の書き出しと観測。develop 6. の手順 4 に反映した。
-- `pstack/skills/ketchup/SKILL.md` の判断依頼の形。推奨・根拠・リスクの示し方・案ごとの得るものと費用・不明なことの書き方・本人を待つものを完了と書かない規則を指す。`agents/planner.md` の未確定事項・develop 5.・build の要判断の節に反映した。
-- `pstack/skills/poteto-mode/SKILL.md` の「Match the model to the job」にある推論の強さの 4 文。develop 6. に反映した。
-
-上流は 2026-10-15 のコミット e5136d8 で 4 つの原則を書き直した。書き直しでは手段の列挙をやめて判定を導く考えを書いた。続くコミット 99743e9 で 4 つのスキルの周辺の節も削った。この書き直しの方針を README 6.2 と retro 5.6 に取り込んだ。
-
-poteto-mode の fast モードとモデル族・slug の扱いは取り込まなかった。ketchup の視覚の規則とハッシュ・パスを省く規則も取り込まなかった。ハッシュ・パスを省く規則は respond の「調べた事実には根拠となるソースを示す」と衝突するためである。fix-root-causes の安価な常時の信号も取り込まなかった。test-behavior-not-implementation の不変条件のテストも取り込まなかった。
+- ponytail 5. のテストの判定、`agents/reviewer.md` のテストの観点、`agents/implementer.md` の進め方 2: `pstack/skills/principle-test-behavior-not-implementation/SKILL.md`
+- ponytail 2. の状態の正当性の問い: `pstack/skills/principle-fix-root-causes/SKILL.md`
+- recover 2.3 の再実行される操作: `pstack/skills/principle-make-operations-idempotent/SKILL.md`
+- develop 6. の手順 4 の前提の書き出し: `pstack/skills/principle-attack-the-premise/SKILL.md`
+- `agents/planner.md` の未確定事項、develop 5.、build の要判断の節の判断依頼の形: `pstack/skills/ketchup/SKILL.md`
+- develop 6. の推論の強さ: `pstack/skills/poteto-mode/SKILL.md` の「Match the model to the job」
+- README 6.2 と retro 5.6 の規則を考えで書くこと: 上流が 4 つの原則を書き直したコミット e5136d8・99743e9(2026-10-15)
