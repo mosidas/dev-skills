@@ -232,6 +232,7 @@ $ agy plugin validate .
 - 節番号での参照は節を追加・削除すると別の節を指すため、複数のスキルが同じ規則を「develop 2.」のような節番号で参照するときは、その規則を、参照される側のスキルの `references/<name>.md` に抜き出す。参照する側は、そのファイル名で参照する。抜き出すのは規則の定義だけにし、手順(誰が・いつ確かめるか)は元のスキルに残す。例は `skills/develop/references/requirements.md`(要件の 4 行の形式)である。
 - 上流の資料(yomiyasu など)にある条件付きの規則(文脈で言い換え先が変わる比喩動詞など)を write-doc へ取り込むときは、語ごとに、システム開発の文書で字義どおりの正当な用法があるかを確かめる。条件付きの規則は lint が検出しないため、正当な用法が無い語は `skills/write-doc/scripts/forbidden_phrases.json` に禁止語として登録し、lint で検出する。開発文書でも正当な用法と言い換えるべき用法の両方がある語(引き返す・契約・正本など)だけを、`skills/write-doc/references/sentence.md` に条件付きの規則として書く。
 - 上流の資料を取り込んだときは、出典(資料名・URL・ライセンス・版とコミット SHA・取り込んだ範囲)をスキルの `SKILL.md` と `references/` に書かず、README の 9. に書く。CLI がスキルを読み込むたびに出典の文面もコンテキストに入るためである。
+- 規則を具体的な手段の禁止や指示の列挙だけで書かない。列挙に無い場面でも判定を導ける考え(何を守るためか・判定の問い)を書く。手段は考えの例として書く。lint で検出する禁止語の登録はこの規則から除く。例は ponytail の「テストの判定」(2 つの想像上の編集で判定する)である。規則が無くてもエージェントが同じに振る舞う文は書かない。そうした文を見つけたら削る。
 
 ## 7. 評価
 
@@ -270,7 +271,7 @@ MIT ライセンスで公開する。全文は `LICENSE` にある。
 
 | 出典 | ライセンス | 取り込んだ版・コミット | 反映先 |
 | :-- | :-- | :-- | :-- |
-| [cursor/plugins](https://github.com/cursor/plugins) の pstack | MIT | コミット 997ffc7(2026-10-12 時点) | specify |
+| [cursor/plugins](https://github.com/cursor/plugins) の pstack | MIT | コミット 997ffc7(2026-10-12 時点。specify)・0.15.36(コミット 1ba91fc、2026-10-28) | specify・develop・build・ponytail・recover・retro・agents(`planner.md`・`implementer.md`・`reviewer.md`)・README 6.2 |
 | [mattpocock/skills](https://github.com/mattpocock/skills) | MIT | コミット 49dd158(2026-10-12 時点) | specify |
 | [DietrichGebert/ponytail](https://github.com/DietrichGebert/ponytail) | MIT | v5.1.0 | ponytail |
 | [coji/natural-japanese](https://github.com/coji/natural-japanese) | MIT | v1.5.0(9a78a42)・v1.6.0(03bc944)・v1.6.2(a88b8e9) | write-doc(`inspection.md`・`paragraph.md`・`readers.md`・`sentence.md`・`format/slide.md`・`types/report.md`)・write-slide・write-message(`SKILL.md`) |
@@ -360,11 +361,11 @@ retro は次の資料を参照し、要点を自分の言葉でまとめた。�
   - 個人を責めず、仕組みと工程を直す。retro では 1. の指摘の扱いと、5.6 の対処の型にあたる。
   - 再発を防ぐ対策を記録に含める。retro では 6. の起票にあたる。
 
-4\. の分類と 5. の原因の分類は外部の出典を持たず、2026-10-14 の事例(`references/example.md`)に基づく。
+4\. の分類と 5. の原因の分類は外部の出典を持たず、2026-10-14 の事例(`references/example.md`)に基づく。ただし 5.6 の表の後の段落(規則を加える前の確認と考えで書くこと)は pstack を元にする(9.14)。
 
 ### 9.4. ponytail
 
-ponytail は ponytail(MIT ライセンス、Copyright (c) 2026 DietrichGebert、https://github.com/DietrichGebert/ponytail)v5.1.0 の `skills/ponytail/SKILL.md` を元にする。強度の切り替え(lite・ultra)は取り込まず、既定の強度の規範だけを残した。
+ponytail は ponytail(MIT ライセンス、Copyright (c) 2026 DietrichGebert、https://github.com/DietrichGebert/ponytail)v5.1.0 の `skills/ponytail/SKILL.md` を元にする。強度の切り替え(lite・ultra)は取り込まず、既定の強度の規範だけを残した。テストの判定(5.)と根本原因の段落(2.)の一部は pstack を元にする(9.14)。
 
 ### 9.5. secure
 
@@ -397,6 +398,8 @@ recover は次の資料を参照し、要点を自分の言葉でまとめた。
 - Michael T. Nygard『Release It! Second Edition』(Pragmatic Bookshelf、2018)。Timeouts・Fail Fast の背景として書名だけを挙げる。
 
 2.6 の noindex と 2.7 は外部の出典を持たない。2.7 は、結果ページを直接開くと置換前の印がそのまま見えたという実装の事例に基づき、2.6 の noindex は、エラーページを独立した URL で配信すると直接開いたときに 200 で返るという本文の理由に基づく。
+
+2.3 の再実行される操作の箇条は pstack を元にする(9.14)。
 
 NN/g Error-Message Guidelines は design-ui の `references/text.md` の出典(README 9.13.5)にある。
 
@@ -533,3 +536,15 @@ respond は i-have-adhd(MIT ライセンス、Copyright (c) 2026 Ayoub Ghriss、
 - [pbakaus/impeccable](https://github.com/pbakaus/impeccable)(Apache-2.0)、`skill/reference/clarify.md`
 - [s0xDk/refactoring-ui-skill](https://github.com/s0xDk/refactoring-ui-skill)(MIT。原典 Wathan & Schoger, *Refactoring UI*)
 - [anthropics/skills frontend-design](https://github.com/anthropics/skills/tree/main/skills/frontend-design)(Apache-2.0)
+
+### 9.14. pstack(develop・ponytail・build・recover・retro・agents)
+
+次の箇所は cursor/plugins の pstack(MIT ライセンス、Copyright (c) 2026 Lauren Tan、https://github.com/cursor/plugins)0.15.36(2026-10-28 時点のコミット 1ba91fc)を元にする。パスは上流のリポジトリ内のものである。specify の出典は 9.2 にある。
+
+- ponytail 5. のテストの判定、`agents/reviewer.md` のテストの観点、`agents/implementer.md` の進め方 2: `pstack/skills/principle-test-behavior-not-implementation/SKILL.md`
+- ponytail 2. の状態の正当性の問い: `pstack/skills/principle-fix-root-causes/SKILL.md`
+- recover 2.3 の再実行される操作: `pstack/skills/principle-make-operations-idempotent/SKILL.md`
+- develop 6. の手順 4 の前提の書き出し: `pstack/skills/principle-attack-the-premise/SKILL.md`
+- `agents/planner.md` の未確定事項、develop 5.、build の要判断の節の判断依頼の形: `pstack/skills/ketchup/SKILL.md`
+- develop 6. の推論の強さ: `pstack/skills/poteto-mode/SKILL.md` の「Match the model to the job」
+- README 6.2 と retro 5.6 の規則を考えで書くこと: 上流が 4 つの原則を書き直したコミット e5136d8・99743e9(2026-10-15)
