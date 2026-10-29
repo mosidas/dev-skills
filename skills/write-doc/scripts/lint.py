@@ -114,6 +114,7 @@ FORBIDDEN_PHRASE_VARIANTS: list[tuple[str, str]] = [
 # 正規表現からは外し、品詞列で「〜ことができる」を拾う translationese_morph だけで扱う。
 TRANSLATIONESE_PATTERNS: list[str] = [
     r"と言えるだろう",
+    r"と言えるでしょう",
     r"という点で",
     r"という観点(から|で)",
     r"にとって(重要|不可欠)",
@@ -153,6 +154,41 @@ FILLER_PATTERNS: list[tuple[str, str]] = [
         "文末の付け足し",
     ),
 ]
+
+# 中身の薄い評価の文（「操作性が高い。」のように名詞の評価を述語で言い直すだけの文）。
+# 出典: yomiyasu v2.2.0(a34d94f)の references/lists/thin-evaluation.txt・references/slop-catalog.md 5 章(MIT)。
+# 35 組のうち技術文書向けの 15 組だけを取り込み、製品レビュー向けの 20 組(〜心地・質感・携帯性・保温性など)は除いた。
+# 照合の形は scripts/yomiyasu_lint.py の _v220_patterns に合わせた。
+_THIN_PRED_WIDE = r"(?:高い|優れてい(?:ます|る)|よい|良い|抜群)"
+_THIN_PRED = r"(?:高い|優れてい(?:ます|る)|抜群)"
+THIN_EVALUATION_PAIRS: list[tuple[str, str]] = [
+    ("操作性", _THIN_PRED_WIDE),
+    ("視認性", _THIN_PRED_WIDE),
+    ("利便性", _THIN_PRED),
+    ("快適性", _THIN_PRED),
+    ("安定性", _THIN_PRED),
+    ("耐久性", _THIN_PRED),
+    ("静音性", _THIN_PRED),
+    ("信頼性", _THIN_PRED),
+    ("拡張性", _THIN_PRED),
+    ("保守性", _THIN_PRED),
+    ("可読性", _THIN_PRED),
+    ("機能性", _THIN_PRED),
+    ("デザイン性", _THIN_PRED),
+    ("品質", _THIN_PRED),
+    ("性能", _THIN_PRED),
+]
+_THIN_ADVERB = r"(?:とても|非常に|大変|たいへん|すごく|かなり|十分に?|抜群に|格段に|より|さらに|一段と)?"
+_THIN_TAIL = r"(?:です|でした|だ|だった|である|でございます|ですね|ですよ)?"
+# split_sentences_with_lines が句点を取り除くので、上流の末尾の [。．！!]* は付けない。
+THIN_EVALUATION_RE = re.compile(
+    r"^[^、，,]{0,20}?(?P<body>"
+    + "|".join(f"(?:{re.escape(n)}(?:が|は|も){_THIN_ADVERB}{p})" for n, p in THIN_EVALUATION_PAIRS)
+    + r")"
+    + _THIN_TAIL
+    + r"$"
+)
+_QUOTED_RE = re.compile(r"「[^」\n]*」|『[^』\n]*』")
 
 # 段落頭に来ると「AI が構成を接続詞で誤魔化しがち」な語
 PARAGRAPH_CONJUNCTIONS: list[str] = [
@@ -681,6 +717,37 @@ def detect_filler_phrases(
                         detail=f"{label}: 「{_strip_line_marker(m.group())}」",
                     )
                 )
+    return findings
+
+
+def detect_thin_evaluation(
+    lines: list[tuple[int, str]], raw_lines_by_no: dict[int, str] | None = None
+) -> list[Finding]:
+    """名詞の評価を述語で言い直すだけの文を拾う。info であり、直す合図ではない。
+
+    カギ括弧の中は引用・悪い例として除くため、同じ長さの空白に置き換えてから文に分ける。
+    """
+    findings = []
+    for no, line in lines:
+        masked_line = _QUOTED_RE.sub(lambda m: " " * len(m.group()), line)
+        for _, masked_sentence, raw_sentence in split_sentences_with_lines([(no, masked_line)], raw_lines_by_no):
+            m = THIN_EVALUATION_RE.match(_strip_line_marker(masked_sentence))
+            if not m:
+                continue
+            noun = next(n for n, _ in THIN_EVALUATION_PAIRS if m.group("body").startswith(n))
+            findings.append(
+                Finding(
+                    line=no,
+                    category="thin_evaluation",
+                    excerpt=raw_sentence.strip()[:40],
+                    severity="info",
+                    detail=(
+                        f"中身の薄い評価の文: 「{noun}」の評価を述語で言い直している。"
+                        "同じ文書に評価の中身(数値・寸法)があればその事実に寄せ、"
+                        "無ければ中身を足さずに残して書き手に確かめる(sentence.md 3.)"
+                    ),
+                )
+            )
     return findings
 
 
@@ -1838,6 +1905,7 @@ def run_lint(
     findings += detect_forbidden_phrases(lex_lines, raw_lines_by_no)
     findings += detect_translationese(lex_lines, raw_lines_by_no)
     findings += detect_filler_phrases(lex_lines, raw_lines_by_no)
+    findings += detect_thin_evaluation(lex_lines, raw_lines_by_no)
     findings += detect_antithesis_repetition(
         lines,
         raw_lines_by_no,

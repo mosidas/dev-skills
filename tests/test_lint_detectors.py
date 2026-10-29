@@ -6,6 +6,7 @@
 
 from __future__ import annotations
 
+import json
 import sys
 import unittest
 
@@ -117,6 +118,67 @@ class TranslationeseTest(unittest.TestCase):
 
     def test_という点では検出する(self) -> None:
         self.assertEqual(self.categories("性能という点で優れている。"), ["translationese"])
+
+    def test_と言えるでしょうを検出する(self) -> None:
+        self.assertEqual(self.categories("この方式は有効と言えるでしょう。"), ["translationese"])
+
+    def test_と言えるだけなら検出しない(self) -> None:
+        self.assertEqual(self.categories("この方式は有効と言える。"), [])
+
+
+class ThinEvaluationTest(unittest.TestCase):
+    def findings(self, text: str) -> list:
+        lines = lint.iter_lines_with_no(lint.mask_markdown_structure(text, keep_structure_text=True))
+        return lint.detect_thin_evaluation(lines)
+
+    def test_評価を言い直すだけの文を検出する(self) -> None:
+        cases = [
+            ("操作性が高い。", "操作性"),
+            ("この画面は操作性が非常に高いです。", "操作性"),
+            ("設定画面の視認性も良い。", "視認性"),
+            ("- 保守性が高い。", "保守性"),
+        ]
+        for text, noun in cases:
+            with self.subTest(text=text):
+                found = self.findings(text)
+                self.assertEqual(len(found), 1)
+                self.assertEqual(found[0].category, "thin_evaluation")
+                self.assertEqual(found[0].severity, "info")
+                self.assertIn(noun, found[0].detail)
+
+    def test_読点の前置き_変化の形_に_括弧の中は検出しない(self) -> None:
+        for text in [
+            "ログが少ないので、可読性が高い。",
+            "信頼性が高まった。",
+            "可読性に優れている。",
+            "「操作性が高い。」と書かない。",
+            "- Before: 「操作性が高い。」",
+        ]:
+            with self.subTest(text=text):
+                self.assertEqual(self.findings(text), [])
+
+    def test_製品レビュー向けの組は取り込まない(self) -> None:
+        for text in ["座り心地が快適だ。", "携帯性が高い。", "保温性が高い。"]:
+            with self.subTest(text=text):
+                self.assertEqual(self.findings(text), [])
+        self.assertEqual(len(lint.THIN_EVALUATION_PAIRS), 15)
+
+    def test_前置きは_20_字まで(self) -> None:
+        self.assertEqual(len(self.findings("あ" * 20 + "操作性が高い。")), 1)
+        self.assertEqual(self.findings("あ" * 21 + "操作性が高い。"), [])
+
+    def test_元の行を渡すと_excerpt_はカギ括弧を含む元の文になる(self) -> None:
+        text = "「設定」の操作性が高い。"
+        lines = lint.iter_lines_with_no(lint.mask_markdown_structure(text, keep_structure_text=True))
+        found = lint.detect_thin_evaluation(lines, {1: text})
+        self.assertEqual(len(found), 1)
+        self.assertEqual(found[0].excerpt, "「設定」の操作性が高い")
+
+    def test_重大カテゴリに入れない(self) -> None:
+        config = json.loads((helpers.REPO_ROOT / "hooks" / "inspection.config.json").read_text(encoding="utf-8"))
+        categories = {rule["category"] for rule in config["blocking"]}
+        self.assertNotIn("thin_evaluation", categories)
+        self.assertNotIn("translationese", categories)
 
 
 class NegationRepetitionTest(unittest.TestCase):
