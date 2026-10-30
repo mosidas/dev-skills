@@ -6,7 +6,7 @@ Claude Code・Codex CLI・Antigravity CLI のプラグインである。開発�
 
 | 構成要素 | 種別 | 役割 |
 | :-- | :-- | :-- |
-| `develop` | スキル | 実装タスクを要件の確認から PR まで進める統括の手順。要件(目的・完了条件・対象外・品質(簡易 / プロダクト))の壁打ち、Backlog.md のタスク、GitHub flow、git hook(lefthook・husky)、planner・implementer・reviewer による実装と点検のループ、gate-reviewer によるブランチ全体の点検、push 後の CI 確認を定める。品質がプロダクトのときは secure・observe・recover を適用し、git hook と CI にシークレット検知(gitleaks)と依存監査(osv-scanner)を、CI に SAST(CodeQL か semgrep)を追加し、Claude Code ではゲートの前に `/security-review` を実行する。新しい Web の画面・フォームを作るタスクで UI モックの行が無ければ、要件の確認で UI モックを先に作るか不要かを 1 問聞き、先に作るなら design-ui の工程を示して止まる。UI モックの行は planner に渡す。計画の未確定事項のうち事実で決まるものは統括が調べて決め、調べても決まらないものと本人の判断が必要なものは依存するステップの前に 1 問ずつ聞く。本人の指摘があったタスクでは、閉じる工程で retro を実行する(build の反復を除く)。中断を指示されたら再開メモを Implementation Notes に書いて止まる。再開するときは Notes・ブランチ・PR の状態から再開点を決める。済んだステップは繰り返さない |
+| `develop` | スキル | 実装タスクを要件の確認から PR まで進める統括の手順。要件(目的・完了条件・対象外・品質(簡易 / プロダクト))の壁打ち、Backlog.md のタスク、GitHub flow、git hook(lefthook・husky)、planner・implementer・reviewer による実装と点検のループ、gate-reviewer によるブランチ全体の点検、push 後の CI 確認を定める。品質がプロダクトのときは secure・observe・recover を適用し、git hook と CI にシークレット検知(gitleaks)と依存監査(osv-scanner)を、CI に SAST(CodeQL か semgrep)を追加し、Claude Code ではゲートの前に `/security-review` を実行する。新しい Web の画面・フォームを作るタスクで UI モックの行が無ければ、要件の確認で UI モックを先に作るか不要かを 1 問聞き、先に作るなら design-ui の工程を示して止まる。UI モックの行は planner に渡す。計画の未確定事項のうち事実で決まるものは統括が調べて決め、調べても決まらないものと本人の判断が必要なものは依存するステップの前に 1 問ずつ聞く。本人の指摘があったタスクでは、閉じる工程で retro を実行する(build の反復を除く)。中断を指示されたら再開メモを Implementation Notes に書いて止まる。再開するときは Notes・ブランチ・PR の状態から再開点を決める。済んだステップは繰り返さない。PR のレビューコメント(bot・Codex CLI・人)を fix・dismiss・ask に分ける。dismiss には反証を返信する |
 | `specify` | スキル | 曖昧な着想から、ユーザーとの対話で「何を作るか」を 1 問ずつ聞き出し、build がそのまま 1 要求 = 1 タスクで分解できる PRD(製品要求仕様書)を書く手順。PRD は雛形 `references/prd.md` から書き、要求ごとに目的・完了条件・対象外・品質の 4 行と、検証できる受け入れ条件を持たせる。PRD の 4.(制約と決定事項)には UI モックの行(brief.md のパス・`未作成`・`不要` のいずれか)を書き、新しい Web の画面・フォームを作る要求で UI モックの行が `未作成` なら、次の一手に design-ui で UI モックを作るかを示す。PRD のタスクへの分解と実装は build が行う |
 | `build` | スキル | PRD から起こした複数のタスクを develop で 1 つずつ PR まで進める外側のループ。PRD を受け入れ条件つきの backlog のタスクに分解する工程と、未完了のタスクを 1 つ取って develop で PR まで進め、受け入れ条件を検証して Done にする反復を定める。新しい Web の画面・フォームを作る要求で PRD の UI モックの行が `未作成` か無ければ、分解の前に UI モックを先に作るか不要かを 1 問だけ聞き、タスク本文に UI モックの行を書く。反復ではこの問いで止まらない。状態は backlog と進捗ファイルだけに持ち、全タスクの Done・要判断・同じタスクの失敗の上限・反復の回数の上限などで止まる。`scripts/loop.py` が反復ごとに新しい `claude -p` を起動する(Claude Code) |
 | `retro` | スキル | 本人とレビューの指摘を 4 分類(文言・挙動・手順・委譲)に分け、原因を 3 分類(守られなかった・無かった・矛盾)と個別で判定して根拠付きの表にし、個別を除く行を本人の承認を得て dev-skills の改善タスクとして起票する手順。原因が「無かった」で直す場所が文書の規範なら、規範にするか(案件の記録・宛先プロファイルに残すか)と、write-doc のどの束に加えるかを判定する。本人の指摘の回数と往復の回数を記録する。表の雛形 `references/report.md` と事例 `references/example.md` を持つ。Google の SRE 本 15 章を出典とする |
@@ -178,7 +178,7 @@ agents/
 └── gate-reviewer.md       # push 前のブランチ全体の点検(opus、Write/Edit 不可)
 skills/develop/
 ├── SKILL.md               # 統括の工程(要件・タスク・ブランチ・計画・実装と点検のループ・ゲート・PR・完了・中断・再開)
-└── references/            # requirements.md(要件の 4 行と UI モックの行の形式・聞く範囲・品質の決め方)、git-flow.md(ブランチ・PR・CI・マージ)、hooks.md(lefthook・husky・シークレット検知・依存監査・CI での監査・SAST)
+└── references/            # requirements.md(要件の 4 行と UI モックの行の形式・聞く範囲・品質の決め方)、git-flow.md(ブランチ・PR・CI・マージ)、hooks.md(lefthook・husky・シークレット検知・依存監査・CI での監査・SAST)、review-triage.md(PR のレビューコメントの仕分けと却下のパターンの一覧)
 skills/specify/
 ├── SKILL.md               # 着想から PRD を書く工程(聞く・PRD を書く・確かめて終える)
 └── references/prd.md      # PRD の雛形(節ごとの書き方は各節の直下のコメント)
@@ -617,3 +617,6 @@ respond は i-have-adhd(MIT ライセンス、Copyright (c) 2026 Ayoub Ghriss、
 - develop 11.: `pstack/skills/poteto-mode/playbooks/session-pickup.md`
 - `skills/develop/references/git-flow.md` 3. の PR 本文の節: `pstack/skills/poteto-mode/playbooks/opening-a-pr.md` の「Descriptions」
 - `skills/develop/references/git-flow.md` 4. の CI の失敗の分類・develop 8.: `pstack/skills/poteto-mode/playbooks/babysit.md` の手順 7
+- `skills/develop/references/review-triage.md`・develop 8. のレビューコメントの仕分けと 1 回の push: `pstack/skills/poteto-mode/references/bugbot-triage.md`・`pstack/skills/poteto-mode/playbooks/babysit.md` の手順 5・6・8・`pstack/docs/guide/06-verify-and-ship.md` の「Drive the PR to merge-ready with Babysit」
+- `agents/gate-reviewer.md` の検査の変更の観点と main に既にある問題の扱い: `pstack/skills/poteto-mode/playbooks/autopilot-full.md` の手順 4・6
+- `agents/reviewer.md` の進め方 4 と `agents/gate-reviewer.md` の進め方 3 の再現のコマンドと出力: `pstack/skills/interrogate/SKILL.md` の「Fan out」と「Verify」・`pstack/skills/poteto-mode/playbooks/autopilot-full.md` の手順 4
