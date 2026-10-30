@@ -80,7 +80,7 @@ description: コードを書く・足す・直す・リファクタする・レ�
 
 | 英語名 | 日本語名 | 適用する場面 | 規則の所在 |
 | :-- | :-- | :-- | :-- |
-| Laziness Protocol | 怠ける作法 | 差分の大きさを決めるときと、抽象化や層を追加したくなったとき | ponytail 2.(はしご)・ponytail 3.(規則) |
+| Laziness Protocol | 怠ける作法 | 差分の大きさを決めるとき・抽象化や層を追加したくなったとき | ponytail 2.(はしご)・ponytail 3.(規則) |
 | Foundational Thinking | 土台から考える | 機能より先に用意する足場(git hook・テストの仕組み)を決めるとき | develop 4.(ブランチを切る)・ponytail 3.(規則) |
 | Redesign from First Principles | 一から設計し直す | 既存の設計に新しい要求を入れるとき。変更が及ぶ範囲を列挙してすべて変更し終える | ponytail 2.(はしご)の冒頭の段落 |
 | Attack the Premise | 前提を疑う | 同じ前提を共有する修正が続けて同じ指摘で通らないとき | develop 6.(実装と点検のループ)の手順 4・respond 4.(規則を外すとき)の 3 |
