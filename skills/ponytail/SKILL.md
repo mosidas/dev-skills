@@ -80,21 +80,21 @@ description: コードを書く・足す・直す・リファクタする・レ�
 
 | 英語名 | 日本語名 | 適用する場面 | 規則の所在 |
 | :-- | :-- | :-- | :-- |
-| Laziness Protocol | 怠ける作法 | 差分の大きさを決めるとき、抽象化や層を足したくなったとき | ponytail 2.(はしご)、ponytail 3.(規則) |
-| Foundational Thinking | 土台から考える | 機能より先に整える足場(git hook・テストの仕組み)を決めるとき | develop 4.(ブランチを切る)、ponytail 3.(規則) |
-| Redesign from First Principles | 一から設計し直す | 既存の設計に新しい要求を入れるとき。変更が及ぶ範囲を列挙し、すべて変更し終える | ponytail 2.(はしご)の冒頭の段落 |
+| Laziness Protocol | 怠ける作法 | 差分の大きさを決めるとき、抽象化や層を追加したくなったとき | ponytail 2.(はしご)、ponytail 3.(規則) |
+| Foundational Thinking | 土台から考える | 機能より先に用意する足場(git hook・テストの仕組み)を決めるとき | develop 4.(ブランチを切る)、ponytail 3.(規則) |
+| Redesign from First Principles | 一から設計し直す | 既存の設計に新しい要求を入れるとき。変更が及ぶ範囲を列挙してすべて変更し終える | ponytail 2.(はしご)の冒頭の段落 |
 | Attack the Premise | 前提を疑う | 同じ前提を共有する修正が続けて同じ指摘で通らないとき | develop 6.(実装と点検のループ)の手順 4、respond 4.(規則を外すとき)の 3 |
 | Subtract Before You Add | 足す前に削る | 追加・リファクタの順序を決めるとき | ponytail 3.(規則) |
 | Minimize Reader Load | 読み手の負荷を減らす | 追いにくいコードを書く・点検するとき | ponytail 3.(規則)、`agents/reviewer.md` の進め方 2 の簡潔さ |
 | Experience First | 体験を先に | 機能の範囲を取捨するとき | `skills/develop/references/requirements.md` 1.(形式)の目的の行、ponytail 2.(はしご)の段 1 |
 | Boundary Discipline | 境界で守る | 検証・エラー処理を書くとき | ponytail 5.(単純にしないもの)、secure 2.1(信頼境界と入力検証) |
 | Make Operations Idempotent | 操作を冪等にする | 再実行されるコマンド・ジョブ・スクリプトを設計するとき | recover 2.3(リトライと冪等) |
-| Migrate Callers Then Delete Legacy APIs | 呼び出し元を移して旧 API を消す | 内部 API を置き換えるとき | ponytail 2.(はしご)の冒頭の段落、ponytail 3.(規則) |
+| Migrate Callers Then Delete Legacy APIs | 呼び出し元を移して旧 API を削除する | 内部 API を置き換えるとき | ponytail 2.(はしご)の冒頭の段落、ponytail 3.(規則) |
 | Separate Before Serializing Shared State | 直列化の前に共有をなくす | 並行するアクターが同じ書き込み先に書きうるとき | `agents/reviewer.md` の進め方 2 の欠陥、ponytail 3.(規則)の `shortcut:` |
 | Prove It Works | 動くと示す | 完了と言う前 | develop 6.(実装と点検のループ)の末尾の検収、`agents/reviewer.md` の進め方 3、`agents/gate-reviewer.md` の進め方 2 のテスト、build 4.(反復する)の手順 5 |
 | Fix Root Causes | 根本原因を直す | バグを直すとき | ponytail 2.(はしご)の根本原因と状態の正当性の段落 |
 | Sequence Work into Verifiable Units | 確かめられる単位で刻む | 複数ステップの作業とコミットの積み方を決めるとき | `agents/planner.md` の進め方 3、develop 5.(計画する)、`agents/implementer.md` の進め方 2 |
 | Test Behavior, Not Implementation | 実装でなく挙動をテストする | テストを書く・変える・残すとき | ponytail 5.(単純にしないもの)のテストの判定、`agents/reviewer.md` の進め方 2 のテスト、`agents/implementer.md` の進め方 2 |
 | Guard the Context Window | コンテキストを守る | 大きな出力や長い読み込みで文脈が埋まるとき | develop の冒頭の段落、develop 6.(実装と点検のループ)の冒頭、build 1.(工程) |
-| Never Block on the Human | 人を待たない | 戻せる作業で人に聞きたくなったとき。事実で決まる問いは調べて決め、取り消せない操作だけは確認を取る | develop 5.(計画する)の未確定事項の処理、respond 4.(規則を外すとき)の 2 |
+| Never Block on the Human | 人を待たない | 戻せる作業で人に聞きたくなったとき。事実で決まる問いは調べて決める。取り消せない操作だけは確認を取る | develop 5.(計画する)の未確定事項の処理、respond 4.(規則を外すとき)の 2 |
 | Encode Lessons in Structure | 教訓を構造にする | 同じ指示や指摘が繰り返されたとき | retro 5.6(原因ごとの対処の型)、README 6.2(スキルを書くときの規則) |
