@@ -565,9 +565,9 @@ respond は i-have-adhd(MIT ライセンス、Copyright (c) 2026 Ayoub Ghriss、
 - [s0xDk/refactoring-ui-skill](https://github.com/s0xDk/refactoring-ui-skill)(MIT。原典 Wathan & Schoger, *Refactoring UI*)
 - [anthropics/skills frontend-design](https://github.com/anthropics/skills/tree/main/skills/frontend-design)(Apache-2.0)
 
-### 9.14. pstack(develop・ponytail・build・recover・retro・respond・agents)
+### 9.14. pstack(develop・specify・ponytail・build・recover・retro・respond・agents)
 
-次の箇所は cursor/plugins の pstack(MIT ライセンス、Copyright (c) 2026 Lauren Tan、https://github.com/cursor/plugins)0.15.36(2026-10-28 時点のコミット 1ba91fc)を元にする。パスは上流のリポジトリ内のものである。specify の出典は 9.2 にある。
+次の箇所は cursor/plugins の pstack(MIT ライセンス、Copyright (c) 2026 Lauren Tan、https://github.com/cursor/plugins)0.15.36(2026-10-28 時点のコミット 1ba91fc)を元にする。パスは上流のリポジトリ内のものである。specify の PRD の手法の出典は 9.2 にある。
 
 - ponytail 5. のテストの判定、`agents/reviewer.md` のテストの観点、`agents/implementer.md` の進め方 2: `pstack/skills/principle-test-behavior-not-implementation/SKILL.md`
 - ponytail 2. の状態の正当性の問い: `pstack/skills/principle-fix-root-causes/SKILL.md`
