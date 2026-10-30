@@ -299,7 +299,7 @@ MIT ライセンスで公開する。全文は `LICENSE` にある。
 
 | 出典 | ライセンス | 取り込んだ版・コミット | 反映先 |
 | :-- | :-- | :-- | :-- |
-| [cursor/plugins](https://github.com/cursor/plugins) の pstack | MIT | コミット 997ffc7(2026-10-12 時点。specify)・0.15.36(コミット 1ba91fc、2026-10-28) | specify・develop・build・ponytail・recover・retro・agents(`planner.md`・`implementer.md`・`reviewer.md`・`gate-reviewer.md`)・README 6.2 |
+| [cursor/plugins](https://github.com/cursor/plugins) の pstack | MIT | コミット 997ffc7(2026-10-12 時点。specify)・0.15.36(コミット 1ba91fc、2026-10-28) | specify・develop・build・ponytail・recover・retro・respond・agents(`planner.md`・`implementer.md`・`reviewer.md`・`gate-reviewer.md`)・README 6.2 |
 | [mattpocock/skills](https://github.com/mattpocock/skills) | MIT | コミット 49dd158(2026-10-12 時点) | specify |
 | [DietrichGebert/ponytail](https://github.com/DietrichGebert/ponytail) | MIT | v5.1.0 | ponytail |
 | [coji/natural-japanese](https://github.com/coji/natural-japanese) | MIT | v1.5.0(9a78a42)・v1.6.0(03bc944)・v1.6.2(a88b8e9) | write-doc(`inspection.md`・`paragraph.md`・`readers.md`・`sentence.md`・`format/slide.md`・`types/report.md`)・write-slide・write-message(`SKILL.md`) |
@@ -565,7 +565,7 @@ respond は i-have-adhd(MIT ライセンス、Copyright (c) 2026 Ayoub Ghriss、
 - [s0xDk/refactoring-ui-skill](https://github.com/s0xDk/refactoring-ui-skill)(MIT。原典 Wathan & Schoger, *Refactoring UI*)
 - [anthropics/skills frontend-design](https://github.com/anthropics/skills/tree/main/skills/frontend-design)(Apache-2.0)
 
-### 9.14. pstack(develop・ponytail・build・recover・retro・agents)
+### 9.14. pstack(develop・ponytail・build・recover・retro・respond・agents)
 
 次の箇所は cursor/plugins の pstack(MIT ライセンス、Copyright (c) 2026 Lauren Tan、https://github.com/cursor/plugins)0.15.36(2026-10-28 時点のコミット 1ba91fc)を元にする。パスは上流のリポジトリ内のものである。specify の出典は 9.2 にある。
 
@@ -599,3 +599,8 @@ respond は i-have-adhd(MIT ライセンス、Copyright (c) 2026 Ayoub Ghriss、
 - `agents/planner.md` の進め方 2 の最初からあったらの問い: `pstack/skills/principle-redesign-from-first-principles/SKILL.md`
 - `agents/planner.md` の進め方 3 の移行の例外・`agents/gate-reviewer.md` のテストの観点: `pstack/skills/principle-outcome-oriented-execution/SKILL.md`
 - `agents/planner.md` の出力形式の順序の節: `pstack/skills/poteto-mode/playbooks/feature.md` の手順 3
+- respond 3.15: `pstack/skills/poteto-mode/SKILL.md` の「Autonomy」の「No is an acceptable answer」
+- respond 4. の 2 のデプロイと他者へ送るメッセージ: `pstack/skills/poteto-mode/SKILL.md` の「Autonomy」の「Always pause」
+- respond 3.9 の未決の判断とトレードオフ・3.11 のラベルと読み手に頼まない確認・3.14 の完全な URL・5. の冒頭: `pstack/skills/poteto-mode/SKILL.md` の「Writing the reply」
+- respond 3.11 の見つからなかった事項と調べた範囲: `pstack/docs/guide/03-understand.md`・`pstack/skills/why/references/epistemics.md`
+- respond 4. の 7: `pstack/skills/bro/SKILL.md`
