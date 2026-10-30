@@ -565,7 +565,7 @@ respond は i-have-adhd(MIT ライセンス、Copyright (c) 2026 Ayoub Ghriss、
 - [s0xDk/refactoring-ui-skill](https://github.com/s0xDk/refactoring-ui-skill)(MIT。原典 Wathan & Schoger, *Refactoring UI*)
 - [anthropics/skills frontend-design](https://github.com/anthropics/skills/tree/main/skills/frontend-design)(Apache-2.0)
 
-### 9.14. pstack(develop・ponytail・build・recover・retro・agents・respond)
+### 9.14. pstack(develop・ponytail・build・recover・retro・respond・agents)
 
 次の箇所は cursor/plugins の pstack(MIT ライセンス、Copyright (c) 2026 Lauren Tan、https://github.com/cursor/plugins)0.15.36(2026-10-28 時点のコミット 1ba91fc)を元にする。パスは上流のリポジトリ内のものである。specify の出典は 9.2 にある。
 
@@ -602,5 +602,5 @@ respond は i-have-adhd(MIT ライセンス、Copyright (c) 2026 Ayoub Ghriss、
 - respond 3.15: `pstack/skills/poteto-mode/SKILL.md` の「Autonomy」の「No is an acceptable answer」
 - respond 4. の 2 のデプロイと他者へ送るメッセージ: `pstack/skills/poteto-mode/SKILL.md` の「Autonomy」の「Always pause」
 - respond 3.9 の未決の判断とトレードオフ・3.11 のラベルと読み手に頼まない確認・3.14 の完全な URL・5. の冒頭: `pstack/skills/poteto-mode/SKILL.md` の「Writing the reply」
-- respond 3.11 の見つからなかった事項: `pstack/docs/guide/03-understand.md`
+- respond 3.11 の見つからなかった事項と調べた範囲: `pstack/docs/guide/03-understand.md`・`pstack/skills/why/references/epistemics.md`
 - respond 4. の 7: `pstack/skills/bro/SKILL.md`
