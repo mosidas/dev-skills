@@ -44,7 +44,7 @@ gh run view <run-id> --log-failed        # 失敗したステップのログだ�
 - 失敗したら直すか再実行する前に失敗を次の 3 つに分ける。分けずに再実行を重ねると本当の失敗を flake として見逃す。
   - 差分の内側の失敗: ログの該当箇所を implementer に渡して直させる。直したコミットを再 push する。
   - flake(不安定なテスト・CI の基盤の一時的な障害): 新しいビルドを 1 回だけ実行する(`gh run rerun <run-id>`。`--failed` は付けない)。同じ失敗が 2 回続いたら flake ではない。再実行せずにログを読んで原因を探す。
-  - 差分の外の失敗(差分が触れていないコードの失敗): ブランチが古い main から切られたことを疑う。`git fetch origin main` の後に `git merge-base --is-ancestor origin/main HEAD` で確かめる。終了コードが 0 でなければ `git merge origin/main` で main を取り込んで再 push する。取り込みで競合したら解消せずにユーザーに報告する。取り込み済みなら main 側の失敗としてユーザーに報告する。
+  - 差分の外の失敗(差分が触れていないコードの失敗): ブランチが古い main から切られたことを疑う。`git fetch origin main` の後に `git merge-base --is-ancestor origin/main HEAD` で確かめる。終了コードが 0 でなければ `git merge origin/main` で main を取り込んで再 push する。取り込みで競合したら解消せずに `git merge --abort` で戻してからユーザーに報告する。取り込み済みなら main 側の失敗としてユーザーに報告する。
 - 再 push と再実行の後は `gh pr checks --watch` を再実行する。
 - CI が無いリポジトリでは、pre-push hook のテスト結果を CI の代わりとし、PR 本文の検証の節にその旨を書く。
 
