@@ -23,7 +23,7 @@ git push -u origin <ブランチ名>
 gh pr create --base main --title "<type>: <変更内容>" --body "<本文>"   # 本文が長いときは --body-file
 ```
 
-PR 本文には、目的、変更の要点、検証したこと(テスト・手動確認)を書く。`--fill` はコミットメッセージを流し込むだけなので使わない。PR 本文の末尾に付ける帰属の行は `Generated with` の行だけにし、セッション URL は書かない。`gh pr edit` でも同じである。Claude Code では、書くと PreToolUse hook が実行を止める。
+PR 本文の冒頭には利用者(画面の利用者と呼び出し側の開発者)と次の保守者にとって何が変わるかを書く。PR 本文には、目的、変更の要点、検証したこと(テスト・手動確認)を書く。`--fill` はコミットメッセージを流し込むだけなので使わない。PR 本文の末尾に付ける帰属の行は `Generated with` の行だけにし、セッション URL は書かない。`gh pr edit` でも同じである。Claude Code では、書くと PreToolUse hook が実行を止める。
 
 ## 4. CI の確認
 

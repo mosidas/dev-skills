@@ -40,6 +40,7 @@ Claude Code・Codex CLI・Antigravity CLI のプラグインである。開発�
 | Subtract Before You Add | 足す前に削る |
 | Minimize Reader Load | 読み手の負荷を減らす |
 | Experience First | 体験を先に |
+| Build the Lever | 道具を作る |
 | Boundary Discipline | 境界で守る |
 | Make Operations Idempotent | 操作を冪等にする |
 | Migrate Callers Then Delete Legacy APIs | 呼び出し元を移して旧 API を削除する |
@@ -572,3 +573,17 @@ respond は i-have-adhd(MIT ライセンス、Copyright (c) 2026 Ayoub Ghriss、
 - develop 6. の推論の強さ: `pstack/skills/poteto-mode/SKILL.md` の「Match the model to the job」
 - README 6.2 と retro 5.6 の規則を考えで書くこと: 上流が 4 つの原則を書き直したコミット e5136d8・99743e9(2026-10-15)
 - ponytail 6. の原則の索引、ponytail 4. と agents 4 本の原則の行、`agents/reviewer.md`・`agents/gate-reviewer.md` の名指しの点検: `pstack/skills/poteto-mode/SKILL.md` の「Non-negotiables」と「Principles」
+- ponytail 3. の決定の集約: `pstack/skills/principle-laziness-protocol/SKILL.md`
+- ponytail 3. の素通しの層・`agents/reviewer.md` の簡潔さの 30 秒の問い: `pstack/skills/principle-minimize-reader-load/SKILL.md`
+- ponytail 3. の仕様を超える検証の規則・`agents/planner.md` の進め方 3 の削除の順: `pstack/skills/principle-subtract-before-you-add/SKILL.md`
+- ponytail 3. の旧 API の削除: `pstack/skills/principle-migrate-callers-then-delete-legacy-apis/SKILL.md`
+- ponytail 3. の境界の内側の検証: `pstack/skills/principle-boundary-discipline/SKILL.md`
+- `skills/develop/references/requirements.md` の目的の行の利用者・`skills/develop/references/git-flow.md` の PR 本文の冒頭: `pstack/skills/principle-experience-first/SKILL.md`
+- `agents/planner.md` の変更の種類ごとの実物・`agents/implementer.md` の進め方 3 の観測の方法: `pstack/skills/principle-prove-it-works/SKILL.md`
+- `agents/planner.md` の進め方 3 の並べ方の型: `pstack/skills/principle-sequence-verifiable-units/SKILL.md`
+- develop 6. の手順 2 の大きな出力: `pstack/skills/principle-guard-the-context-window/SKILL.md`
+- develop 5. と `agents/planner.md` の事実の範囲(試作・計測): `pstack/skills/poteto-mode/SKILL.md` の「Non-negotiables」
+- ponytail 3. の一括の作業のスクリプト・`agents/planner.md` の再実行できる検査・retro 3. の収集のスクリプトの理由: `pstack/skills/principle-build-the-lever/SKILL.md`
+- `agents/implementer.md` の進め方 2 の実装前の失敗の確認と報告の実装前の行: `pstack/skills/tdd/SKILL.md`
+- ponytail 3. の残してよいコメントと抑止コメント・`agents/reviewer.md` の簡潔さのコメントの点検: `pstack/skills/no-comments/SKILL.md`・`pstack/agents/comment-sicko.md`
+- ponytail 3. の検証スクリプトの工程のコメント: `pstack/skills/poteto-mode/SKILL.md` の「Comments」
