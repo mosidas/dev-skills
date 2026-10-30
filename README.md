@@ -618,5 +618,5 @@ respond は i-have-adhd(MIT ライセンス、Copyright (c) 2026 Ayoub Ghriss、
 - `skills/develop/references/git-flow.md` 3. の PR 本文の節: `pstack/skills/poteto-mode/playbooks/opening-a-pr.md` の「Descriptions」
 - `skills/develop/references/git-flow.md` 4. の CI の失敗の分類・develop 8.: `pstack/skills/poteto-mode/playbooks/babysit.md` の手順 7
 - `skills/develop/references/review-triage.md`・develop 8. のレビューコメントの仕分けと 1 回の push: `pstack/skills/poteto-mode/references/bugbot-triage.md`・`pstack/skills/poteto-mode/playbooks/babysit.md` の手順 5・6・8・`pstack/docs/guide/06-verify-and-ship.md` の「Drive the PR to merge-ready with Babysit」
-- `agents/gate-reviewer.md` の検査の変更の観点と main に既にある問題の扱い: `pstack/skills/poteto-mode/playbooks/autopilot-full.md` の手順 4・6
+- `agents/gate-reviewer.md` の検査の変更の観点と main に既にある欠陥の扱い: `pstack/skills/poteto-mode/playbooks/autopilot-full.md` の手順 4・6
 - `agents/reviewer.md` の進め方 4 と `agents/gate-reviewer.md` の進め方 3 の再現のコマンドと出力: `pstack/skills/interrogate/SKILL.md` の「Fan out」と「Verify」・`pstack/skills/poteto-mode/playbooks/autopilot-full.md` の手順 4
