@@ -6,7 +6,7 @@ Claude Code・Codex CLI・Antigravity CLI のプラグインである。開発�
 
 | 構成要素 | 種別 | 役割 |
 | :-- | :-- | :-- |
-| `develop` | スキル | 実装タスクを要件の確認から PR まで進める統括の手順。要件(目的・完了条件・対象外・品質(簡易 / プロダクト))の壁打ち、Backlog.md のタスク、GitHub flow、git hook(lefthook・husky)、planner・implementer・reviewer による実装と点検のループ、gate-reviewer によるブランチ全体の点検、push 後の CI 確認を定める。品質がプロダクトのときは secure・observe・recover を適用し、git hook と CI にシークレット検知(gitleaks)と依存監査(osv-scanner)を、CI に SAST(CodeQL か semgrep)を追加し、Claude Code ではゲートの前に `/security-review` を実行する。新しい Web の画面・フォームを作るタスクで UI モックの行が無ければ、要件の確認で UI モックを先に作るか不要かを 1 問聞き、先に作るなら design-ui の工程を示して止まる。UI モックの行は planner に渡す。計画の未確定事項のうち事実で決まるものは統括が調べて決め、調べても決まらないものと本人の判断が必要なものは依存するステップの前に 1 問ずつ聞く。本人の指摘があったタスクでは、閉じる工程で retro を実行する(build の反復を除く) |
+| `develop` | スキル | 実装タスクを要件の確認から PR まで進める統括の手順。要件(目的・完了条件・対象外・品質(簡易 / プロダクト))の壁打ち、Backlog.md のタスク、GitHub flow、git hook(lefthook・husky)、planner・implementer・reviewer による実装と点検のループ、gate-reviewer によるブランチ全体の点検、push 後の CI 確認を定める。品質がプロダクトのときは secure・observe・recover を適用し、git hook と CI にシークレット検知(gitleaks)と依存監査(osv-scanner)を、CI に SAST(CodeQL か semgrep)を追加し、Claude Code ではゲートの前に `/security-review` を実行する。新しい Web の画面・フォームを作るタスクで UI モックの行が無ければ、要件の確認で UI モックを先に作るか不要かを 1 問聞き、先に作るなら design-ui の工程を示して止まる。UI モックの行は planner に渡す。計画の未確定事項のうち事実で決まるものは統括が調べて決め、調べても決まらないものと本人の判断が必要なものは依存するステップの前に 1 問ずつ聞く。本人の指摘があったタスクでは、閉じる工程で retro を実行する(build の反復を除く)。中断を指示されたら再開メモを Implementation Notes に書いて止まる。再開するときは Notes・ブランチ・PR の状態から再開点を決める。済んだステップは繰り返さない |
 | `specify` | スキル | 曖昧な着想から、ユーザーとの対話で「何を作るか」を 1 問ずつ聞き出し、build がそのまま 1 要求 = 1 タスクで分解できる PRD(製品要求仕様書)を書く手順。PRD は雛形 `references/prd.md` から書き、要求ごとに目的・完了条件・対象外・品質の 4 行と、検証できる受け入れ条件を持たせる。PRD の 4.(制約と決定事項)には UI モックの行(brief.md のパス・`未作成`・`不要` のいずれか)を書き、新しい Web の画面・フォームを作る要求で UI モックの行が `未作成` なら、次の一手に design-ui で UI モックを作るかを示す。PRD のタスクへの分解と実装は build が行う |
 | `build` | スキル | PRD から起こした複数のタスクを develop で 1 つずつ PR まで進める外側のループ。PRD を受け入れ条件つきの backlog のタスクに分解する工程と、未完了のタスクを 1 つ取って develop で PR まで進め、受け入れ条件を検証して Done にする反復を定める。新しい Web の画面・フォームを作る要求で PRD の UI モックの行が `未作成` か無ければ、分解の前に UI モックを先に作るか不要かを 1 問だけ聞き、タスク本文に UI モックの行を書く。反復ではこの問いで止まらない。状態は backlog と進捗ファイルだけに持ち、全タスクの Done・要判断・同じタスクの失敗の上限・反復の回数の上限などで止まる。`scripts/loop.py` が反復ごとに新しい `claude -p` を起動する(Claude Code) |
 | `retro` | スキル | 本人とレビューの指摘を 4 分類(文言・挙動・手順・委譲)に分け、原因を 3 分類(守られなかった・無かった・矛盾)と個別で判定して根拠付きの表にし、個別を除く行を本人の承認を得て dev-skills の改善タスクとして起票する手順。原因が「無かった」で直す場所が文書の規範なら、規範にするか(案件の記録・宛先プロファイルに残すか)と、write-doc のどの束に加えるかを判定する。本人の指摘の回数と往復の回数を記録する。表の雛形 `references/report.md` と事例 `references/example.md` を持つ。Google の SRE 本 15 章を出典とする |
@@ -177,7 +177,7 @@ agents/
 ├── reviewer.md            # ステップの点検と判定(opus、Write/Edit 不可、ponytail 読み込み。品質がプロダクトのとき secure・observe・recover も、UI を含むタスクでは design-ui も読み込む)
 └── gate-reviewer.md       # push 前のブランチ全体の点検(opus、Write/Edit 不可)
 skills/develop/
-├── SKILL.md               # 統括の工程(要件・タスク・ブランチ・計画・実装と点検のループ・ゲート・PR・完了)
+├── SKILL.md               # 統括の工程(要件・タスク・ブランチ・計画・実装と点検のループ・ゲート・PR・完了・中断・再開)
 └── references/            # requirements.md(要件の 4 行と UI モックの行の形式・聞く範囲・品質の決め方)、git-flow.md(ブランチ・PR・CI・マージ)、hooks.md(lefthook・husky・シークレット検知・依存監査・CI での監査・SAST)
 skills/specify/
 ├── SKILL.md               # 着想から PRD を書く工程(聞く・PRD を書く・確かめて終える)
@@ -565,9 +565,9 @@ respond は i-have-adhd(MIT ライセンス、Copyright (c) 2026 Ayoub Ghriss、
 - [s0xDk/refactoring-ui-skill](https://github.com/s0xDk/refactoring-ui-skill)(MIT。原典 Wathan & Schoger, *Refactoring UI*)
 - [anthropics/skills frontend-design](https://github.com/anthropics/skills/tree/main/skills/frontend-design)(Apache-2.0)
 
-### 9.14. pstack(develop・ponytail・build・recover・retro・respond・agents)
+### 9.14. pstack(develop・specify・ponytail・build・recover・retro・respond・agents)
 
-次の箇所は cursor/plugins の pstack(MIT ライセンス、Copyright (c) 2026 Lauren Tan、https://github.com/cursor/plugins)0.15.36(2026-10-28 時点のコミット 1ba91fc)を元にする。パスは上流のリポジトリ内のものである。specify の出典は 9.2 にある。
+次の箇所は cursor/plugins の pstack(MIT ライセンス、Copyright (c) 2026 Lauren Tan、https://github.com/cursor/plugins)0.15.36(2026-10-28 時点のコミット 1ba91fc)を元にする。パスは上流のリポジトリ内のものである。specify の PRD の手法の出典は 9.2 にある。
 
 - ponytail 5. のテストの判定、`agents/reviewer.md` のテストの観点、`agents/implementer.md` の進め方 2: `pstack/skills/principle-test-behavior-not-implementation/SKILL.md`
 - ponytail 2. の状態の正当性の問い: `pstack/skills/principle-fix-root-causes/SKILL.md`
@@ -604,3 +604,16 @@ respond は i-have-adhd(MIT ライセンス、Copyright (c) 2026 Ayoub Ghriss、
 - respond 3.9 の未決の判断とトレードオフ・3.11 のラベルと読み手に頼まない確認・3.14 の完全な URL・5. の冒頭: `pstack/skills/poteto-mode/SKILL.md` の「Writing the reply」
 - respond 3.11 の見つからなかった事項と調べた範囲: `pstack/docs/guide/03-understand.md`・`pstack/skills/why/references/epistemics.md`
 - respond 4. の 7: `pstack/skills/bro/SKILL.md`
+- develop の冒頭の段落の CLI に無い機能の報告: `pstack/docs/harness/claude-code.md` の「Cursor-only features」
+- develop 1. の工程の表を todo に写すこと: `pstack/skills/poteto-mode/SKILL.md` の「Playbooks」
+- develop 2. の期待する最小の変更と止まる条件: `pstack/skills/poteto-mode/SKILL.md` の「Non-negotiables」の「Your first message on a task」の行
+- develop 2. の完了条件の確かめ方・`skills/develop/references/requirements.md` の完了条件の確かめ方・`skills/specify/references/prd.md` と `skills/retro/references/report.md` の雛形: `pstack/docs/guide/02-poteto-mode.md` の「What goes in a prompt」・`pstack/docs/guide/06-verify-and-ship.md` の「State the finish condition up front」
+- `agents/implementer.md` の確定できず: `pstack/docs/guide/06-verify-and-ship.md` の「State the finish condition up front」
+- develop 3. の Implementation Notes の 1 件の形: `pstack/skills/show-me-your-work/SKILL.md` の「The format」
+- develop 6. の手順 4 の修正の回の新しい implementer: `pstack/skills/poteto-mode/SKILL.md` の「Subagents」の「Fresh subagents by default」
+- develop 6. の規範の不具合: `pstack/skills/poteto-mode/SKILL.md` の「Non-negotiables」の「Broken skill mid-task」の行
+- develop 9. の次にこのコードを触る人が知るべきこと: `pstack/skills/poteto-mode/SKILL.md` の「Writing the reply」の「Frame impact for the consumer and the maintainer」
+- develop 10.: `pstack/skills/poteto-mode/playbooks/pause-safely.md`
+- develop 11.: `pstack/skills/poteto-mode/playbooks/session-pickup.md`
+- `skills/develop/references/git-flow.md` 3. の PR 本文の節: `pstack/skills/poteto-mode/playbooks/opening-a-pr.md` の「Descriptions」
+- `skills/develop/references/git-flow.md` 4. の CI の失敗の分類・develop 8.: `pstack/skills/poteto-mode/playbooks/babysit.md` の手順 7
