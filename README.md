@@ -10,8 +10,8 @@ Claude Code・Codex CLI・Antigravity CLI のプラグインである。開発�
 | `specify` | スキル | 曖昧な着想から、ユーザーとの対話で「何を作るか」を 1 問ずつ聞き出し、build がそのまま 1 要求 = 1 タスクで分解できる PRD(製品要求仕様書)を書く手順。PRD は雛形 `references/prd.md` から書き、要求ごとに目的・完了条件・対象外・品質の 4 行と、検証できる受け入れ条件を持たせる。PRD の 4.(制約と決定事項)には UI モックの行(brief.md のパス・`未作成`・`不要` のいずれか)を書き、新しい Web の画面・フォームを作る要求で UI モックの行が `未作成` なら、次の一手に design-ui で UI モックを作るかを示す。PRD のタスクへの分解と実装は build が行う |
 | `build` | スキル | PRD から起こした複数のタスクを develop で 1 つずつ PR まで進める外側のループ。PRD を受け入れ条件つきの backlog のタスクに分解する工程と、未完了のタスクを 1 つ取って develop で PR まで進め、受け入れ条件を検証して Done にする反復を定める。新しい Web の画面・フォームを作る要求で PRD の UI モックの行が `未作成` か無ければ、分解の前に UI モックを先に作るか不要かを 1 問だけ聞き、タスク本文に UI モックの行を書く。反復ではこの問いで止まらない。状態は backlog と進捗ファイルだけに持ち、全タスクの Done・要判断・同じタスクの失敗の上限・反復の回数の上限などで止まる。`scripts/loop.py` が反復ごとに新しい `claude -p` を起動する(Claude Code) |
 | `retro` | スキル | 本人とレビューの指摘を 4 分類(文言・挙動・手順・委譲)に分け、原因を 3 分類(守られなかった・無かった・矛盾)と個別で判定して根拠付きの表にし、個別を除く行を本人の承認を得て dev-skills の改善タスクとして起票する手順。原因が「無かった」で直す場所が文書の規範なら、規範にするか(案件の記録・宛先プロファイルに残すか)と、write-doc のどの束に加えるかを判定する。本人の指摘の回数と往復の回数を記録する。表の雛形 `references/report.md` と事例 `references/example.md` を持つ。Google の SRE 本 15 章を出典とする |
-| `planner`・`implementer`・`reviewer`・`gate-reviewer` | サブエージェント(`agents/`) | develop が起動する 4 つの役割。planner は計画(Write/Edit 不可)、implementer はステップ 1 つ分の実装とコミット、reviewer はステップの適合・テスト・欠陥・簡潔さの点検(Write/Edit 不可)、gate-reviewer は push 前のブランチ全体の点検(要件の充足・ステップ間の整合・残骸・PR 本文。Write/Edit 不可)。このうち planner・implementer・reviewer は起動時に ponytail を読み込み、品質がプロダクトのときは secure・observe・recover も読み込み、UI を含むタスクでは design-ui も読み込む。planner は未確定事項に決め方(事実 / 本人の判断)を付けて既定を置かずに書き、品質がプロダクトのとき入口ごとの失敗を「失敗の一覧」の表として計画に書き、UI を含むタスクで状態ごとの見出し・本文・操作と、管理画面の項目名・選択肢の値と並びを「利用者に見せる文言」の表として計画に書く。reviewer と gate-reviewer は実装の文言が「利用者に見せる文言」の表と文言の規範に合うかを点検する |
-| `ponytail` | スキル | コードを最小に保つ規範。そもそも作るかを問い、標準ライブラリと既存のもの、利用する外部サービスの組み込み機能を先に使い、動く最小の差分で終える。planner・implementer・reviewer が起動時に読み込む |
+| `planner`・`implementer`・`reviewer`・`gate-reviewer` | サブエージェント(`agents/`) | develop が起動する 4 つの役割。planner は計画(Write/Edit 不可)、implementer はステップ 1 つ分の実装とコミット、reviewer はステップの適合・テスト・欠陥・簡潔さの点検(Write/Edit 不可)、gate-reviewer は push 前のブランチ全体の点検(要件の充足・ステップ間の整合・残骸・PR 本文。Write/Edit 不可)。このうち planner・implementer・reviewer は起動時に ponytail を読み込み、品質がプロダクトのときは secure・observe・recover も読み込み、UI を含むタスクでは design-ui も読み込む。planner は未確定事項に決め方(事実 / 本人の判断)を付けて既定を置かずに書き、品質がプロダクトのとき入口ごとの失敗を「失敗の一覧」の表として計画に書き、UI を含むタスクで状態ごとの見出し・本文・操作と、管理画面の項目名・選択肢の値と並びを「利用者に見せる文言」の表として計画に書く。reviewer と gate-reviewer は実装の文言が「利用者に見せる文言」の表と文言の規範に合うかを点検する。4 つの役割は判断を変えた原則を報告に名指しし、reviewer と gate-reviewer は名指しした判断が差分にあるかを点検する |
+| `ponytail` | スキル | コードを最小に保つ規範。そもそも作るかを問い、標準ライブラリと既存のもの、利用する外部サービスの組み込み機能を先に使い、動く最小の差分で終える。原則の名前と規則の所在の索引を持つ。planner・implementer・reviewer が起動時に読み込む |
 | `secure` | スキル | プロダクト品質のコードの安全性の規範。信頼境界での入力検証、認証・認可、シークレットと設定、依存の脆弱性、GitHub Actions の供給網(SHA 固定・最小権限)、ログへの秘密の出力、エラー応答からの情報漏えいについて、何を対策すれば十分かを定める。OWASP ASVS と OWASP Cheat Sheet Series を出典とする |
 | `observe` | スキル | プロダクト品質のコードの可観測性の規範。構造化ログ、相関 ID、メトリクス、トレース、ヘルスチェック、エラーの分類、計画の完了条件に書く観測の内容を定める。OpenTelemetry のセマンティック規約、Google の SRE 本、W3C Trace Context を出典とする |
 | `recover` | スキル | プロダクト品質のコードの失敗時の挙動の規範。入口ごとの失敗の列挙、タイムアウト、リトライと冪等(移行・投入のスクリプトを空の環境から 1 回の実行で最終状態にし、再実行で変えないことを含む)、二重送信の防止、段階的なフォールバック、エラーページ、中間状態の露出防止、計画の完了条件に書く失敗時の挙動を定める。Google の SRE 本、Amazon Builders' Library、RFC 9110 などを出典とする |
@@ -28,6 +28,29 @@ Claude Code・Codex CLI・Antigravity CLI のプラグインである。開発�
 | `hooks/inspect_stop.py` | hook(Stop、Claude Code のみ) | セッション完了時に再検査し、重大カテゴリの検出が残るあいだ完了を差し戻す |
 
 スキルは各 CLI が用途を判断して自動で読み込む。Claude Code では `/dev-skills:develop`・`/dev-skills:specify`・`/dev-skills:build`・`/dev-skills:retro`・`/dev-skills:ponytail`・`/dev-skills:secure`・`/dev-skills:observe`・`/dev-skills:recover`・`/dev-skills:write-doc`・`/dev-skills:write-slide`・`/dev-skills:write-message`・`/dev-skills:draw-diagram`・`/dev-skills:design-ui`・`/dev-skills:write-page`、Codex CLI では `$dev-skills:develop`、Antigravity CLI では `/develop` で明示的に呼んでもよい。サブエージェントは Claude Code では `dev-skills:planner` のように plugin 名つきで起動する。Codex CLI と Antigravity CLI はサブエージェントを起動しないため、develop では統括が 4 つの役割を順に受け持つ。respond は Claude Code では SessionStart hook が常時適用し、Codex CLI・Antigravity CLI ではスキルとして読み込む。hooks に呼び出しの操作はない。プラグインを有効にした Claude Code のセッションで、セッション開始、`git commit`・`gh pr create`・`gh pr edit` の実行前、日本語 Markdown の書き込み、セッション完了のたびに自動で発火する。hooks の stdin の形式は CLI ごとに異なるため、Codex CLI と Antigravity CLI では hooks を提供しない。
+
+本人は次の原則の名前で軌道修正を指示できる。原則ごとの適用する場面と規則の所在は ponytail の「原則の索引」にある。
+
+| 英語名 | 日本語名 |
+| :-- | :-- |
+| Laziness Protocol | 怠ける作法 |
+| Foundational Thinking | 土台から考える |
+| Redesign from First Principles | 一から設計し直す |
+| Attack the Premise | 前提を疑う |
+| Subtract Before You Add | 足す前に削る |
+| Minimize Reader Load | 読み手の負荷を減らす |
+| Experience First | 体験を先に |
+| Boundary Discipline | 境界で守る |
+| Make Operations Idempotent | 操作を冪等にする |
+| Migrate Callers Then Delete Legacy APIs | 呼び出し元を移して旧 API を削除する |
+| Separate Before Serializing Shared State | 直列化の前に共有をなくす |
+| Prove It Works | 動くと示す |
+| Fix Root Causes | 根本原因を直す |
+| Sequence Work into Verifiable Units | 確かめられる単位で刻む |
+| Test Behavior, Not Implementation | 実装でなく挙動をテストする |
+| Guard the Context Window | コンテキストを守る |
+| Never Block on the Human | 人を待たない |
+| Encode Lessons in Structure | 教訓を構造にする |
 
 ## 2. 前提
 
@@ -271,7 +294,7 @@ MIT ライセンスで公開する。全文は `LICENSE` にある。
 
 | 出典 | ライセンス | 取り込んだ版・コミット | 反映先 |
 | :-- | :-- | :-- | :-- |
-| [cursor/plugins](https://github.com/cursor/plugins) の pstack | MIT | コミット 997ffc7(2026-10-12 時点。specify)・0.15.36(コミット 1ba91fc、2026-10-28) | specify・develop・build・ponytail・recover・retro・agents(`planner.md`・`implementer.md`・`reviewer.md`)・README 6.2 |
+| [cursor/plugins](https://github.com/cursor/plugins) の pstack | MIT | コミット 997ffc7(2026-10-12 時点。specify)・0.15.36(コミット 1ba91fc、2026-10-28) | specify・develop・build・ponytail・recover・retro・agents(`planner.md`・`implementer.md`・`reviewer.md`・`gate-reviewer.md`)・README 6.2 |
 | [mattpocock/skills](https://github.com/mattpocock/skills) | MIT | コミット 49dd158(2026-10-12 時点) | specify |
 | [DietrichGebert/ponytail](https://github.com/DietrichGebert/ponytail) | MIT | v5.1.0 | ponytail |
 | [coji/natural-japanese](https://github.com/coji/natural-japanese) | MIT | v1.5.0(9a78a42)・v1.6.0(03bc944)・v1.6.2(a88b8e9) | write-doc(`inspection.md`・`paragraph.md`・`readers.md`・`sentence.md`・`format/slide.md`・`types/report.md`)・write-slide・write-message(`SKILL.md`) |
@@ -548,3 +571,4 @@ respond は i-have-adhd(MIT ライセンス、Copyright (c) 2026 Ayoub Ghriss、
 - `agents/planner.md` の未確定事項、develop 5.、build の要判断の節の判断依頼の形: `pstack/skills/ketchup/SKILL.md`
 - develop 6. の推論の強さ: `pstack/skills/poteto-mode/SKILL.md` の「Match the model to the job」
 - README 6.2 と retro 5.6 の規則を考えで書くこと: 上流が 4 つの原則を書き直したコミット e5136d8・99743e9(2026-10-15)
+- ponytail 6. の原則の索引、ponytail 4. と agents 4 本の原則の行、`agents/reviewer.md`・`agents/gate-reviewer.md` の名指しの点検: `pstack/skills/poteto-mode/SKILL.md` の「Non-negotiables」と「Principles」
