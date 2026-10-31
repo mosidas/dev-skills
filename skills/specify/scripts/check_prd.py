@@ -108,7 +108,10 @@ def check(text: str, template: str) -> list[tuple[int, str]]:
     rows: list[tuple[int, str, list[str]]] = []
     for n, line in body("6."):
         cells = [c.strip() for c in line.strip().strip("|").split("|")] if line.lstrip().startswith("|") else []
-        if len(cells) < 2 or cells[0] == "要求" or set(cells[0]) <= set(":- "):
+        if len(cells) < 2 or cells[0] == "要求" or (cells[0] and set(cells[0]) <= set(":- ")):
+            continue
+        if not cells[0]:
+            problems.append((n, "表の ID が空 → 要求一覧の ID を書く"))
             continue
         if not cells[1]:
             problems.append((n, f"{cells[0]} の依存先が空 → 無ければ「なし」と書く"))

@@ -147,7 +147,12 @@ class CheckPrdTest(helpers.TempDirTestCase):
             "- 型は `Array<Reservation>` とする(<https://example.com/spec>)\n"
             "- 件数 < 10 かつ > 0\n"
             "\n````md\n```\n<未記入の例>\n````\n",
-        ).replace("| R2 | R1 |", "| R3 | なし |\n| R10 | なし |\n| R2 | R1、R3 |")
+        )
+        _path, proc = self.run_check(text)
+        self.assertEqual(proc.returncode, 0, proc.stdout)
+
+    def test_読点で区切った依存先と2桁のIDを受け付ける(self) -> None:
+        text = VALID.replace("| R2 | R1 |", "| R3 | なし |\n| R10 | なし |\n| R2 | R1、R3 |")
         text = text.replace(
             "## 6. 依存と順序",
             "### R3. 予約の一覧の印刷\n\n目的: 担当者が予約を紙で確かめられるようにする\n完了条件: 一覧を印刷できる\n"
@@ -158,6 +163,10 @@ class CheckPrdTest(helpers.TempDirTestCase):
         )
         _path, proc = self.run_check(text)
         self.assertEqual(proc.returncode, 0, proc.stdout)
+
+    def test_IDが空の表の行を指摘する(self) -> None:
+        text = VALID.replace("| R2 | R1 |", "| R2 | R1 |\n|  | R1 |")
+        self.assertProblem(text, 50, "表の ID が空")
 
     def test_雛形そのものはコメントと未記入で不合格になる(self) -> None:
         proc = helpers.run_script(SCRIPT, TEMPLATE)
