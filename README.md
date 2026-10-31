@@ -21,7 +21,7 @@ Claude Code・Codex CLI・Antigravity CLI のプラグインである。開発�
 | `respond` | スキル | 会話の応答の形を定める規範。読み手の認知負荷を下げるため、最初の行に答えを書く・最後の行に読み手の次の行動を 1 つ書く・複数手順に番号を振る・状態を毎回書き直す・調べた事実に根拠となるソースを示すなどの規則を定める |
 | `draw-diagram` | スキル | `.mmd` で構造を固めてから人間が見やすい SVG を描く作図の規範。埋め込み先の幅で横スクロールを出さない寸法、辺の端点、帯の連続、軸と帯の説明、原典の工程を写す図では箱をまとめない規則、接続線の規則(水平・垂直の線分と角丸の曲がり、線を箱より先に描く。出典は diagram-design)を持つ。主体・コンポーネントが 3 つ以上ある説明のための図は前の図を描き直してつなぐ辺と一緒に主体・コンポーネントを 1 つずつ加えた図の列にする。`render.py` で `.mmd` と SVG の対応照合・禁止要素の検査・斜めの接続線の検出・Chrome headless の PNG 出力を行う |
 | `write-page` | スキル | HTML で配布する説明資料(図・表・切り替えの UI を持つ 1 ページの文書)を作る・直すときの入口。読む write-doc のファイル(HTML 固有の規則を持つ `format/html.md` と、工程・言語の束)と、モックの往復・本文と図の作成・HTML の生成・検査の HTML 固有の工程を定める。図は draw-diagram、見た目は design-ui の閲読モードを参照する |
-| `design-ui` | スキル | Web・iOS・Android・デスクトップの画面・コンポーネント・ページを設計・実装するときの規範。題材からトークン案を書き、汎用の既定と照合してから実装し、有限回の検証で止める工程を定める。利用者向けの日本語の文言の規範(敬体で書く、利用者が行動を変えられない情報を出さない、管理画面の項目名・選択肢は利用者の画面の見出しと同じ語を既定にする)を `references/text.md` に持つ。新しい Web の画面・フォームの実装の前に、UI モックを本人と往復して作る工程を `references/session.md` に持つ。往復は HTML のモック・headless Chrome で撮った PNG・文言の表で 1 案ずつ行い(1 往復に質問 1 つ、3 往復まで)、合意を brief.md にまとめる(既定の置き場所は `docs/ui-mock/<slug>/`)。UI モックは PRD と組で build に渡すか、単独で develop に渡す |
+| `design-ui` | スキル | Web・iOS・Android・デスクトップの画面・コンポーネント・ページを設計・実装するときの規範。題材からトークン案を書き、汎用の既定と照合してから実装し、有限回の検証で止める工程を定める。利用者向けの日本語の文言の規範(敬体で書く、利用者が行動を変えられない情報を出さない、管理画面の項目名・選択肢は利用者の画面の見出しと同じ語を既定にする)を `references/text.md` に持つ。新しい Web の画面・フォームの実装の前に、UI モックを本人と往復して作る工程を `references/session.md` に持つ。往復は HTML のモック・headless Chrome で撮った PNG・文言の表で 1 案ずつ行い(1 往復に質問 1 つ、3 往復まで)、合意を brief.md にまとめる(既定の置き場所は `docs/ui-mock/<slug>/`)。前例の無い UI の操作・感触で決まる判断では本人に見せる前に根本の違う 2〜3 案を試作して比べる。確立したパターンでは比べずに 1 案を作る。UI モックは PRD と組で build に渡すか、単独で develop に渡す。見た目を変えずに実装を置き換える移行(スタイルの仕組み・コンポーネントライブラリの入れ替え)の工程を `references/migration.md` に持つ。移行の前に状態ごとに撮影した基準を作って画像差分 0 を完了条件にする |
 | `hooks/inject_respond.py` | hook(SessionStart、Claude Code のみ) | セッション開始時に `skills/respond/SKILL.md` の本文を注入する |
 | `hooks/guard_session_url.py` | hook(PreToolUse、Claude Code のみ) | コミットと PR 本文に入るセッション URL を実行前に止める |
 | `hooks/inspect_write.py` | hook(PostToolUse、Claude Code のみ) | 日本語 Markdown の書き込み直後に `lint.py` を実行し、検出があれば書き直しを促す警告を返す |
@@ -228,7 +228,7 @@ skills/write-page/
 └── SKILL.md               # HTML の説明資料の規範の入口(読むファイルの表と HTML 固有の工程)
 skills/design-ui/
 ├── SKILL.md               # UI 設計規範の入口(モードの選択・工程・スケール)
-└── references/            # anti-ai.md・text.md・checklist.md・native.md・session.md・brief.md(汎用の既定の一覧・UI テキストの最小化と利用者向けの文言の規範・実装の品質床・ネイティブアプリ固有の規範・UI モックを作る工程・UI モックの brief の雛形)
+└── references/            # anti-ai.md・text.md・checklist.md・native.md・session.md・brief.md・migration.md(汎用の既定の一覧・UI テキストの最小化と利用者向けの文言の規範・実装の品質床・ネイティブアプリ固有の規範・UI モックを作る工程・UI モックの brief の雛形・見た目を変えない実装の置き換えの工程)
 hooks/
 ├── hooks.json             # SessionStart・PreToolUse・PostToolUse・Stop の配線
 ├── guard_session_url.py   # PreToolUse: コミットと PR 本文のセッション URL を拒否する
@@ -315,7 +315,7 @@ MIT ライセンスで公開する。全文は `LICENSE` にある。
 
 | 出典 | ライセンス | 取り込んだ版・コミット | 反映先 |
 | :-- | :-- | :-- | :-- |
-| [cursor/plugins](https://github.com/cursor/plugins) の pstack | MIT | コミット 997ffc7(2026-10-12 時点。specify)・0.15.36(コミット 1ba91fc、2026-10-28) | specify・develop・build・ponytail・recover・retro・respond・agents(`planner.md`・`implementer.md`・`reviewer.md`・`gate-reviewer.md`)・write-doc(`types/README.md`・`sentence.md`・`types/report.md`)・draw-diagram(`SKILL.md`)・README 1.・6.2・7. |
+| [cursor/plugins](https://github.com/cursor/plugins) の pstack | MIT | コミット 997ffc7(2026-10-12 時点。specify)・0.15.36(コミット 1ba91fc、2026-10-28) | specify・develop・build・ponytail・recover・retro・respond・agents(`planner.md`・`implementer.md`・`reviewer.md`・`gate-reviewer.md`)・write-doc(`types/README.md`・`sentence.md`・`types/report.md`)・draw-diagram(`SKILL.md`)・design-ui(`migration.md`・`session.md`)・README 1.・6.2・7. |
 | [mattpocock/skills](https://github.com/mattpocock/skills) | MIT | コミット 49dd158(2026-10-12 時点) | specify |
 | [DietrichGebert/ponytail](https://github.com/DietrichGebert/ponytail) | MIT | v5.1.0 | ponytail |
 | [coji/natural-japanese](https://github.com/coji/natural-japanese) | MIT | v1.5.0(9a78a42)・v1.6.0(03bc944)・v1.6.2(a88b8e9) | write-doc(`inspection.md`・`paragraph.md`・`readers.md`・`sentence.md`・`format/slide.md`・`types/report.md`)・write-slide・write-message(`SKILL.md`) |
@@ -581,7 +581,7 @@ respond は i-have-adhd(MIT ライセンス、Copyright (c) 2026 Ayoub Ghriss、
 - [s0xDk/refactoring-ui-skill](https://github.com/s0xDk/refactoring-ui-skill)(MIT。原典 Wathan & Schoger, *Refactoring UI*)
 - [anthropics/skills frontend-design](https://github.com/anthropics/skills/tree/main/skills/frontend-design)(Apache-2.0)
 
-### 9.14. pstack(develop・specify・ponytail・build・recover・retro・respond・agents・write-doc・draw-diagram・README)
+### 9.14. pstack(develop・specify・ponytail・build・recover・retro・respond・agents・write-doc・draw-diagram・design-ui・README)
 
 次の箇所は cursor/plugins の pstack(MIT ライセンス、Copyright (c) 2026 Lauren Tan、https://github.com/cursor/plugins)0.15.36(2026-10-28 時点のコミット 1ba91fc)を元にする。パスは上流のリポジトリ内のものである。specify の PRD の手法の出典は 9.2 にある。
 
@@ -671,3 +671,5 @@ respond は i-have-adhd(MIT ライセンス、Copyright (c) 2026 Ayoub Ghriss、
 - `skills/develop/references/parallel.md` 2. と 4.・develop 6. の並列に起動した作業者の SHA と方法: `pstack/skills/swarm/SKILL.md`(swarm)
 - `skills/develop/references/parallel.md` 5.・develop 7. の敵対役・`agents/gate-reviewer.md` の敵対役の所見: `pstack/skills/interrogate/SKILL.md`(interrogate)
 - `skills/develop/references/parallel.md` 6.・develop 7. の Codex CLI のレビューの並走: `pstack/skills/arena/SKILL.md`(arena)の「Phase C: Cross-judge」・`pstack/skills/interrogate/SKILL.md`(interrogate)の description の「multi-model review」
+- `skills/design-ui/references/migration.md`・`skills/develop/references/kinds.md` 6.1 の撮影の基準と画像差分 0・`agents/reviewer.md` の進め方 2 の種類の見た目の移行・`agents/gate-reviewer.md` の検査の変更の視覚回帰の基準: `pstack/skills/poteto-mode/playbooks/visual-parity.md`(Visual parity)
+- `skills/develop/references/kinds.md` 5.1 の根本の違う 2〜3 案・`skills/design-ui/references/session.md` 3.1 の本人に見せる前の試作・ponytail 6. の Exhaust the Design Space の行: `pstack/skills/principle-exhaust-the-design-space/SKILL.md`(Exhaust the Design Space)

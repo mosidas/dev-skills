@@ -69,6 +69,7 @@ description: Web・iOS・Android・デスクトップの画面・コンポーネ
 | `references/native.md` | ネイティブアプリ固有の規範(セーフエリア・文字の拡縮・タップ領域・ナビゲーション) | ネイティブアプリ・モバイルアプリを設計・実装するとき |
 | `references/session.md` | UI モックを作る工程(聞く・往復する・確かめて終える・次の一手、モックと撮影) | 新しい Web の画面・フォームを実装の前に本人と決めるとき |
 | `references/brief.md` | UI モックの brief の雛形 | UI モックを作り始めるとき |
+| `references/migration.md` | 見た目を変えずに実装を置き換える移行(状態ごとの撮影の基準・画像差分 0 の完了条件・禁じること) | スタイルの仕組みかコンポーネントライブラリを入れ替えるとき |
 
 ## 8. 他スキルとの関係
 
@@ -76,4 +77,5 @@ description: Web・iOS・Android・デスクトップの画面・コンポーネ
 - 図・ポンチ絵を作るときは draw-diagram に従う。UI モックの撮影には draw-diagram の `render.py` を使う。
 - UI モックは、specify の PRD と組で build に渡すか、単独で develop に渡す。planner は UI モックの決定を決め直さない。
 - 画面内の日本語の文言は `references/text.md` 8. に従う。語の選び方と文の組み立ては `../write-doc/references/sentence.md` の 1.〜5. に従い(漢語基調の項を除く)、同 6.〜8. と `../write-doc/references/format/` は適用しない。文体は text.md 8. を優先する。
+- 見た目を変えずに実装を置き換える移行は develop の `../develop/references/kinds.md` 6. の移行の 1 つであり `references/migration.md` がその基準(旧版の出力を状態ごとに撮った画像)と完了条件(画像差分 0)を定める。
 - 失敗の状態の洗い出しと、失敗時にシステムがすること(タイムアウト・再試行・二重送信の防止・エラーページ)は、品質がプロダクトのとき recover に従う。本スキルは各状態の見せ方と文言を定める。
