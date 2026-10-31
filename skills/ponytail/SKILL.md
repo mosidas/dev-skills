@@ -100,6 +100,7 @@ description: コードを書く・足す・直す・リファクタする・レ�
 | Subtract Before You Add | 足す前に削る | 追加・リファクタの順序を決めるとき | ponytail 3.(規則)・`agents/planner.md` の進め方 3 |
 | Minimize Reader Load | 読み手の負荷を減らす | 追いにくいコードを書く・点検するとき | ponytail 3.(規則)・`agents/reviewer.md` の進め方 2 の簡潔さ・`skills/ponytail/references/design.md` 3.(設計の赤信号) |
 | Outcome-Oriented Execution | 最終の形を目指す | 段階の境界を明示した書き直しと移行の計画を立てるとき | `agents/planner.md` の進め方 3 の移行の例外・`agents/gate-reviewer.md` の進め方 2 のテスト |
+| Exhaust the Design Space | 設計の幅を尽くす | 前例の無い UI の操作・感触で決まる判断をするとき。根本の違う 2〜3 案を試作して比べる | `skills/develop/references/kinds.md` 5.1(固定するもの)・`skills/design-ui/references/session.md` 3.1(1 往復で出すもの) |
 | Experience First | 体験を先に | 機能の範囲を取捨するとき | `skills/develop/references/requirements.md` 1.(形式)の目的の行・ponytail 2.(はしご)の段 1・`skills/develop/references/git-flow.md` の PR 本文の冒頭 |
 | Build the Lever | 道具を作る | 自明でない編集・移行・検査を手作業で繰り返したくなったとき | ponytail 3.(規則)・`agents/planner.md` の規則の検証 |
 | Model the Domain | ドメインを構造で表す | 状態を持つロジック・分岐の多いコード・同じ形の仮定を複数のファイルで繰り返すコードを書くとき | `skills/ponytail/references/design.md` 2.1(ドメインを構造で表す)・ponytail 3.(規則)の抽象化に数えない構造・`agents/planner.md` の進め方 2 のデータの形・`agents/reviewer.md` の進め方 2 の簡潔さ |
