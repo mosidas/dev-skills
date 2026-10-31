@@ -7,7 +7,7 @@ Claude Code・Codex CLI・Antigravity CLI のプラグインである。開発�
 | 構成要素 | 種別 | 役割 |
 | :-- | :-- | :-- |
 | `develop` | スキル | 実装タスクを要件の確認から PR まで進める統括の手順。要件(目的・完了条件・対象外・品質(簡易 / プロダクト))の壁打ち、Backlog.md のタスク、GitHub flow、git hook(lefthook・husky)、planner・implementer・reviewer による実装と点検のループ、gate-reviewer によるブランチ全体の点検、push 後の CI 確認を定める。品質がプロダクトのときは secure・observe・recover を適用し、git hook と CI にシークレット検知(gitleaks)と依存監査(osv-scanner)を、CI に SAST(CodeQL か semgrep)を追加し、Claude Code ではゲートの前に `/security-review` を実行する。新しい Web の画面・フォームを作るタスクで UI モックの行が無ければ、要件の確認で UI モックを先に作るか不要かを 1 問聞き、先に作るなら design-ui の工程を示して止まる。UI モックの行は planner に渡す。計画の未確定事項のうち事実で決まるものは統括が調べて決め、調べても決まらないものと本人の判断が必要なものは依存するステップの前に 1 問ずつ聞く。本人の指摘があったタスクでは、閉じる工程で retro を実行する(build の反復を除く)。中断を指示されたら再開メモを Implementation Notes に書いて止まる。再開するときは Notes・ブランチ・PR の状態から再開点を決める。済んだステップは繰り返さない。PR のレビューコメント(bot・Codex CLI・人)を fix・dismiss・ask に分ける。dismiss には反証を返信する。タスクの種類(バグ修正・リファクタ・性能・試作・移行)ごとに最初に固定するものと止まる条件を `references/kinds.md` に持つ。統括は要件の確認で種類を見分けて planner と reviewer に渡す。試作と診断だけの依頼では統括が作業ツリーの外で使い捨てのスクリプトを書く。ブランチと PR を作らない。見た目の試作は design-ui の `references/session.md` に従う。性能の数値を報告と判断に使う前に確かめる 7 つの問い・結論の 4 択(速い・遅い・差なし・判定不能)・数値の書き方を `references/benchmark.md` に持つ |
-| `specify` | スキル | 曖昧な着想から、ユーザーとの対話で「何を作るか」を 1 問ずつ聞き出し、build がそのまま 1 要求 = 1 タスクで分解できる PRD(製品要求仕様書)を書く手順。PRD は雛形 `references/prd.md` から書き、要求ごとに目的・完了条件・対象外・品質の 4 行と、検証できる受け入れ条件を持たせる。PRD の 4.(制約と決定事項)には UI モックの行(brief.md のパス・`未作成`・`不要` のいずれか)を書き、新しい Web の画面・フォームを作る要求で UI モックの行が `未作成` なら、次の一手に design-ui で UI モックを作るかを示す。PRD のタスクへの分解と実装は build が行う |
+| `specify` | スキル | 曖昧な着想から、ユーザーとの対話で「何を作るか」を 1 問ずつ聞き出し、build がそのまま 1 要求 = 1 タスクで分解できる PRD(製品要求仕様書)を書く手順。PRD は雛形 `references/prd.md` から書き、要求ごとに目的・完了条件・対象外・品質の 4 行と、検証できる受け入れ条件を持たせる。PRD の 4.(制約と決定事項)には UI モックの行(brief.md のパス・`未作成`・`不要` のいずれか)を書き、新しい Web の画面・フォームを作る要求で UI モックの行が `未作成` なら、次の一手に design-ui で UI モックを作るかを示す。承認の前に聞く点は要求の粒度・依存・分割と統合・第一人者が加えるもの・結果の正しさを示す外部の検証手段の 5 つである。`scripts/check_prd.py` で PRD の雛形の節の並び・要求ごとの 4 行と受け入れ条件・依存と順序の表・未記入とコメントの残りを検査する。PRD のタスクへの分解と実装は build が行う |
 | `build` | スキル | PRD から起こした複数のタスクを develop で 1 つずつ PR まで進める外側のループ。PRD を受け入れ条件つきの backlog のタスクに分解する工程と、未完了のタスクを 1 つ取って develop で PR まで進め、受け入れ条件を検証して Done にする反復を定める。新しい Web の画面・フォームを作る要求で PRD の UI モックの行が `未作成` か無ければ、分解の前に UI モックを先に作るか不要かを 1 問だけ聞き、タスク本文に UI モックの行を書く。反復ではこの問いで止まらない。状態は backlog と進捗ファイルだけに持ち、全タスクの Done・要判断・同じタスクの失敗の上限・反復の回数の上限などで止まる。`scripts/loop.py` が反復ごとに新しい `claude -p` を起動する(Claude Code)。ループを始める前に信頼の 4 条件(手で 1 度やった・道具がある・各段が止められる・繰り返す失敗を道具にした)を確かめる。最初の 1 タスクはユーザーが結果を確かめてから残りを回す。性能か指標の要求があれば検証の仕組みと変更前の値の取得を最初のタスクにする。反復は判断ごとの根拠を Implementation Notes に書く。結果の根拠は記録の要点に書く。受け入れ条件と停止条件を書き換えない。判定不能の受け入れ条件を満たしたことにしない。マージが `許可` のときはマージの直前に main の変更とブランチの変更の重なりを確かめる |
 | `retro` | スキル | 本人とレビューの指摘を 4 分類(文言・挙動・手順・委譲)に分け、原因を 3 分類(守られなかった・無かった・矛盾)と個別で判定して根拠付きの表にし、個別を除く行を本人の承認を得て dev-skills の改善タスクとして起票する手順。原因が「無かった」で直す場所が文書の規範なら、規範にするか(案件の記録・宛先プロファイルに残すか)と、write-doc のどの束に加えるかを判定する。本人の指摘の回数と往復の回数を記録する。表の雛形 `references/report.md` と事例 `references/example.md` を持つ。Google の SRE 本 15 章を出典とする |
 | `planner`・`implementer`・`reviewer`・`gate-reviewer` | サブエージェント(`agents/`) | develop が起動する 4 つの役割。planner は計画(Write/Edit 不可)、implementer はステップ 1 つ分の実装とコミット、reviewer はステップの適合・テスト・欠陥・簡潔さの点検(Write/Edit 不可)、gate-reviewer は push 前のブランチ全体の点検(要件の充足・ステップ間の整合・残骸・PR 本文。Write/Edit 不可)。このうち planner・implementer・reviewer は起動時に ponytail を読み込み、品質がプロダクトのときは secure・observe・recover も読み込み、UI を含むタスクでは design-ui も読み込む。planner は未確定事項に決め方(事実 / 本人の判断)を付けて既定を置かずに書き、品質がプロダクトのとき入口ごとの失敗を「失敗の一覧」の表として計画に書き、UI を含むタスクで状態ごとの見出し・本文・操作と、管理画面の項目名・選択肢の値と並びを「利用者に見せる文言」の表として計画に書く。reviewer と gate-reviewer は実装の文言が「利用者に見せる文言」の表と文言の規範に合うかを点検する。planner は計画に設計の節(中核のデータの形・呼び出し側の使い方・関数境界を越える変更の 2 案・要求が最初からあったら作る形)と順序の節(先行する作業・最小の分解)を書く。4 つの役割は判断を変えた原則を報告に名指しする。reviewer と gate-reviewer は名指しした判断が差分にあるかを点検する。planner は計画に関係するコードの仕組みの節(概要・主要な概念・動き・所在・落とし穴)を書く。利用者が見る挙動を変えるステップでは検証の 1 つを利用者が触る面で行う。reviewer は種類を受け取ったときに種類別の確認(修正後に元の再現が通る・挙動が変わっていない根拠・1 変更 1 計測・移行の一致)を行う。reviewer と gate-reviewer は性能の数値の主張を develop の `references/benchmark.md` で点検する。implementer は性能の数値を同じファイルの 4. の形(結論・単位・回数・範囲・律速)で報告する |
@@ -15,11 +15,11 @@ Claude Code・Codex CLI・Antigravity CLI のプラグインである。開発�
 | `secure` | スキル | プロダクト品質のコードの安全性の規範。信頼境界での入力検証、認証・認可、シークレットと設定、依存の脆弱性、GitHub Actions の供給網(SHA 固定・最小権限)、ログへの秘密の出力、エラー応答からの情報漏えいについて、何を対策すれば十分かを定める。OWASP ASVS と OWASP Cheat Sheet Series を出典とする |
 | `observe` | スキル | プロダクト品質のコードの可観測性の規範。構造化ログ、相関 ID、メトリクス、トレース、ヘルスチェック、エラーの分類、計画の完了条件に書く観測の内容を定める。OpenTelemetry のセマンティック規約、Google の SRE 本、W3C Trace Context を出典とする |
 | `recover` | スキル | プロダクト品質のコードの失敗時の挙動の規範。入口ごとの失敗の列挙、タイムアウト、リトライと冪等(移行・投入のスクリプトを空の環境から 1 回の実行で最終状態にし、再実行で変えないことを含む)、二重送信の防止、段階的なフォールバック、エラーページ、中間状態の露出防止、計画の完了条件に書く失敗時の挙動を定める。Google の SRE 本、Amazon Builders' Library、RFC 9110 などを出典とする |
-| `write-doc` | スキル | 仕様書・手順書・調査レポート・議事録・記事などの日本語文書を書く・推敲する・リライトするときの規範。`references/` を 4 つの束(言語・読み手と工程・形式・種類)に分け、SKILL.md は束と参照ファイルの表だけを持つ。工程の規範 `process.md` に、着手時の brief、骨組みの合意、レビュー役に渡す物を定める。形式の束は `format/`(Markdown・HTML・スライド)、種類の束は `types/` の手順書・仕様書と規約・議事録・調査レポート・技術記事・企画書と PRD の 6 種類のファイルである。検査スクリプト(`lint.py` ほか)を持つ。他者向けの文書は、本人に見せる前に、書いたエージェントと別のエージェントにレビューさせる。見出しが 10 を超える文書では `lint.py` が分担の通知を出す |
+| `write-doc` | スキル | 仕様書・手順書・調査レポート・議事録・記事などの日本語文書を書く・推敲する・リライトするときの規範。`references/` を 4 つの束(言語・読み手と工程・形式・種類)に分け、SKILL.md は束と参照ファイルの表だけを持つ。工程の規範 `process.md` に、着手時の brief、骨組みの合意、レビュー役に渡す物を定める。形式の束は `format/`(Markdown・HTML・スライド)、種類の束は `types/` の手順書・仕様書と規約・議事録・調査レポート・技術記事・企画書と PRD の 6 種類のファイルである。種類は Diátaxis の 2 軸(行動か理解か・学習か作業か)で判定する。1 つの文書には 1 つの型だけを持たせる。別の型の内容はその型の文書か付録の節に分ける。文の規範は過圧縮(矢印・記号・略語・動詞の無い断片)の規則を持つ。調査レポートは素材と手法と道具を依頼者と合意する調査の brief を持つ。検査スクリプト(`lint.py` ほか)を持つ。他者向けの文書は、本人に見せる前に、書いたエージェントと別のエージェントにレビューさせる。見出しが 10 を超える文書では `lint.py` が分担の通知を出す |
 | `write-slide` | スキル | プレゼン資料・説明資料のスライド構成を作る・点検するときの入口。読む write-doc のファイル(`format/slide.md` と言語の束)と、型の確認・ページ単位の骨組み・スケルトン通読の工程を定める |
 | `write-message` | スキル | issue・PR のコメント、レビューコメント、業務チャット、短いメールなど、他者へ送る短い日本語メッセージを敬語で書く・直すときの規範。宛先・場・用件を確かめ、用件から書き、定型の謝辞・結び・申し出と敬語の誤用を除く。敬語の規範(`references/keigo.md`)と場ごとの規範(`references/places.md`)を持つ |
 | `respond` | スキル | 会話の応答の形を定める規範。読み手の認知負荷を下げるため、最初の行に答えを書く・最後の行に読み手の次の行動を 1 つ書く・複数手順に番号を振る・状態を毎回書き直す・調べた事実に根拠となるソースを示すなどの規則を定める |
-| `draw-diagram` | スキル | `.mmd` で構造を固めてから人間が見やすい SVG を描く作図の規範。埋め込み先の幅で横スクロールを出さない寸法、辺の端点、帯の連続、軸と帯の説明、原典の工程を写す図では箱をまとめない規則、接続線の規則(水平・垂直の線分と角丸の曲がり、線を箱より先に描く。出典は diagram-design)を持つ。`render.py` で `.mmd` と SVG の対応照合・禁止要素の検査・斜めの接続線の検出・Chrome headless の PNG 出力を行う |
+| `draw-diagram` | スキル | `.mmd` で構造を固めてから人間が見やすい SVG を描く作図の規範。埋め込み先の幅で横スクロールを出さない寸法、辺の端点、帯の連続、軸と帯の説明、原典の工程を写す図では箱をまとめない規則、接続線の規則(水平・垂直の線分と角丸の曲がり、線を箱より先に描く。出典は diagram-design)を持つ。部品が 3 つ以上ある説明のための図は前の図を描き直して部品を 1 つずつ加えた図の列にする。`render.py` で `.mmd` と SVG の対応照合・禁止要素の検査・斜めの接続線の検出・Chrome headless の PNG 出力を行う |
 | `write-page` | スキル | HTML で配布する説明資料(図・表・切り替えの UI を持つ 1 ページの文書)を作る・直すときの入口。読む write-doc のファイル(HTML 固有の規則を持つ `format/html.md` と、工程・言語の束)と、モックの往復・本文と図の作成・HTML の生成・検査の HTML 固有の工程を定める。図は draw-diagram、見た目は design-ui の閲読モードを参照する |
 | `design-ui` | スキル | Web・iOS・Android・デスクトップの画面・コンポーネント・ページを設計・実装するときの規範。題材からトークン案を書き、汎用の既定と照合してから実装し、有限回の検証で止める工程を定める。利用者向けの日本語の文言の規範(敬体で書く、利用者が行動を変えられない情報を出さない、管理画面の項目名・選択肢は利用者の画面の見出しと同じ語を既定にする)を `references/text.md` に持つ。新しい Web の画面・フォームの実装の前に、UI モックを本人と往復して作る工程を `references/session.md` に持つ。往復は HTML のモック・headless Chrome で撮った PNG・文言の表で 1 案ずつ行い(1 往復に質問 1 つ、3 往復まで)、合意を brief.md にまとめる(既定の置き場所は `docs/ui-mock/<slug>/`)。UI モックは PRD と組で build に渡すか、単独で develop に渡す |
 | `hooks/inject_respond.py` | hook(SessionStart、Claude Code のみ) | セッション開始時に `skills/respond/SKILL.md` の本文を注入する |
@@ -190,7 +190,8 @@ skills/develop/
 └── references/            # requirements.md(要件の 4 行と UI モックの行の形式・聞く範囲・品質の決め方)、git-flow.md(ブランチ・PR・CI・マージ)、hooks.md(lefthook・husky・シークレット検知・依存監査・CI での監査・SAST)、review-triage.md(PR のレビューコメントの仕分けと却下のパターンの一覧)、kinds.md(種類別の工程: バグ修正・リファクタ・性能・試作・移行の固定するもの・進め方・止まる条件)、benchmark.md(性能の数値の吟味: 7 つの問い・結論の 4 択・数値の書き方)
 skills/specify/
 ├── SKILL.md               # 着想から PRD を書く工程(聞く・PRD を書く・確かめて終える)
-└── references/prd.md      # PRD の雛形(節ごとの書き方は各節の直下のコメント)
+├── references/prd.md      # PRD の雛形(節ごとの書き方は各節の直下のコメント)
+└── scripts/check_prd.py   # PRD を雛形の形に照らして検査する。問題と直し方を 1 行ずつ出力する
 skills/build/
 ├── SKILL.md               # 外側のループの工程(進捗ファイル・分解と信頼の確認・反復・停止と再開・最初の 1 タスクと反復の回し方)
 └── scripts/loop.py        # 反復ごとに新しい `claude -p` を起動し、停止条件を判定する
@@ -237,7 +238,7 @@ hooks/
 ├── inspect_lib.py         # 共通処理(設定・対象判定・lint 実行・警告文・状態)
 ├── inspection.config.json # 検査設定の正本
 └── rewrite_guides.json    # カテゴリごとの書き直し指針・言い換え例
-tests/                     # カタログと hooks の単体テスト、test_render.py(draw-diagram の render.py)、test_build_loop.py(build の loop.py)、test_manifest_version.py(2 つのマニフェストの version の一致)、corpus/(境界値コーパス)
+tests/                     # カタログと hooks の単体テスト、test_render.py(draw-diagram の render.py)、test_build_loop.py(build の loop.py)、test_check_prd.py(specify の check_prd.py)、test_manifest_version.py(2 つのマニフェストの version の一致)、corpus/(境界値コーパス)
 evals/                     # claude plugin eval のケース(prompt.md と graders/)。結果の出力先 results/ は git 管理外
 ```
 
@@ -314,7 +315,7 @@ MIT ライセンスで公開する。全文は `LICENSE` にある。
 
 | 出典 | ライセンス | 取り込んだ版・コミット | 反映先 |
 | :-- | :-- | :-- | :-- |
-| [cursor/plugins](https://github.com/cursor/plugins) の pstack | MIT | コミット 997ffc7(2026-10-12 時点。specify)・0.15.36(コミット 1ba91fc、2026-10-28) | specify・develop・build・ponytail・recover・retro・respond・agents(`planner.md`・`implementer.md`・`reviewer.md`・`gate-reviewer.md`)・README 1.・6.2・7. |
+| [cursor/plugins](https://github.com/cursor/plugins) の pstack | MIT | コミット 997ffc7(2026-10-12 時点。specify)・0.15.36(コミット 1ba91fc、2026-10-28) | specify・develop・build・ponytail・recover・retro・respond・agents(`planner.md`・`implementer.md`・`reviewer.md`・`gate-reviewer.md`)・write-doc(`types/README.md`・`sentence.md`・`types/report.md`)・draw-diagram(`SKILL.md`)・README 1.・6.2・7. |
 | [mattpocock/skills](https://github.com/mattpocock/skills) | MIT | コミット 49dd158(2026-10-12 時点) | specify |
 | [DietrichGebert/ponytail](https://github.com/DietrichGebert/ponytail) | MIT | v5.1.0 | ponytail |
 | [coji/natural-japanese](https://github.com/coji/natural-japanese) | MIT | v1.5.0(9a78a42)・v1.6.0(03bc944)・v1.6.2(a88b8e9) | write-doc(`inspection.md`・`paragraph.md`・`readers.md`・`sentence.md`・`format/slide.md`・`types/report.md`)・write-slide・write-message(`SKILL.md`) |
@@ -580,7 +581,7 @@ respond は i-have-adhd(MIT ライセンス、Copyright (c) 2026 Ayoub Ghriss、
 - [s0xDk/refactoring-ui-skill](https://github.com/s0xDk/refactoring-ui-skill)(MIT。原典 Wathan & Schoger, *Refactoring UI*)
 - [anthropics/skills frontend-design](https://github.com/anthropics/skills/tree/main/skills/frontend-design)(Apache-2.0)
 
-### 9.14. pstack(develop・specify・ponytail・build・recover・retro・respond・agents・README)
+### 9.14. pstack(develop・specify・ponytail・build・recover・retro・respond・agents・write-doc・draw-diagram・README)
 
 次の箇所は cursor/plugins の pstack(MIT ライセンス、Copyright (c) 2026 Lauren Tan、https://github.com/cursor/plugins)0.15.36(2026-10-28 時点のコミット 1ba91fc)を元にする。パスは上流のリポジトリ内のものである。specify の PRD の手法の出典は 9.2 にある。
 
@@ -658,4 +659,10 @@ respond は i-have-adhd(MIT ライセンス、Copyright (c) 2026 Ayoub Ghriss、
 - retro 5.2 の規則が既にあった指摘の扱い・retro 5.6 の仕組みで強制できる規則: `pstack/skills/reflect/references/synthesizer.md`(reflect)の「Already-covered」と「Structural-mechanism check」・`pstack/skills/principle-encode-lessons-in-structure/SKILL.md`(Encode Lessons in Structure)
 - retro 3. の指摘として書かれていない 3 つ: `pstack/skills/reflect/references/divergent-reviewer.md`(reflect)の「Scan for」
 - README 1. の依頼の書き方: `pstack/docs/guide/02-poteto-mode.md`(Route work through `/poteto-mode`)の「What goes in a prompt」と「Switch tasks with "new task"」と末尾の Pitfall・`pstack/docs/guide/10-recipes-and-pitfalls.md`(Recipes and pitfalls)の「The pitfalls」
+- `skills/write-doc/references/types/README.md` の Diátaxis の 2 軸と型を混ぜない規則: `pstack/skills/technical-writing/SKILL.md`(technical-writing)の「Pick the mode first (Diátaxis)」
+- `skills/write-doc/references/sentence.md` 2. の過圧縮: `pstack/skills/unslop/SKILL.md`(unslop)の規則 33「Over-compression」
+- `skills/write-doc/references/types/report.md` 3. の調査の brief の素材と手法と道具: `pstack/skills/sharpen/SKILL.md`(sharpen)の問い 2・3
+- specify 4. の第一人者が加えるものと結果の正しさを示す外部の検証手段: `pstack/skills/sharpen/SKILL.md`(sharpen)の問い 1・4
+- specify 3. の検査スクリプトの実行と `skills/specify/scripts/check_prd.py`: `pstack/skills/poteto-mode/playbooks/multi-phase-plan.md`(Multi-phase or multi-PR plan)の手順 6・`pstack/skills/poteto-mode/scripts/check-plan.mjs`。検査の項目は specify の PRD の雛形に合わせて書き直した
+- draw-diagram 1. の図の積み上げ: `pstack/skills/teach/SKILL.md`(teach)の 5「build the picture up diagram by diagram」
 - README 7. の観測者効果: `pstack/docs/guide/09-make-it-yours.md`(Make it yours)の「Test a skill change blind」
