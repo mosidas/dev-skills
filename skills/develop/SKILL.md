@@ -100,6 +100,7 @@ Claude Code ではサブエージェントを起動するたびに Agent の `ef
 ## 8. PR を出す
 
 - ゲートを通ったら push し、PR を作る。本文はゲートに渡した本文案を、指摘があれば直して使う。
+- PR のレビューコメントを `references/review-triage.md` に従って fix・dismiss・ask に分ける。fix は implementer に直させる。dismiss には反証を返信する。ask はユーザーに 1 問で聞く。修正は 1 回の push にまとめる。push のたびに CI が最初から実行されるためである。レビューコメントと CI の失敗が両方あるときは先にコメントを仕分ける。CI の失敗の直しも同じ push に含める。
 - CI の結果を確認する。失敗したら `references/git-flow.md` 4. の分類に従って直させるか再実行する。
 - PR のマージはユーザーの指示を得てから行う。手順は `references/git-flow.md` に従う。
 
@@ -147,6 +148,7 @@ build の反復が In Progress のタスクを取ったときも本節で再開�
 | :-- | :-- | :-- |
 | `references/requirements.md` | 要件の 4 行の形式、聞く範囲、品質の決め方 | 要件を確かめるとき |
 | `references/git-flow.md` | ブランチ・コミット・push・PR・CI 確認・マージのコマンド | ブランチを切るとき、PR を出すとき |
+| `references/review-triage.md` | PR のレビューコメントを fix・dismiss・ask に分ける基準と dismiss の返信と却下のパターンの一覧 | PR にレビューコメントが付いたとき |
 | `references/hooks.md` | git hook(lefthook・husky)の導入、シークレット検知と依存監査、CI での同じ検査と SAST | hook が無いリポジトリで作業を始めるとき、品質がプロダクトのとき |
 
 サブエージェントの定義(`agents/`)は統括が読まなくてよい。役割と出力形式はサブエージェント自身が持つ。
