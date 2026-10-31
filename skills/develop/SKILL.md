@@ -151,6 +151,7 @@ build の反復が In Progress のタスクを取ったときも本節で再開�
 | `references/git-flow.md` | ブランチ・コミット・push・PR・CI 確認・マージのコマンド | ブランチを切るとき、PR を出すとき |
 | `references/review-triage.md` | PR のレビューコメントを fix・dismiss・ask に分ける基準と dismiss の返信と却下のパターンの一覧 | PR にレビューコメントが付いたとき |
 | `references/kinds.md` | バグ修正・リファクタ・性能・試作・移行の種類ごとに最初に固定するもの・進め方・止まる条件 | 要件を確かめるときに種類を見分けるとき |
+| `references/benchmark.md` | 性能の数値を吟味する 7 つの問い・結論の 4 択と判定不能の条件・数値の書き方 | 性能の数値を報告するとき・数値で案を比べるとき・PR 本文に数値を書くとき |
 | `references/hooks.md` | git hook(lefthook・husky)の導入、シークレット検知と依存監査、CI での同じ検査と SAST | hook が無いリポジトリで作業を始めるとき、品質がプロダクトのとき |
 
 サブエージェントの定義(`agents/`)は統括が読まなくてよい。役割と出力形式はサブエージェント自身が持つ。
