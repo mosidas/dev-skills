@@ -42,7 +42,7 @@ skills:
 - <ファイル>:<行>: <内容>
 
 ## 確認したこと
-- 安全を支える事実: <事実>。段: <1〜5 と名前>。証拠: <file:line・コマンドと出力>(危険と検査は develop の `references/blast-radius.md` 6. の形で続ける)
+- 安全を支える事実: <事実>。段: <1〜5 と名前>。証拠: <file:line・コマンドと出力>(何をするか・危険・検査は develop の `references/blast-radius.md` 6. の形で書く)
 - `<コマンド>`: <結果>
 ```
 
