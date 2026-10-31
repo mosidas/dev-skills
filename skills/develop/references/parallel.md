@@ -159,7 +159,7 @@
 - <敵対役の番号>: <件数>。理由: <再実行で失敗が出なかった・失敗が意図を壊さないなど>
 ```
 
-残った所見は develop 7. で gate-reviewer に渡す。gate-reviewer は再現のコマンドと出力がある所見を欠陥として差し戻しの判定に含める(`agents/gate-reviewer.md` の進め方 3)。敵対役の worktree は所見の再実行が済んだら削除する。残った所見の再現のスクリプトは削除の前に作業ツリーの外へ写す。Implementation Notes にそのパスを書く。
+残った所見は develop 7. で gate-reviewer に渡す。gate-reviewer は再現のコマンドと出力がある所見を(main に既にある欠陥を除く)欠陥として差し戻しの判定に含める(`agents/gate-reviewer.md` の進め方 3)。敵対役の worktree は所見の再実行が済んだら削除する。残った所見の再現のスクリプトは削除の前に作業ツリーの外へ写す。Implementation Notes にそのパスを書く。
 
 ## 6. 別系統のレビューの並走
 
