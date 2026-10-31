@@ -99,9 +99,10 @@ def check(text: str, template: str) -> list[tuple[int, str]]:
         for label in FOUR_LINES:
             if not any(re.match(rf"^{label}: *\S", b) for b in block):
                 problems.append((n, f"{rid} に「{label}:」の行が無い → 雛形の形で「{label}: <内容>」の 1 行を書く"))
-        if "受け入れ条件:" not in block:
+        ac = next((i for i, b in enumerate(block) if b.strip() == "受け入れ条件:"), None)
+        if ac is None:
             problems.append((n, f"{rid} に「受け入れ条件:」が無い → 「受け入れ条件:」の行とその下に検証できる条件の箇条を 1 件以上書く"))
-        elif not any(b.startswith("- ") for b in block[block.index("受け入れ条件:") + 1:]):
+        elif not any(b.startswith("- ") for b in block[ac + 1:]):
             problems.append((n, f"{rid} の受け入れ条件に箇条が無い → 「受け入れ条件:」の下に検証できる条件を「- 」の箇条で 1 件以上書く"))
 
     # 依存と順序の表

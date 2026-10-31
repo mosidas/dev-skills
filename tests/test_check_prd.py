@@ -95,6 +95,10 @@ class CheckPrdTest(helpers.TempDirTestCase):
         text = VALID.replace("対象外: メール以外の通知\n", "")
         self.assertProblem(text, 32, "R2 に「対象外:」の行が無い")
 
+    def test_行末に空白がある受け入れ条件の行を認める(self) -> None:
+        _path, proc = self.run_check(VALID.replace("受け入れ条件:\n", "受け入れ条件: \n"))
+        self.assertEqual(proc.returncode, 0, proc.stdout)
+
     def test_受け入れ条件の箇条が無いと指摘する(self) -> None:
         text = VALID.replace("- 予約を 1 件登録すると一覧の件数が 1 増える\n", "")
         self.assertProblem(text, 21, "R1 の受け入れ条件に箇条が無い")
