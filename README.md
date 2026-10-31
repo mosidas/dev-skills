@@ -29,6 +29,15 @@ Claude Code・Codex CLI・Antigravity CLI のプラグインである。開発�
 
 スキルは各 CLI が用途を判断して自動で読み込む。Claude Code では `/dev-skills:develop`・`/dev-skills:specify`・`/dev-skills:build`・`/dev-skills:retro`・`/dev-skills:ponytail`・`/dev-skills:secure`・`/dev-skills:observe`・`/dev-skills:recover`・`/dev-skills:write-doc`・`/dev-skills:write-slide`・`/dev-skills:write-message`・`/dev-skills:draw-diagram`・`/dev-skills:design-ui`・`/dev-skills:write-page`、Codex CLI では `$dev-skills:develop`、Antigravity CLI では `/develop` で明示的に呼んでもよい。サブエージェントは Claude Code では `dev-skills:planner` のように plugin 名つきで起動する。Codex CLI と Antigravity CLI はサブエージェントを起動しないため、develop では統括が 4 つの役割を順に受け持つ。respond は Claude Code では SessionStart hook が常時適用し、Codex CLI・Antigravity CLI ではスキルとして読み込む。hooks に呼び出しの操作はない。プラグインを有効にした Claude Code のセッションで、セッション開始、`git commit`・`gh pr create`・`gh pr edit` の実行前、日本語 Markdown の書き込み、セッション完了のたびに自動で発火する。hooks の stdin の形式は CLI ごとに異なるため、Codex CLI と Antigravity CLI では hooks を提供しない。
 
+依頼は次のように書く。統括は依頼を要件の 4 行にまとめて確認する。4 行の形式は `skills/develop/references/requirements.md` にある。
+
+- 目標と確かめ方を自分の言葉で書く。確かめ方は合否が付く形(実行するコマンド・見る値・開く画面)にする。「良くして」には合否が付かない。
+- 見たい証拠を書く(コマンドの出力・画面の撮影・変更の前後の数値)。書かないとビルドが通ったという報告だけで終わることがある。
+- 既に知っていることと制約を書く。症状・再現の手順・ログの行・リンクは調べ直しを減らす。「先に再現する」「コードはまだ変えない」「挙動を変えない」のような制約は工程を変える。
+- どう作るかと原因の仮説は最初に書かない。仮説を書くと調べる範囲がそこに狭まる。仮説は統括が 4 行と期待する最小の変更を示した後で伝える。
+- スキル名を並べて手順を指図しない。工程の順序は develop が持つ。スキル名は特定の判断を変えたいときだけ書く。
+- 話題を変えたら「新しいタスク」と書く。書かないと前のタスクの続きとして扱われることがある。
+
 本人は次の原則の名前で軌道修正を指示できる。原則ごとの適用する場面と規則の所在は ponytail の「原則の索引」にある。
 
 | 英語名 | 日本語名 |
@@ -285,6 +294,12 @@ $ claude plugin eval . --trust-plugin --allow-tools Write Edit -j 4 --max-cost-u
 - `arm` を指定しない `tool_used: Skill` の grader(`write-doc-report` の `fired`)は、ありアームの発火指標であり、Δ には入らない。`arm: both` を付けた `one-liner-control` の `no-skill` はスコアに入る。
 - 1 ケースを 2〜3 回しか実行しないため、Δ の小さな差は誤差の範囲にある。差は傾向として読む。
 
+ケースを加える・直すときと結果を読むときは観測者効果を避ける。評価されていると分かったエージェントは普段と違う振る舞いをするためである。
+
+- `prompt.md` の依頼文に評価の場と分かる語(「評価」「テスト」)を書かない。普段の依頼と同じ文面にする。
+- llm の grader の PASS の条件にどのアームの出力かが分かる語(アームの名前・評価対象のモデル名)を書かない。採点者がどちらのアームの出力かを知ると採点が偏る。
+- 採点の値だけで判断しない。各アームの出力を自分で読む。採点と読んだ結果が食い違うときは採点基準を先に疑う。
+
 ## 8. ライセンス
 
 MIT ライセンスで公開する。全文は `LICENSE` にある。
@@ -299,7 +314,7 @@ MIT ライセンスで公開する。全文は `LICENSE` にある。
 
 | 出典 | ライセンス | 取り込んだ版・コミット | 反映先 |
 | :-- | :-- | :-- | :-- |
-| [cursor/plugins](https://github.com/cursor/plugins) の pstack | MIT | コミット 997ffc7(2026-10-12 時点。specify)・0.15.36(コミット 1ba91fc、2026-10-28) | specify・develop・build・ponytail・recover・retro・respond・agents(`planner.md`・`implementer.md`・`reviewer.md`・`gate-reviewer.md`)・README 6.2 |
+| [cursor/plugins](https://github.com/cursor/plugins) の pstack | MIT | コミット 997ffc7(2026-10-12 時点。specify)・0.15.36(コミット 1ba91fc、2026-10-28) | specify・develop・build・ponytail・recover・retro・respond・agents(`planner.md`・`implementer.md`・`reviewer.md`・`gate-reviewer.md`)・README 1.・6.2・7. |
 | [mattpocock/skills](https://github.com/mattpocock/skills) | MIT | コミット 49dd158(2026-10-12 時点) | specify |
 | [DietrichGebert/ponytail](https://github.com/DietrichGebert/ponytail) | MIT | v5.1.0 | ponytail |
 | [coji/natural-japanese](https://github.com/coji/natural-japanese) | MIT | v1.5.0(9a78a42)・v1.6.0(03bc944)・v1.6.2(a88b8e9) | write-doc(`inspection.md`・`paragraph.md`・`readers.md`・`sentence.md`・`format/slide.md`・`types/report.md`)・write-slide・write-message(`SKILL.md`) |
@@ -389,7 +404,7 @@ retro は次の資料を参照し、要点を自分の言葉でまとめた。�
   - 個人を責めず、仕組みと工程を直す。retro では 1. の指摘の扱いと、5.6 の対処の型にあたる。
   - 再発を防ぐ対策を記録に含める。retro では 6. の起票にあたる。
 
-4\. の分類と 5. の原因の分類は外部の出典を持たず、2026-10-14 の事例(`references/example.md`)に基づく。ただし 5.6 の表の後の段落(規則を加える前の確認と考えで書くこと)は pstack を元にする(9.14)。
+4\. の分類と 5. の原因の分類は外部の出典を持たず、2026-10-14 の事例(`references/example.md`)に基づく。ただし 3. の指摘として書かれていない 3 つ・5.2 の規則が既にあった指摘の扱い・5.6 の表の後の段落と箇条(規則を加える前の確認と考えで書くこと・手段の強さの順と起票の完了条件)は pstack を元にする(9.14)。
 
 ### 9.4. ponytail
 
@@ -565,7 +580,7 @@ respond は i-have-adhd(MIT ライセンス、Copyright (c) 2026 Ayoub Ghriss、
 - [s0xDk/refactoring-ui-skill](https://github.com/s0xDk/refactoring-ui-skill)(MIT。原典 Wathan & Schoger, *Refactoring UI*)
 - [anthropics/skills frontend-design](https://github.com/anthropics/skills/tree/main/skills/frontend-design)(Apache-2.0)
 
-### 9.14. pstack(develop・specify・ponytail・build・recover・retro・respond・agents)
+### 9.14. pstack(develop・specify・ponytail・build・recover・retro・respond・agents・README)
 
 次の箇所は cursor/plugins の pstack(MIT ライセンス、Copyright (c) 2026 Lauren Tan、https://github.com/cursor/plugins)0.15.36(2026-10-28 時点のコミット 1ba91fc)を元にする。パスは上流のリポジトリ内のものである。specify の PRD の手法の出典は 9.2 にある。
 
@@ -639,3 +654,8 @@ respond は i-have-adhd(MIT ライセンス、Copyright (c) 2026 Ayoub Ghriss、
 - build 4. の手順 5 の判定不能: `pstack/skills/figure-it-out/SKILL.md`(figure-it-out)の「Phase C: Run the loop」
 - build 4. の手順 6 のマージの直前の重なりの確認: `pstack/skills/poteto-mode/playbooks/autopilot-full.md`(Autopilot-full)の手順 5
 - build 4. の手順 4 の CI の失敗の数え方: `pstack/skills/poteto-mode/playbooks/babysit.md`(Babysit)の手順 7
+- retro 5.6 の手段の強さの順と起票の完了条件(元の指摘の実例で不合格になる検査・文の規則の削除): `pstack/skills/correct/SKILL.md`(correct)・`pstack/skills/principle-encode-lessons-in-structure/SKILL.md`(Encode Lessons in Structure)・`pstack/docs/guide/09-make-it-yours.md`(Make it yours)の「Fix the environment with `/correct`」
+- retro 5.2 の規則が既にあった指摘の扱い・retro 5.6 の仕組みで強制できる規則: `pstack/skills/reflect/references/synthesizer.md`(reflect)の「Already-covered」と「Structural-mechanism check」・`pstack/skills/principle-encode-lessons-in-structure/SKILL.md`(Encode Lessons in Structure)
+- retro 3. の指摘として書かれていない 3 つ: `pstack/skills/reflect/references/divergent-reviewer.md`(reflect)の「Scan for」
+- README 1. の依頼の書き方: `pstack/docs/guide/02-poteto-mode.md`(Route work through `/poteto-mode`)の「What goes in a prompt」と「Switch tasks with "new task"」と末尾の Pitfall・`pstack/docs/guide/10-recipes-and-pitfalls.md`(Recipes and pitfalls)の「The pitfalls」
+- README 7. の観測者効果: `pstack/docs/guide/09-make-it-yours.md`(Make it yours)の「Test a skill change blind」
