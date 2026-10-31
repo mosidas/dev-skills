@@ -20,7 +20,8 @@ from pathlib import Path
 TEMPLATE = Path(__file__).resolve().parent.parent / "references" / "prd.md"
 FOUR_LINES = ("目的", "完了条件", "対象外", "品質")
 REQ_HEADING = re.compile(r"^### (R\d+)\.")
-PLACEHOLDER = re.compile(r"<[^<>\n]+>")
+# 内側が空白で始まるか終わるもの(`< 10 かつ >`)は比較演算子として扱う。
+PLACEHOLDER = re.compile(r"<(?=\S)[^<>\n]+(?<=\S)>")
 # 自動リンク(<https://...>)と HTML タグ(<br>・</summary>)は未記入として扱わない。
 NOT_PLACEHOLDER = re.compile(r"<(?:https?://|mailto:)[^<>]*>|</?[A-Za-z][A-Za-z0-9]*(?:\s[^<>]*)?/?>")
 FENCE = re.compile(r"^ {0,3}(`{3,}|~{3,})")
@@ -38,10 +39,11 @@ def prose_lines(text: str) -> list[tuple[int, str]]:
     for n, line in enumerate(text.splitlines(), start=1):
         m = FENCE.match(line)
         if fence is None and m:
-            fence = m.group(1)[0]
+            fence = m.group(1)
             continue
         if fence is not None:
-            if m and m.group(1)[0] == fence:
+            # 開きと同じ文字で、長さが開き以上のときだけ閉じる。
+            if m and m.group(1)[0] == fence[0] and len(m.group(1)) >= len(fence):
                 fence = None
             continue
         result.append((n, line))
@@ -89,6 +91,9 @@ def check(text: str, template: str) -> list[tuple[int, str]]:
     if section_line("5.") is not None and not blocks:
         problems.append((section_line("5."), "要求一覧に要求が無い → 「### R1. <タイトル>」の見出しで要求を 1 件以上書く"))
     for rid, n, block in blocks:
+        if rid in req_line:
+            problems.append((n, f"### {rid}. の見出しが重複している → 重複した見出しを 1 つにする"))
+            continue
         req_ids.append(rid)
         req_line[rid] = n
         for label in FOUR_LINES:
@@ -105,13 +110,23 @@ def check(text: str, template: str) -> list[tuple[int, str]]:
         cells = [c.strip() for c in line.strip().strip("|").split("|")] if line.lstrip().startswith("|") else []
         if len(cells) < 2 or cells[0] == "要求" or set(cells[0]) <= set(":- "):
             continue
+        if not cells[1]:
+            problems.append((n, f"{cells[0]} の依存先が空 → 無ければ「なし」と書く"))
         deps = [] if cells[1] == "なし" else [d.strip() for d in re.split(r"[,、]", cells[1]) if d.strip()]
         rows.append((n, cells[0], deps))
-    row_index = {rid: i for i, (_, rid, _) in enumerate(rows)}
+    row_index: dict[str, int] = {}
+    for i, (n, rid, _) in enumerate(rows):
+        if rid in row_index:
+            problems.append((n, f"表の {rid} の行が重複している → 重複した行を 1 つにする"))
+        else:
+            row_index[rid] = i
     for i, (n, rid, deps) in enumerate(rows):
         if rid not in req_ids:
             problems.append((n, f"表の {rid} が要求一覧に無い → 要求一覧にある ID に直すか行を削除する"))
         for dep in deps:
+            if dep == rid:
+                problems.append((n, f"{rid} が自身に依存している → 依存先から {rid} を除く"))
+                continue
             if dep not in req_ids:
                 problems.append((n, f"{rid} の依存先 {dep} が要求一覧に無い → 要求一覧にある ID に直す"))
             elif dep in row_index and row_index[dep] >= i:

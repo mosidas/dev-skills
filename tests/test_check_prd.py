@@ -107,6 +107,27 @@ class CheckPrdTest(helpers.TempDirTestCase):
         text = VALID.replace("| R1 | なし |\n| R2 | R1 |", "| R2 | R1 |\n| R1 | なし |")
         self.assertProblem(text, 48, "R2 の依存先 R1 が R2 より下の行にある")
 
+    def test_自身への依存を指摘する(self) -> None:
+        for row in ("| R2 | R2 |", "| R2 | R1, R2 |"):
+            with self.subTest(row=row):
+                text = VALID.replace("| R2 | R1 |", row)
+                self.assertProblem(text, 49, "R2 が自身に依存している")
+                _path, proc = self.run_check(text)
+                self.assertNotIn("R2 より下の行にある", proc.stdout)
+
+    def test_表の行の重複を指摘する(self) -> None:
+        text = VALID.replace("| R2 | R1 |\n", "| R2 | R1 |\n| R2 | R1 |\n")
+        self.assertProblem(text, 50, "表の R2 の行が重複している")
+
+    def test_要求の見出しの重複を指摘する(self) -> None:
+        text = VALID.replace("### R2. 予約の通知", "### R1. 予約の通知")
+        text = text.replace("| R2 | R1 |\n", "")
+        self.assertProblem(text, 32, "### R1. の見出しが重複している")
+
+    def test_依存先が空だと指摘する(self) -> None:
+        text = VALID.replace("| R2 | R1 |", "| R2 |  |")
+        self.assertProblem(text, 49, "R2 の依存先が空")
+
     def test_表に無い要求を指摘する(self) -> None:
         text = VALID.replace("| R2 | R1 |\n", "")
         self.assertProblem(text, 44, "R2 が依存と順序の表に無い")
@@ -124,7 +145,16 @@ class CheckPrdTest(helpers.TempDirTestCase):
             "- 通知はメールで送る(担当者が常に見ているため)\n",
             "- 通知はメールで送る(担当者が常に見ているため)<br>\n"
             "- 型は `Array<Reservation>` とする(<https://example.com/spec>)\n"
-            "\n```ts\ntype Reservations = Array<Reservation>\n```\n",
+            "- 件数 < 10 かつ > 0\n"
+            "\n````md\n```\n<未記入の例>\n````\n",
+        ).replace("| R2 | R1 |", "| R3 | なし |\n| R10 | なし |\n| R2 | R1、R3 |")
+        text = text.replace(
+            "## 6. 依存と順序",
+            "### R3. 予約の一覧の印刷\n\n目的: 担当者が予約を紙で確かめられるようにする\n完了条件: 一覧を印刷できる\n"
+            "対象外: 帳票の書式の変更\n品質: 簡易\n\n受け入れ条件:\n\n- 印刷の操作で一覧が印刷される\n\n"
+            "### R10. 予約の集計\n\n目的: 担当者が予約の件数を確かめられるようにする\n完了条件: 日ごとの件数が表示される\n"
+            "対象外: 月ごとの集計\n品質: 簡易\n\n受け入れ条件:\n\n- 予約を 1 件登録すると当日の件数が 1 増える\n\n"
+            "## 6. 依存と順序",
         )
         _path, proc = self.run_check(text)
         self.assertEqual(proc.returncode, 0, proc.stdout)
