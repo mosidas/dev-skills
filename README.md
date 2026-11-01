@@ -10,6 +10,7 @@ Claude Code・Codex CLI・Antigravity CLI のプラグインである。開発�
 | `specify` | スキル | 曖昧な着想から、ユーザーとの対話で「何を作るか」を 1 問ずつ聞き出し、build がそのまま 1 要求 = 1 タスクで分解できる PRD(製品要求仕様書)を書く手順。PRD は雛形 `references/prd.md` から書き、要求ごとに目的・完了条件・対象外・品質の 4 行と、検証できる受け入れ条件を持たせる。PRD の 4.(制約と決定事項)には UI モックの行(brief.md のパス・`未作成`・`不要` のいずれか)を書き、新しい Web の画面・フォームを作る要求で UI モックの行が `未作成` なら、次の一手に design-ui で UI モックを作るかを示す。承認の前に聞く点は要求の粒度・依存・分割と統合・第一人者が加えるもの・結果の正しさを示す外部の検証手段の 5 つである。`scripts/check_prd.py` で PRD の雛形の節の並び・要求ごとの 4 行と受け入れ条件・依存と順序の表・未記入とコメントの残りを検査する。PRD のタスクへの分解と実装は build が行う |
 | `build` | スキル | PRD から起こした複数のタスクを develop で 1 つずつ PR まで進める外側のループ。PRD を受け入れ条件つきの backlog のタスクに分解する工程と、未完了のタスクを 1 つ取って develop で PR まで進め、受け入れ条件を検証して Done にする反復を定める。新しい Web の画面・フォームを作る要求で PRD の UI モックの行が `未作成` か無ければ、分解の前に UI モックを先に作るか不要かを 1 問だけ聞き、タスク本文に UI モックの行を書く。反復ではこの問いで止まらない。状態は backlog と進捗ファイルだけに持ち、全タスクの Done・要判断・同じタスクの失敗の上限・反復の回数の上限などで止まる。`scripts/loop.py` が反復ごとに新しい `claude -p` を起動する(Claude Code)。ループを始める前に信頼の 4 条件(手で 1 度やった・道具がある・各段が止められる・繰り返す失敗を道具にした)を確かめる。最初の 1 タスクはユーザーが結果を確かめてから残りを回す。性能か指標の要求があれば検証の仕組みと変更前の値の取得を最初のタスクにする。反復は判断ごとの根拠を Implementation Notes に書く。結果の根拠は記録の要点に書く。受け入れ条件と停止条件を書き換えない。判定不能の受け入れ条件を満たしたことにしない。マージが `許可` のときはマージの直前に main の変更とブランチの変更の重なりを確かめる |
 | `retro` | スキル | 本人とレビューの指摘を 4 分類(文言・挙動・手順・委譲)に分け、原因を 3 分類(守られなかった・無かった・矛盾)と個別で判定して根拠付きの表にし、個別を除く行を本人の承認を得て dev-skills の改善タスクとして起票する手順。原因が「無かった」で直す場所が文書の規範なら、規範にするか(案件の記録・宛先プロファイルに残すか)と、write-doc のどの束に加えるかを判定する。本人の指摘の回数と往復の回数を記録する。表の雛形 `references/report.md` と事例 `references/example.md` を持つ。Google の SRE 本 15 章を出典とする |
+| `explain` | スキル | コードを変えずに読み取りだけで調べて答える手順。問いを 4 種類(仕組み・経緯・学び・再開)に振り分ける。仕組みの問いは規模を判定する。複雑なら 2〜4 の切り口の探索役を並列に起動して説明役が 5 節(概要・主要な概念・動き・所在・落とし穴)にまとめる。経緯の問いはコードの足場を作ってから情報源を 7 分類(ソース管理・課題管理・長文の文書・チャット・インフラ監視・エラー追跡・分析基盤)に割り当てる。git と gh は必須であり MCP はあれば使う。合成役は主張を確信度 5 段(直接・裏付け・推定・推測・不明)に分けて本人の仮説を追認しない。学びの問いは理解してほしい点を絞り一般の定義から事例へ進めて最小の完全な答えで止める。再開の問いは範囲と話題を固定して会話の記録・backlog・gh から文脈を組み直し状態タグ付きのスレッドで返す。Claude Code では探索役に `Explore` を使い調査役・説明役・合成役に `general-purpose` を使う。Codex CLI・Antigravity CLI では統括が切り口と情報源を順に調べる |
 | `planner`・`implementer`・`reviewer`・`gate-reviewer` | サブエージェント(`agents/`) | develop が起動する 4 つの役割。planner は計画(Write/Edit 不可)、implementer はステップ 1 つ分の実装とコミット、reviewer はステップの適合・テスト・欠陥・簡潔さの点検(Write/Edit 不可)、gate-reviewer は push 前のブランチ全体の点検(要件の充足・ステップ間の整合・残骸・PR 本文。Write/Edit 不可)。このうち planner・implementer・reviewer は起動時に ponytail を読み込み、品質がプロダクトのときは secure・observe・recover も読み込み、UI を含むタスクでは design-ui も読み込む。planner は未確定事項に決め方(事実 / 本人の判断)を付けて既定を置かずに書き、品質がプロダクトのとき入口ごとの失敗を「失敗の一覧」の表として計画に書き、UI を含むタスクで状態ごとの見出し・本文・操作と、管理画面の項目名・選択肢の値と並びを「利用者に見せる文言」の表として計画に書く。reviewer と gate-reviewer は実装の文言が「利用者に見せる文言」の表と文言の規範に合うかを点検する。planner は計画に設計の節(中核のデータの形・呼び出し側の使い方・関数境界を越える変更の 2 案・要求が最初からあったら作る形)と順序の節(先行する作業・最小の分解)を書く。4 つの役割は判断を変えた原則を報告に名指しする。reviewer と gate-reviewer は名指しした判断が差分にあるかを点検する。planner は計画に関係するコードの仕組みの節(概要・主要な概念・動き・所在・落とし穴)を書く。利用者が見る挙動を変えるステップでは検証の 1 つを利用者が触る面で行う。reviewer は種類を受け取ったときに種類別の確認(修正後に元の再現が通る・挙動が変わっていない根拠・1 変更 1 計測・移行の一致)を行う。reviewer と gate-reviewer は性能の数値の主張を develop の `references/benchmark.md` で点検する。implementer は性能の数値を同じファイルの 4. の形(結論・単位・回数・範囲・律速)で報告する。reviewer は差分の外で動かなくなる箇所と変更の安全を支える 1 つの事実とその確かさの段を develop の `references/blast-radius.md` で点検する。gate-reviewer は PR 本文案の影響範囲の事実の段が実物と一致するかを点検する |
 | `ponytail` | スキル | コードを最小に保つ規範。そもそも作るかを問い、標準ライブラリと既存のもの、利用する外部サービスの組み込み機能を先に使い、動く最小の差分で終える。原則の名前と規則の所在の索引を持つ。設計の原則と設計の赤信号を参照ファイル `references/design.md` に持つ。TypeScript の型の規則と例(判別共用体・ブランド型・`unknown`・スキーマからの型・`as` を使わない・網羅性の `never`・`satisfies` など 14 項目)を参照ファイル `references/typescript.md` に持つ。planner・implementer・reviewer が起動時に読み込む。implementer と reviewer は `.ts`・`.tsx` を触るときに `references/typescript.md` も読み込む |
 | `secure` | スキル | プロダクト品質のコードの安全性の規範。信頼境界での入力検証、認証・認可、シークレットと設定、依存の脆弱性、GitHub Actions の供給網(SHA 固定・最小権限)、ログへの秘密の出力、エラー応答からの情報漏えいについて、何を対策すれば十分かを定める。OWASP ASVS と OWASP Cheat Sheet Series を出典とする |
@@ -27,7 +28,7 @@ Claude Code・Codex CLI・Antigravity CLI のプラグインである。開発�
 | `hooks/inspect_write.py` | hook(PostToolUse、Claude Code のみ) | 日本語 Markdown の書き込み直後に `lint.py` を実行し、検出があれば書き直しを促す警告を返す |
 | `hooks/inspect_stop.py` | hook(Stop、Claude Code のみ) | セッション完了時に再検査し、重大カテゴリの検出が残るあいだ完了を差し戻す |
 
-スキルは各 CLI が用途を判断して自動で読み込む。Claude Code では `/dev-skills:develop`・`/dev-skills:specify`・`/dev-skills:build`・`/dev-skills:retro`・`/dev-skills:ponytail`・`/dev-skills:secure`・`/dev-skills:observe`・`/dev-skills:recover`・`/dev-skills:write-doc`・`/dev-skills:write-slide`・`/dev-skills:write-message`・`/dev-skills:draw-diagram`・`/dev-skills:design-ui`・`/dev-skills:write-page`、Codex CLI では `$dev-skills:develop`、Antigravity CLI では `/develop` で明示的に呼んでもよい。サブエージェントは Claude Code では `dev-skills:planner` のように plugin 名つきで起動する。Codex CLI と Antigravity CLI はサブエージェントを起動しないため、develop では統括が 4 つの役割を順に受け持つ。respond は Claude Code では SessionStart hook が常時適用し、Codex CLI・Antigravity CLI ではスキルとして読み込む。hooks に呼び出しの操作はない。プラグインを有効にした Claude Code のセッションで、セッション開始、`git commit`・`gh pr create`・`gh pr edit` の実行前、日本語 Markdown の書き込み、セッション完了のたびに自動で発火する。hooks の stdin の形式は CLI ごとに異なるため、Codex CLI と Antigravity CLI では hooks を提供しない。
+スキルは各 CLI が用途を判断して自動で読み込む。Claude Code では `/dev-skills:develop`・`/dev-skills:specify`・`/dev-skills:build`・`/dev-skills:retro`・`/dev-skills:explain`・`/dev-skills:ponytail`・`/dev-skills:secure`・`/dev-skills:observe`・`/dev-skills:recover`・`/dev-skills:write-doc`・`/dev-skills:write-slide`・`/dev-skills:write-message`・`/dev-skills:draw-diagram`・`/dev-skills:design-ui`・`/dev-skills:write-page`、Codex CLI では `$dev-skills:develop`、Antigravity CLI では `/develop` で明示的に呼んでもよい。サブエージェントは Claude Code では `dev-skills:planner` のように plugin 名つきで起動する。Codex CLI と Antigravity CLI はサブエージェントを起動しないため、develop では統括が 4 つの役割を順に受け持つ。respond は Claude Code では SessionStart hook が常時適用し、Codex CLI・Antigravity CLI ではスキルとして読み込む。hooks に呼び出しの操作はない。プラグインを有効にした Claude Code のセッションで、セッション開始、`git commit`・`gh pr create`・`gh pr edit` の実行前、日本語 Markdown の書き込み、セッション完了のたびに自動で発火する。hooks の stdin の形式は CLI ごとに異なるため、Codex CLI と Antigravity CLI では hooks を提供しない。
 
 依頼は次のように書く。統括は依頼を要件の 4 行にまとめて確認する。4 行の形式は `skills/develop/references/requirements.md` にある。
 
@@ -137,7 +138,7 @@ $ codex plugin add dev-skills@personal
 $ agy plugin install <クローンのパス>
 ```
 
-導入先は `~/.gemini/config/plugins/dev-skills/`(コピー)である。クローンを更新したら同じコマンドで導入し直す。スキルは `/develop`・`/specify`・`/build`・`/retro`・`/ponytail`・`/secure`・`/observe`・`/recover`・`/write-doc`・`/write-slide`・`/write-message`・`/respond`・`/draw-diagram`・`/design-ui`・`/write-page` のスラッシュコマンドにもなる。
+導入先は `~/.gemini/config/plugins/dev-skills/`(コピー)である。クローンを更新したら同じコマンドで導入し直す。スキルは `/develop`・`/specify`・`/build`・`/retro`・`/explain`・`/ponytail`・`/secure`・`/observe`・`/recover`・`/write-doc`・`/write-slide`・`/write-message`・`/respond`・`/draw-diagram`・`/design-ui`・`/write-page` のスラッシュコマンドにもなる。
 
 ## 4. hooks
 
@@ -198,6 +199,9 @@ skills/build/
 skills/retro/
 ├── SKILL.md               # 指摘からの規範の改善の工程(集める・分類する・原因を判定する・表にして起票する)
 └── references/            # report.md・example.md(表と起票案の雛形・2026-10-14 の事例)
+skills/explain/
+├── SKILL.md               # 読み取りだけの調査の入口(問いの振り分け・共通の作法・学びの問い)
+└── references/            # how.md・why.md・recall.md(仕組みの問い・経緯の問いと確信度 5 段・再開の問いの手順と雛形)
 skills/write-doc/
 ├── SKILL.md               # 規範の入口(束と参照ファイルの表)
 ├── references/            # 4 つの束。言語: sentence.md・paragraph.md(文と表記・段落と見出し)、読み手と工程: readers.md・process.md・inspection.md(読み手・brief と骨組みの合意とレビュー役に渡す物・検査)
@@ -315,7 +319,7 @@ MIT ライセンスで公開する。全文は `LICENSE` にある。
 
 | 出典 | ライセンス | 取り込んだ版・コミット | 反映先 |
 | :-- | :-- | :-- | :-- |
-| [cursor/plugins](https://github.com/cursor/plugins) の pstack | MIT | コミット 997ffc7(2026-10-12 時点。specify)・0.15.36(コミット 1ba91fc、2026-10-28) | specify・develop・build・ponytail・recover・retro・respond・agents(`planner.md`・`implementer.md`・`reviewer.md`・`gate-reviewer.md`)・write-doc(`types/README.md`・`sentence.md`・`types/report.md`)・draw-diagram(`SKILL.md`)・design-ui(`migration.md`・`session.md`)・README 1.・6.2・7. |
+| [cursor/plugins](https://github.com/cursor/plugins) の pstack | MIT | コミット 997ffc7(2026-10-12 時点。specify)・0.15.36(コミット 1ba91fc、2026-10-28) | specify・develop・build・ponytail・recover・retro・respond・agents(`planner.md`・`implementer.md`・`reviewer.md`・`gate-reviewer.md`)・write-doc(`types/README.md`・`sentence.md`・`types/report.md`)・draw-diagram(`SKILL.md`)・design-ui(`migration.md`・`session.md`)・explain・README 1.・6.2・7. |
 | [mattpocock/skills](https://github.com/mattpocock/skills) | MIT | コミット 49dd158(2026-10-12 時点) | specify |
 | [DietrichGebert/ponytail](https://github.com/DietrichGebert/ponytail) | MIT | v5.1.0 | ponytail |
 | [coji/natural-japanese](https://github.com/coji/natural-japanese) | MIT | v1.5.0(9a78a42)・v1.6.0(03bc944)・v1.6.2(a88b8e9) | write-doc(`inspection.md`・`paragraph.md`・`readers.md`・`sentence.md`・`format/slide.md`・`types/report.md`)・write-slide・write-message(`SKILL.md`) |
@@ -581,7 +585,7 @@ respond は i-have-adhd(MIT ライセンス、Copyright (c) 2026 Ayoub Ghriss、
 - [s0xDk/refactoring-ui-skill](https://github.com/s0xDk/refactoring-ui-skill)(MIT。原典 Wathan & Schoger, *Refactoring UI*)
 - [anthropics/skills frontend-design](https://github.com/anthropics/skills/tree/main/skills/frontend-design)(Apache-2.0)
 
-### 9.14. pstack(develop・specify・ponytail・build・recover・retro・respond・agents・write-doc・draw-diagram・design-ui・README)
+### 9.14. pstack(develop・specify・ponytail・build・recover・retro・respond・agents・write-doc・draw-diagram・design-ui・explain・README)
 
 次の箇所は cursor/plugins の pstack(MIT ライセンス、Copyright (c) 2026 Lauren Tan、https://github.com/cursor/plugins)0.15.36(2026-10-28 時点のコミット 1ba91fc)を元にする。パスは上流のリポジトリ内のものである。specify の PRD の手法の出典は 9.2 にある。
 
@@ -674,3 +678,7 @@ respond は i-have-adhd(MIT ライセンス、Copyright (c) 2026 Ayoub Ghriss、
 - `skills/design-ui/references/migration.md`・`skills/develop/references/kinds.md` 6.1 の撮影の基準と画像差分 0・`agents/reviewer.md` の進め方 2 の種類の見た目の移行・`agents/gate-reviewer.md` の検査の変更の視覚回帰の基準: `pstack/skills/poteto-mode/playbooks/visual-parity.md`(Visual parity)
 - `skills/develop/references/kinds.md` 5.1 の根本の違う 2〜3 案・`skills/design-ui/references/session.md` 3.1 の本人に見せる前の試作・ponytail 6. の Exhaust the Design Space の行: `pstack/skills/principle-exhaust-the-design-space/SKILL.md`(Exhaust the Design Space)
 - `skills/ponytail/references/typescript.md`・ponytail 6. の Type System Discipline の所在・ponytail 7. の参照ファイルの行・`agents/implementer.md` と `agents/reviewer.md` の規則の TypeScript の読み込み・`agents/reviewer.md` の進め方 2 の型の観点: `pstack/skills/typescript-best-practices/SKILL.md`(typescript-best-practices)・`pstack/skills/typescript-best-practices/references/patterns.md`
+- explain 2. と 3. の仕組みの問いの役・`skills/explain/references/how.md`: `pstack/skills/how/SKILL.md`(how)・`pstack/skills/how/references/explorer-prompt.md`・`pstack/skills/how/references/explainer-prompt.md`
+- explain 3. の経緯の問いの役・`skills/explain/references/why.md`(確信度 5 段を含む): `pstack/skills/why/SKILL.md`(why)・`pstack/skills/why/references/investigator-prompt.md`・`pstack/skills/why/references/synthesizer-prompt.md`・`pstack/skills/why/references/epistemics.md`・`pstack/skills/why/references/source-playbook.md`・`pstack/skills/why/references/sources/code-archaeology.md`
+- explain 4. の学びの問い: `pstack/skills/teach/SKILL.md`(teach)
+- `skills/explain/references/recall.md`・respond 3.5 の状態タグ: `pstack/skills/recall/SKILL.md`(recall)の「Output contract」
