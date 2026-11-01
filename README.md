@@ -277,7 +277,7 @@ $ agy plugin validate .
 - 雛形は、コピーするとそのまま下書きになる形で提供する。節ごとの書き方の説明は各節の見出しの直下に HTML コメントで書き、使う人は、すべての節を書き終えてからコメントを削除する。write-doc の lint は HTML コメントを検査しないため、説明の文面は検出の対象にならない。例は `skills/specify/references/prd.md` である。
 - 節番号での参照は節を追加・削除すると別の節を指すため、複数のスキルが同じ規則を「develop 2.」のような節番号で参照するときは、その規則を、参照される側のスキルの `references/<name>.md` に抜き出す。参照する側は、そのファイル名で参照する。抜き出すのは規則の定義だけにし、手順(誰が・いつ確かめるか)は元のスキルに残す。例は `skills/develop/references/requirements.md`(要件の 4 行の形式)である。
 - 上流の資料(yomiyasu など)にある条件付きの規則(文脈で言い換え先が変わる比喩動詞など)を write-doc へ取り込むときは、語ごとに、システム開発の文書で字義どおりの正当な用法があるかを確かめる。条件付きの規則は lint が検出しないため、正当な用法が無い語は `skills/write-doc/scripts/forbidden_phrases.json` に禁止語として登録し、lint で検出する。開発文書でも正当な用法と言い換えるべき用法の両方がある語(引き返す・契約・正本など)だけを、`skills/write-doc/references/sentence.md` に条件付きの規則として書く。
-- 上流の資料を取り込んだときは、出典(資料名・URL・ライセンス・版とコミット SHA・取り込んだ範囲)をスキルの `SKILL.md` と `references/` に書かず、README の 9. に書く。CLI がスキルを読み込むたびに出典の文面もコンテキストに入るためである。
+- 上流の資料の出典(資料名・URL・ライセンス・版とコミット SHA・取り込んだ範囲)は README の 9. に書く。スキルの `SKILL.md` と `references/` には書かない。CLI がスキルを読み込むたびに出典の文面もコンテキストに入るためである。9. は帰属表示と上流の差分を調べる基準のための節である。経緯はタスクの記録と PR 本文に残す。修正ログが混ざると帰属と差分の起点が埋もれるためである。9. に書くかは「上流の差分を調べる人と帰属表示を読む人に必要か」で判定する。不要な文の例は取り込みの経緯・取り込まなかった項目とその理由・上流の版ごとの変更の履歴・書き換えた日付である。ライセンス上の理由で書く文は残す。残す範囲は上流の文面をどう使ったかを示す文である。ライセンスの明示が無いため要約にとどめたことと文面を転載していないことがこれに当たる。規範の根拠を示す文も残す。
 - 規則を具体的な手段の禁止や指示の列挙だけで書かない。列挙に無い場面でも判定を導ける考え(何を守るためか・判定の問い)を書く。手段は考えの例として書く。lint で検出する禁止語の登録はこの規則から除く。例は ponytail の「テストの判定」(2 つの想像上の編集で判定する)である。規則が無くてもエージェントが同じに振る舞う文は書かない。そうした文を見つけたら削る。
 
 ## 7. 評価
@@ -315,7 +315,11 @@ MIT ライセンスで公開する。全文は `LICENSE` にある。
 
 ## 9. 出典
 
-この節は、各スキルが取り込んだ上流の資料の出典をまとめる。版とコミットは取り込んだ時点の値であり、上流の更新を調べるときは、この値からの差分を見る。この節は、取り込んだ資料のライセンスが求める帰属表示も兼ねる。9.3 以降の各小節で文中と括弧内に出る節番号は、ファイルを示した小節ではそのファイルの節を、示していない小節では `skills/<スキル名>/SKILL.md` の節を指す。
+この節は帰属表示と上流の差分を調べる基準のための節である。帰属表示は取り込んだ資料のライセンスが求めるものである。版とコミットは取り込んだ時点の値である。上流の更新はこの値からの差分で調べる。「上流は v2.3.0 まで確かめた」のような文は確かめ終えた版を示す。
+
+書くのは資料名・URL・ライセンス・版とコミット SHA・取り込んだ範囲(どのファイルのどの節に何を取り込んだか)と規範の根拠である。経緯はタスクの記録と PR 本文に残す。修正ログが混ざると帰属と差分の起点が埋もれるためである。書くかに迷う文は「上流の差分を調べる人と帰属表示を読む人に必要か」で判定する。不要な文の例は取り込みの経緯・取り込まなかった項目とその理由・上流の版ごとの変更の履歴・書き換えた日付である。ライセンス上の理由で書く文は残す。残す範囲は上流の文面をどう使ったかを示す文である。ライセンスの明示が無いため要約にとどめたことと文面を転載していないことがこれに当たる。
+
+9.3 以降の各小節で文中と括弧内に出る節番号は、ファイルを示した小節ではそのファイルの節を、示していない小節では `skills/<スキル名>/SKILL.md` の節を指す。
 
 ### 9.1. 一覧
 
@@ -388,7 +392,7 @@ MIT ライセンスで公開する。全文は `LICENSE` にある。
 
 ### 9.2. specify
 
-specify は、次の 2 つのリポジトリにある 3 つの手法(grill-me、to-spec と to-tickets、pstack)を参考にした。取り込んだのは dev-skills のコミット 59cac98 であり、手法を specify の文体で書き直した。
+specify は、次の 2 つのリポジトリにある 3 つの手法(grill-me、to-spec と to-tickets、pstack)を参考にした。手法は specify の文体で書き直した。
 
 - cursor/plugins の pstack(MIT ライセンス、Copyright (c) 2026 Lauren Tan、https://github.com/cursor/plugins)。2026-10-12 時点のコミット 997ffc7 の `pstack/skills/figure-it-out/SKILL.md` と `pstack/skills/poteto-mode/playbooks/multi-phase-plan.md` を参考にした。
 - mattpocock/skills(MIT ライセンス、Copyright (c) 2026 Matt Pocock、https://github.com/mattpocock/skills)。2026-10-12 時点のコミット 49dd158 の `skills/productivity/grill-me/SKILL.md`・`skills/engineering/to-spec/SKILL.md`・`skills/engineering/to-tickets/SKILL.md` を参考にした。
@@ -417,7 +421,7 @@ retro は次の資料を参照し、要点を自分の言葉でまとめた。�
 
 ### 9.4. ponytail
 
-ponytail は ponytail(MIT ライセンス、Copyright (c) 2026 DietrichGebert、https://github.com/DietrichGebert/ponytail)v5.1.0 の `skills/ponytail/SKILL.md` を元にする。強度の切り替え(lite・ultra)は取り込まず、既定の強度の規範だけを残した。テストの判定(5.)と根本原因の段落(2.)の一部は pstack を元にする(9.14)。
+ponytail は ponytail(MIT ライセンス、Copyright (c) 2026 DietrichGebert、https://github.com/DietrichGebert/ponytail)v5.1.0 の `skills/ponytail/SKILL.md` の既定の強度の規範を元にする。テストの判定(5.)と根本原因の段落(2.)の一部は pstack を元にする(9.14)。
 
 ### 9.5. secure
 
@@ -459,8 +463,8 @@ NN/g Error-Message Guidelines は design-ui の `references/text.md` の出典(R
 
 #### 9.8.1. `skills/write-doc/references/inspection.md`
 
-- [coji/natural-japanese](https://github.com/coji/natural-japanese)(MIT ライセンス): スクリプト 5 本(textcore.py・lint.py・outline.py・terms.py・semantic.py)と、検査手順・判断台帳・収束条件の原典。write-doc の構成に合わせて再構成した。v1.6.0(コミット 03bc944)からは、文末の打ち消しの多用の検出器(`negation_repetition`)、文中の太字の多用の既定化と行頭のラベルの除外、誤検出の削減(語の境目・文頭の反復・段落の具体性・画像と URL とタグの除外・英字だけの行の除外)、BOM 付きファイルの読み込み、段落ごとの確かめの一覧と、読み手の手間を増やす 5 種(4.)を取り込んだ。段落の分割は、上流の `scripts/paragraphs.py` を持ち込まず、lint.py の中に書いた。v1.6.1 に含まれるコミット b2d1d34 の `skills/natural-japanese/scripts/calques.py` の `MOTION_VERBS` からは、`sentence.md` 3. に例のある 3 語(吐く・死ぬ・育つ)を NG/OK カタログ(`forbidden_phrases.json`、info)へ取り込んだ。残りの語と、候補を並べるスクリプト本体は取り込んでいない。
-- [nanaism/yomiyasu](https://github.com/nanaism/yomiyasu)(MIT ライセンス): v2.0.1(コミット 84e1f5b)の `references/rephrase-test.md`・`references/fact-recovery.md` からは、言い直しテストの 6 点と削る案の比べ方、補いと訂正の根拠の範囲(4.)を取り込んだ。同じ版の `references/lists/fact-gaps.txt` の程度の語・比喩の語と、`references/slop-catalog.md` の定型導入・文末の付け足し・定型の結びは、lint の NG/OK カタログと前置フィラーの検出へ取り込んだ。同じ版の `references/slop-catalog.md` の仮置きの残り(4.)を取り込んだ。【要確認】を仮置きとして扱う部分は、確信度ラベルと衝突するため取り込んでいない。v2.1.0(コミット 8be3ef6)の `skills/yomiyasu/SKILL.md`・`references/review-points.md` からは、段落ごとの確かめの目的語と主題と、言い直しテストの許可・能力・義務・保証の強さ(4.)を取り込んだ。v2.1.1(コミット fbe02c9)の `scripts/yomiyasu_diff.py`・`references/review-points.md` からは、言い直しテストの範囲の語と因果の例(4.)を取り込んだ。v2.2.0(コミット a34d94f)の `references/lists/thin-evaluation.txt`・`references/slop-catalog.md` 5 章からは、中身の薄い評価の文の検出器(`thin_evaluation`、info)と技術文書向けの 15 組を lint.py へ取り込んだ。製品レビュー向けの 20 組(〜心地・質感・携帯性・保温性など)は取り込んでいない。同じ版の `references/slop-catalog.md` 6 章からは、翻訳調の「と言えるでしょう」を lint.py へ取り込んだ。上流の除外の条件(直前が体言・「に当たる」)と、`calque`・`cleft_list_ending` の検出器は取り込んでいない。上流は v2.3.0(コミット 15244a1)まで確かめた。
+- [coji/natural-japanese](https://github.com/coji/natural-japanese)(MIT ライセンス): スクリプト 5 本(textcore.py・lint.py・outline.py・terms.py・semantic.py)と、検査手順・判断台帳・収束条件の原典。write-doc の構成に合わせて再構成した。v1.6.0(コミット 03bc944)からは、文末の打ち消しの多用の検出器(`negation_repetition`)、文中の太字の多用の既定化と行頭のラベルの除外、誤検出の削減(語の境目・文頭の反復・段落の具体性・画像と URL とタグの除外・英字だけの行の除外)、BOM 付きファイルの読み込み、段落ごとの確かめの一覧と、読み手の手間を増やす 5 種(4.)を取り込んだ。v1.6.1 に含まれるコミット b2d1d34 の `skills/natural-japanese/scripts/calques.py` の `MOTION_VERBS` からは、`sentence.md` 3. に例のある 3 語(吐く・死ぬ・育つ)を NG/OK カタログ(`forbidden_phrases.json`、info)へ取り込んだ。
+- [nanaism/yomiyasu](https://github.com/nanaism/yomiyasu)(MIT ライセンス): v2.0.1(コミット 84e1f5b)の `references/rephrase-test.md`・`references/fact-recovery.md` からは、言い直しテストの 6 点と削る案の比べ方、補いと訂正の根拠の範囲(4.)を取り込んだ。同じ版の `references/lists/fact-gaps.txt` の程度の語・比喩の語と、`references/slop-catalog.md` の定型導入・文末の付け足し・定型の結びは、lint の NG/OK カタログと前置フィラーの検出へ取り込んだ。同じ版の `references/slop-catalog.md` の仮置きの残り(4.)を取り込んだ。v2.1.0(コミット 8be3ef6)の `skills/yomiyasu/SKILL.md`・`references/review-points.md` からは、段落ごとの確かめの目的語と主題と、言い直しテストの許可・能力・義務・保証の強さ(4.)を取り込んだ。v2.1.1(コミット fbe02c9)の `scripts/yomiyasu_diff.py`・`references/review-points.md` からは、言い直しテストの範囲の語と因果の例(4.)を取り込んだ。v2.2.0(コミット a34d94f)の `references/lists/thin-evaluation.txt`・`references/slop-catalog.md` 5 章からは、中身の薄い評価の文の検出器(`thin_evaluation`、info)と技術文書向けの 15 組を lint.py へ取り込んだ。同じ版の `references/slop-catalog.md` 6 章からは、翻訳調の「と言えるでしょう」を lint.py へ取り込んだ。上流は v2.3.0(コミット 15244a1)まで確かめた。
 - lint の閾値・severity は、原典が 2026-07 に実施したコーパス校正(人間 103 文書 + AI 81 文書)の結果を引き継いでいる。
 
 #### 9.8.2. `skills/write-doc/references/paragraph.md`
@@ -475,25 +479,25 @@ NN/g Error-Message Guidelines は design-ui の `references/text.md` の出典(R
 
 - [mizchi/explainer](https://github.com/mizchi/explainer)(MIT ライセンス): `skills/explainer/SKILL.md`・`skills/explainer/references/persona.md` が、確認できないときに依頼文にあったことと推測したことを分けて書く規則の原典。explainer はこれを [HyperFrames](https://github.com/heygen-com/hyperframes)(Apache-2.0)の `brief-contract.md` を参考に書いた。write-doc の書式に合わせて再構成した。
 - [coji/natural-japanese](https://github.com/coji/natural-japanese)(MIT ライセンス): v1.6.1(コミット ee007f5)の `skills/natural-japanese/SKILL.md`・`references/doctypes/memo.md` から、素材の作業用の名前(3.)を取り込んだ。上流は v1.6.2(コミット a88b8e9)まで確かめた。
-- [nanaism/yomiyasu](https://github.com/nanaism/yomiyasu)(MIT ライセンス): v2.0.1(コミット 84e1f5b)の `references/audience.md`・`references/persona.md` から、説明の無い用語を書き手に返す規則(3.)を取り込んだ。v2.1.0(コミット 8be3ef6)の `skills/yomiyasu/SKILL.md` の「書き手に確かめたい点」からは、問いの選び方(3.)を取り込んだ。問いの上限の数(3 点)は上流の雛形の都合のため、取り込んでいない。上流は v2.3.0(コミット 15244a1)まで確かめた。
+- [nanaism/yomiyasu](https://github.com/nanaism/yomiyasu)(MIT ライセンス): v2.0.1(コミット 84e1f5b)の `references/audience.md`・`references/persona.md` から、説明の無い用語を書き手に返す規則(3.)を取り込んだ。v2.1.0(コミット 8be3ef6)の `skills/yomiyasu/SKILL.md` の「書き手に確かめたい点」からは、問いの選び方(3.)を取り込んだ。上流は v2.3.0(コミット 15244a1)まで確かめた。
 
 #### 9.8.4. `skills/write-doc/references/sentence.md`
 
 - 木下是雄『理科系の作文技術』中公新書: 事実と意見の峻別の一次出典。
-- [coji/natural-japanese](https://github.com/coji/natural-japanese)(MIT ライセンス): 読みやすさの原則・悪文の型・カタログと例文の原典。write-doc の書式に合わせて再構成した。v1.5.0 までの references は、v1.6.0 で `SKILL.md`・`references/manual-checklist.md`・`references/diagnose.md`・`references/doctypes/` に再編された。v1.6.0(コミット 03bc944)の `SKILL.md`・`references/manual-checklist.md` からは、先回りの打ち消しと残す打ち消しの 3 種(2.)、演出の語、読み手が何のことか取れない言い回しの型と確かめ方、比喩の読み方の報告(3.)、英語の逐語訳(5.)を取り込んだ。硬い漢語への置き換えを避ける規則は漢語基調(3.)と衝突し、技術の言い方として定着した比喩(「キャッシュが効く」)を直さない例外は 3. の比喩の規則(「効く」)とカタログの語と衝突するため、どちらも取り込んでいない。同じ版の `SKILL.md` からは文を分けるときの接続語(2.)と、数字・引用と改行(4.)を、`references/doctypes/memo.md` からは対象外の範囲(4.)を取り込んだ。v1.6.1(コミット ee007f5)の `skills/natural-japanese/SKILL.md` からは、新しい呼び名の規則(1.)を取り込んだ。v1.6.1(コミット 70e6e6a・717d8e0)の `skills/natural-japanese/SKILL.md` からは、読み手の分野の呼び名にそろえる規則(1.)を取り込んだ。v1.6.2(コミット 9d3fd3b)の `skills/natural-japanese/SKILL.md` からは、lint の指摘の有無で直すかを判断しない規則と、好みで言い換えない規則(3.)を取り込んだ。上流は v1.6.2(コミット a88b8e9)まで確かめた。
-- [nanaism/yomiyasu](https://github.com/nanaism/yomiyasu)(MIT ライセンス): 要請と機能説明の書き分け、リライト時の情報増補の禁止、質感・認知を装う語と比喩動詞のカタログ、前置フィラー・定型クロージングの原典。write-doc の書式に合わせて再構成した。v1.1.1(コミット 373356e)の `skills/yomiyasu/SKILL.md`・`references/slop-catalog.md` からは、条件付きの比喩動詞(うち `壊れる`・`静かに`・`黙って`・`沈黙`・`逃がす` は、カタログの禁止語にした)、定着した慣用句、大げさな名詞、文末の立場、言い直しの締め、文頭の「もちろん、」、否定対比の条件を取り込んだ。同じ版の見出しの規則は、`paragraph.md` 6. へ取り込んだ。v2.0.1(コミット 84e1f5b)の `skills/yomiyasu/SKILL.md`・`references/rephrase-test.md`・`references/fact-recovery.md` からは、2 文に分けた否定対比(2.)、文の種類の保持と、リライトで使ってよい根拠の範囲(4.)を取り込んだ。本文に【要確認】を挟まない規則は、確信度ラベル(4.)と衝突するため取り込んでいない。同じ版の `skills/yomiyasu/SKILL.md`・`references/slop-catalog.md`・`references/domains/business.md` からは、`paragraph.md` の見出しの括弧と「〜について」・短い動作の見出し・題(6.)と `types/minutes.md` の議事録の推敲(3.)、`sentence.md` の補助動詞と形式名詞のひらがな(6.)と読点とラベルのコロン(7.)を取り込んだ。読点の規則は 2026-10-28 に本人の指示(接続詞の後にだけ使い、ほかの箇所は文を分ける)で置き換え、上流の読点の規則は残っていない。同じ 3 ファイルからは、「〜するには」・詰めた漢語の句・使役・前後の語での補い・指示語・予定を述べる結び(2.)、確度の語(3.)、論文調と「これにより」(5.)も取り込んだ。v2.1.0(コミット 8be3ef6)の `skills/yomiyasu/SKILL.md`・`references/gemini-syntax.md`・`references/review-points.md` からは、他動詞の目的語、主題の掛かり先、許可・能力・義務・保証、「〜のは」の強調(2.)と、RFC 2119 の表との関係(`types/spec.md` 3.)を取り込んだ。v2.2.0(コミット a34d94f)・v2.2.1(コミット 91964cd)の `references/calques.md`・`references/slop-catalog.md`・`skills/yomiyasu/SKILL.md` からは、場所のたとえの型と直し方、中身の薄い評価(3.)と、「〜と言えるでしょう」(4.)を取り込んだ。lint の `thin_evaluation` と「と言えるでしょう」の検出の出典は 9.8.1 に書いた。上流の lint の検出器 `calque` は取り込んでいない。上流は v2.3.0(コミット 15244a1)まで確かめた。
+- [coji/natural-japanese](https://github.com/coji/natural-japanese)(MIT ライセンス): 読みやすさの原則・悪文の型・カタログと例文の原典。write-doc の書式に合わせて再構成した。v1.6.0(コミット 03bc944)の `SKILL.md`・`references/manual-checklist.md` からは、先回りの打ち消しと残す打ち消しの 3 種(2.)、演出の語、読み手が何のことか取れない言い回しの型と確かめ方、比喩の読み方の報告(3.)、英語の逐語訳(5.)を取り込んだ。同じ版の `SKILL.md` からは文を分けるときの接続語(2.)と、数字・引用と改行(4.)を、`references/doctypes/memo.md` からは対象外の範囲(4.)を取り込んだ。v1.6.1(コミット ee007f5)の `skills/natural-japanese/SKILL.md` からは、新しい呼び名の規則(1.)を取り込んだ。v1.6.1(コミット 70e6e6a・717d8e0)の `skills/natural-japanese/SKILL.md` からは、読み手の分野の呼び名にそろえる規則(1.)を取り込んだ。v1.6.2(コミット 9d3fd3b)の `skills/natural-japanese/SKILL.md` からは、lint の指摘の有無で直すかを判断しない規則と、好みで言い換えない規則(3.)を取り込んだ。上流は v1.6.2(コミット a88b8e9)まで確かめた。
+- [nanaism/yomiyasu](https://github.com/nanaism/yomiyasu)(MIT ライセンス): 要請と機能説明の書き分け、リライト時の情報増補の禁止、質感・認知を装う語と比喩動詞のカタログ、前置フィラー・定型クロージングの原典。write-doc の書式に合わせて再構成した。v1.1.1(コミット 373356e)の `skills/yomiyasu/SKILL.md`・`references/slop-catalog.md` からは、条件付きの比喩動詞(うち `壊れる`・`静かに`・`黙って`・`沈黙`・`逃がす` は、カタログの禁止語にした)、定着した慣用句、大げさな名詞、文末の立場、言い直しの締め、文頭の「もちろん、」、否定対比の条件を取り込んだ。同じ版の見出しの規則は、`paragraph.md` 6. へ取り込んだ。v2.0.1(コミット 84e1f5b)の `skills/yomiyasu/SKILL.md`・`references/rephrase-test.md`・`references/fact-recovery.md` からは、2 文に分けた否定対比(2.)、文の種類の保持と、リライトで使ってよい根拠の範囲(4.)を取り込んだ。同じ版の `skills/yomiyasu/SKILL.md`・`references/slop-catalog.md`・`references/domains/business.md` からは、`paragraph.md` の見出しの括弧と「〜について」・短い動作の見出し・題(6.)と `types/minutes.md` の議事録の推敲(3.)、`sentence.md` の補助動詞と形式名詞のひらがな(6.)とラベルのコロン(7.)を取り込んだ。同じ 3 ファイルからは、「〜するには」・詰めた漢語の句・使役・前後の語での補い・指示語・予定を述べる結び(2.)、確度の語(3.)、論文調と「これにより」(5.)も取り込んだ。v2.1.0(コミット 8be3ef6)の `skills/yomiyasu/SKILL.md`・`references/gemini-syntax.md`・`references/review-points.md` からは、他動詞の目的語、主題の掛かり先、許可・能力・義務・保証、「〜のは」の強調(2.)と、RFC 2119 の表との関係(`types/spec.md` 3.)を取り込んだ。v2.2.0(コミット a34d94f)・v2.2.1(コミット 91964cd)の `references/calques.md`・`references/slop-catalog.md`・`skills/yomiyasu/SKILL.md` からは、場所のたとえの型と直し方、中身の薄い評価(3.)と、「〜と言えるでしょう」(4.)を取り込んだ。lint の `thin_evaluation` と「と言えるでしょう」の検出の出典は 9.8.1 に書いた。上流は v2.3.0(コミット 15244a1)まで確かめた。
 
 #### 9.8.5. `skills/write-doc/references/types/minutes.md`
 
-- [nanaism/yomiyasu](https://github.com/nanaism/yomiyasu)(MIT ライセンス): v2.0.1(コミット 84e1f5b)の `references/domains/business.md` から、議事録の推敲で話題の順と見出しを変えない規則(3.)を取り込んだ。この規則は `paragraph.md` 6. から移した。
+- [nanaism/yomiyasu](https://github.com/nanaism/yomiyasu)(MIT ライセンス): v2.0.1(コミット 84e1f5b)の `references/domains/business.md` から、議事録の推敲で話題の順と見出しを変えない規則(3.)を取り込んだ。
 
 #### 9.8.6. `skills/write-doc/references/types/report.md`
 
-- [coji/natural-japanese](https://github.com/coji/natural-japanese)(MIT ライセンス): 結びの再統合と、v1.6.0(コミット 03bc944)の `references/doctypes/report.md` からの調査の結びの検証と選択肢(3.)の原典。いずれも `paragraph.md` 3. から移した。
+- [coji/natural-japanese](https://github.com/coji/natural-japanese)(MIT ライセンス): 結びの再統合と、v1.6.0(コミット 03bc944)の `references/doctypes/report.md` からの調査の結びの検証と選択肢(3.)の原典。
 
 ### 9.9. write-slide
 
-write-slide の規則は write-doc の `references/format/slide.md` と言語の束(`sentence.md`・`paragraph.md`)・工程の束(`process.md`・`inspection.md`)へ移した。以下の出典は、移した先のファイルと節で示す。
+write-slide の規則は write-doc の `references/format/slide.md` と言語の束(`sentence.md`・`paragraph.md`)・工程の束(`process.md`・`inspection.md`)にある。以下の出典はそのファイルと節で示す。
 
 プレゼン型の原型は [coji/natural-japanese](https://github.com/coji/natural-japanese)(MIT ライセンス)にある。v1.6.0(コミット 03bc944)の `references/doctypes/slide.md` からは `format/slide.md` 2. のメッセージラインの長さと 6. のラベルの太字を、`references/doctypes/memo.md` からは `paragraph.md` 7. の当てはまらないマスを取り込んだ。
 
@@ -533,7 +537,7 @@ write-slide の規則は write-doc の `references/format/slide.md` と言語の
 
 ### 9.11. respond
 
-respond は i-have-adhd(MIT ライセンス、Copyright (c) 2026 Ayoub Ghriss、https://github.com/ayghri/i-have-adhd)の規則を元にする。冒頭の段落・1.・2. の 1〜2・3.1・3.3・3.5・5. は、本人の特性(複数の作業を並行し、最後の行から読む)に合わせて 2026-10-20 に書き換えた。3.11〜3.13 は workspace の `AGENTS.md` の原則を、3.14 は workspace の運用で得た指摘を反映する。
+respond は i-have-adhd(MIT ライセンス、Copyright (c) 2026 Ayoub Ghriss、https://github.com/ayghri/i-have-adhd)の規則を元にする。冒頭の段落・1.・2. の 1〜2・3.1・3.3・3.5・5. は、本人の特性(複数の作業を並行し、最後の行から読む)に合わせて書き換えた。3.11〜3.13 は workspace の `AGENTS.md` の原則を、3.14 は workspace の運用で得た指摘を反映する。
 
 ### 9.12. draw-diagram
 
