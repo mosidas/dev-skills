@@ -105,7 +105,7 @@ description: コードを書く・足す・直す・リファクタする・レ�
 | Build the Lever | 道具を作る | 自明でない編集・移行・検査を手作業で繰り返したくなったとき | ponytail 3.(規則)・`agents/planner.md` の規則の検証 |
 | Model the Domain | ドメインを構造で表す | 状態を持つロジック・分岐の多いコード・同じ形の仮定を複数のファイルで繰り返すコードを書くとき | `skills/ponytail/references/design.md` 2.1(ドメインを構造で表す)・ponytail 3.(規則)の抽象化に数えない構造・`agents/planner.md` の進め方 2 のデータの形・`agents/reviewer.md` の進め方 2 の簡潔さ |
 | Boundary Discipline | 境界で守る | 検証・エラー処理・フレームワークへの接続を書くとき | ponytail 3.(規則)・ponytail 5.(単純にしないもの)・secure 2.1(信頼境界と入力検証)・`skills/ponytail/references/design.md` 2.3(境界の内側の構造) |
-| Type System Discipline | 型で守る | 型と関数のシグネチャを設計するとき | `skills/ponytail/references/design.md` 2.2(型で守る) |
+| Type System Discipline | 型で守る | 型と関数のシグネチャを設計するとき | `skills/ponytail/references/design.md` 2.2(型で守る)・`skills/ponytail/references/typescript.md`(TypeScript の型の書き方) |
 | Make Operations Idempotent | 操作を冪等にする | 再実行されるコマンド・ジョブ・スクリプトを設計するとき | recover 2.3(リトライと冪等) |
 | Migrate Callers Then Delete Legacy APIs | 呼び出し元を移して旧 API を削除する | 内部 API を置き換えるとき | ponytail 2.(はしご)の冒頭の段落・ponytail 3.(規則) |
 | Separate Before Serializing Shared State | 直列化の前に共有をなくす | 並行するアクターが同じ書き込み先に書きうるとき | `agents/reviewer.md` の進め方 2 の欠陥・ponytail 3.(規則)の `shortcut:`・`skills/ponytail/references/design.md` 2.4(直列化の前に共有をなくす) |
@@ -122,3 +122,4 @@ description: コードを書く・足す・直す・リファクタする・レ�
 | ファイル | 内容 | 読むとき |
 | :-- | :-- | :-- |
 | `references/design.md` | 設計の原則(ドメインを構造で表す・型で守る・境界の内側の構造・直列化の前に共有をなくす)と設計の赤信号 8 項目 | データの形・型・モジュールの境界を設計するとき・関数境界を越える案を比べるとき・簡潔さを点検するとき |
+| `references/typescript.md` | `design.md` 2.2(型で守る)の TypeScript での書き方。規則の表 14 項目・規則ごとのしない例とする例・`as` を外すときの見分け | `.ts`・`.tsx` を書く・直す・点検するとき |
