@@ -50,10 +50,10 @@ npm test
 
 ## 4. シークレット検知・依存監査・SAST
 
-要件の品質がプロダクトのとき、hook にシークレット検知と依存監査を追加する。pre-commit で gitleaks、pre-push で osv-scanner を実行する。エコシステム標準の監査(`npm audit`・`cargo audit`・`pip-audit` など)が既に入っていればそれを使い、osv-scanner を重ねて入れない。依存が 1 つも無いリポジトリ(マニフェストやロックファイルが無い、または依存の記載が 0 件)では osv-scanner を入れない。監査の対象が無いと終了コード 128 で失敗し、push が止まる。オフラインでも API に届かず、終了コード 129 で止まる。
+要件の品質がプロダクトのとき、hook にシークレット検知と依存監査を追加する。pre-commit で betterleaks、pre-push で osv-scanner を実行する。エコシステム標準の監査(`npm audit`・`cargo audit`・`pip-audit` など)が既に入っていればそれを使い、osv-scanner を重ねて入れない。依存が 1 つも無いリポジトリ(マニフェストやロックファイルが無い、または依存の記載が 0 件)では osv-scanner を入れない。監査の対象が無いと終了コード 128 で失敗し、push が止まる。オフラインでも API に届かず、終了コード 129 で止まる。
 
 ```sh
-brew install gitleaks osv-scanner   # macOS。ほかは https://github.com/gitleaks/gitleaks と https://google.github.io/osv-scanner/installation/
+brew install betterleaks osv-scanner   # macOS。ほかは https://github.com/betterleaks/betterleaks と https://google.github.io/osv-scanner/installation/
 ```
 
 lefthook では `lefthook.yml` の各 `commands:` に次のコマンドを追加する。
@@ -62,7 +62,7 @@ lefthook では `lefthook.yml` の各 `commands:` に次のコマンドを追加
 pre-commit:
   commands:
     secrets:
-      run: gitleaks git --pre-commit --staged --redact
+      run: betterleaks git --pre-commit --staged --redact
 pre-push:
   commands:
     audit:
@@ -73,7 +73,7 @@ husky では `.husky/pre-commit` と `.husky/pre-push` の末尾に 1 行ずつ�
 
 ```sh
 # .husky/pre-commit
-gitleaks git --pre-commit --staged --redact
+betterleaks git --pre-commit --staged --redact
 
 # .husky/pre-push
 osv-scanner scan source -r .
@@ -83,20 +83,25 @@ CI があるリポジトリでは、hook と同じ検査を CI にも入れる�
 
 ```yaml
 jobs:
-  secrets:
+  betterleaks:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      pull-requests: read
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          fetch-depth: 0               # gitleaks は履歴全体を走査する
+          fetch-depth: 0               # betterleaks は履歴全体を走査する
           persist-credentials: false
-      - uses: gitleaks/gitleaks-action@e0c47f4f8be36e29cdc102c57e68cb5cbf0e8d1e # v3.0.0
+      # 公式の Action が無いため、リリースのバイナリを版と SHA-256 で固定する
+      - name: betterleaks
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GITLEAKS_ENABLE_COMMENTS: false   # 既定では PR にコメントする
+          VERSION: 1.9.0               # 版を上げるときは VERSION と SHA256 を更新する
+          SHA256: f8b185a39ffcece2a1ca82bf3a4e7435cd81963ffd16b7a9128daf75f35f6de7
+        run: |
+          curl -sSfLO "https://github.com/betterleaks/betterleaks/releases/download/v${VERSION}/betterleaks_${VERSION}_linux_x64.tar.gz"
+          echo "${SHA256}  betterleaks_${VERSION}_linux_x64.tar.gz" | sha256sum -c
+          tar -xzf "betterleaks_${VERSION}_linux_x64.tar.gz" betterleaks   # tar の README.md と LICENSE で作業ツリーを上書きしない
+          ./betterleaks git --redact .
   audit:
     permissions:
       actions: read
@@ -111,7 +116,7 @@ jobs:
 
 例の `osv-scanner-reusable.yml` は push と schedule のトリガーで使う。`pull_request` のトリガーでは `osv-scanner-reusable-pr.yml` を使い、PR の差分で増えた脆弱性だけを報告させる。
 
-organization のリポジトリでは、gitleaks-action に `GITLEAKS_LICENSE` の secret が必要である。ライセンスは gitleaks.io で入手する。無料の試用版がある。`env:` に `GITLEAKS_LICENSE: ${{ secrets.GITLEAKS_LICENSE }}` を加える。
+betterleaks のバイナリの版は dependabot の更新の対象外である。版は手で更新する。更新するときは、リリースの tar.gz の SHA-256 を `sha256sum` で求めて `SHA256` に書く。
 
 品質がプロダクトのとき、CI に SAST を入れる。public リポジトリでは CodeQL(GitHub の code scanning。public は無料)を使い、private リポジトリでは semgrep を使う。CodeQL の job の例を次に示す。`languages:` にはリポジトリの言語を書く。
 
@@ -137,6 +142,6 @@ semgrep は CI の step で `semgrep scan --config p/default --error` を実行�
 ## 5. 確認
 
 - hook を直接実行し、lint とテストが動くことを確かめる。lefthook は `lefthook run pre-commit` と `lefthook run pre-push`、husky は `sh .husky/pre-commit` と `sh .husky/pre-push`。
-- 4. を入れたときは、gitleaks と osv-scanner も hook から実行され、終了コード 0 で終わることを確かめる。
+- 4. を入れたときは、betterleaks と osv-scanner も hook から実行され、終了コード 0 で終わることを確かめる。
 - 4. の CI の job を入れたときは、PR の CI でその job が成功することを確かめる。
 - hook を入れたコミットは、計画の最初のステップとは別のコミットにする(`chore: git hook を導入する`)。
