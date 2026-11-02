@@ -342,7 +342,7 @@ MIT ライセンスで公開する。全文は `LICENSE` にある。
 | [ayghri/i-have-adhd](https://github.com/ayghri/i-have-adhd) | MIT | 版の記載なし | respond |
 | [cathrynlavery/diagram-design](https://github.com/cathrynlavery/diagram-design) | MIT | v2.6.115(f2f4d49) | draw-diagram(`svg.md`・`render.py`) |
 | [anthropics/skills frontend-design](https://github.com/anthropics/skills/tree/main/skills/frontend-design) | Apache-2.0 | 版の記載なし | design-ui(`SKILL.md`・`anti-ai.md`・`text.md`) |
-| [pbakaus/impeccable](https://github.com/pbakaus/impeccable) | Apache-2.0 | 版の記載なし | design-ui(`SKILL.md`・`anti-ai.md`・`checklist.md`・`native.md`・`text.md`) |
+| [pbakaus/impeccable](https://github.com/pbakaus/impeccable) | Apache-2.0 | 4.7.1(コミット 9368675) | design-ui(`SKILL.md`・`anti-ai.md`・`checklist.md`・`native.md`・`session.md`・`text.md`) |
 | [nextlevelbuilder/ui-ux-pro-max-skill](https://github.com/nextlevelbuilder/ui-ux-pro-max-skill) | MIT | 版の記載なし | design-ui(`SKILL.md`・`checklist.md`) |
 | [vercel-labs/web-interface-guidelines](https://github.com/vercel-labs/web-interface-guidelines) | MIT | 版の記載なし | design-ui(`SKILL.md`・`checklist.md`) |
 | `vercel-labs/agent-skills` の `skills/web-design-guidelines` | 未確認 | 版の記載なし | design-ui(`SKILL.md`・`checklist.md`。web-interface-guidelines の経由先) |
@@ -578,7 +578,7 @@ respond は i-have-adhd(MIT ライセンス、Copyright (c) 2026 Ayoub Ghriss、
 
 - [vercel-labs/web-interface-guidelines](https://github.com/vercel-labs/web-interface-guidelines)(MIT。`vercel-labs/agent-skills` の `skills/web-design-guidelines` 経由)
 - [nextlevelbuilder/ui-ux-pro-max-skill](https://github.com/nextlevelbuilder/ui-ux-pro-max-skill)(MIT)
-- [pbakaus/impeccable](https://github.com/pbakaus/impeccable)(Apache-2.0)、`skill/reference/craft-floor.md`
+- [pbakaus/impeccable](https://github.com/pbakaus/impeccable)(Apache-2.0)、`skill/reference/craft-floor.md`・`typeset.md`
 
 #### 9.13.4. `skills/design-ui/references/native.md`
 
@@ -599,6 +599,10 @@ respond は i-have-adhd(MIT ライセンス、Copyright (c) 2026 Ayoub Ghriss、
 - [pbakaus/impeccable](https://github.com/pbakaus/impeccable)(Apache-2.0)、`skill/reference/clarify.md`
 - [s0xDk/refactoring-ui-skill](https://github.com/s0xDk/refactoring-ui-skill)(MIT。原典 Wathan & Schoger, *Refactoring UI*)
 - [anthropics/skills frontend-design](https://github.com/anthropics/skills/tree/main/skills/frontend-design)(Apache-2.0)
+
+#### 9.13.6. `skills/design-ui/references/session.md`
+
+- [pbakaus/impeccable](https://github.com/pbakaus/impeccable)(Apache-2.0)、`skill/reference/typeset.md`
 
 ### 9.14. pstack(develop・specify・ponytail・build・recover・retro・respond・agents・write-doc・draw-diagram・design-ui・explain・verify・README)
 
