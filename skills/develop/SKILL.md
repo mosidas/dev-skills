@@ -5,7 +5,7 @@ description: 機能追加・バグ修正・リファクタリングなど、コ�
 
 # 開発の手順
 
-本スキルは統括セッションが読む。統括の仕事は計画・委譲・検収・PR である。サブエージェントを起動できない CLI(Codex CLI・Antigravity CLI)では、統括が planner・implementer・reviewer・gate-reviewer の役割を 1 つずつ順に受け持ち、役割を切り替えるたびに前の役割の判断を引き継がずに `agents/` の各ファイルの手順で作業する。その CLI に無い機能を使う手順(サブエージェントの `effort`・`/security-review` など)に当たったら省いた手順と理由を 1 行でユーザーに報告して次の手順へ進む。止まって聞かない。報告が無いとユーザーは手順が省かれたことに気付かない。コードは書かない。書くのは implementer サブエージェント、点検するのは reviewer と gate-reviewer サブエージェントである。ただし試作と診断(5. の未確定事項を確かめる試作を含む)で作業ツリーの外に作る使い捨てのスクリプトは統括が書く(`references/kinds.md` 1.・5.1)。統括がコードを書かない理由は 2 つある。統括の文脈をタスク全体の判断に使い続けること、そして書いた本人がレビューする状態を避けることである。
+本スキルは統括セッションが読む。統括の仕事は計画・委譲・検収・PR である。サブエージェントを起動できない CLI(Codex CLI・Antigravity CLI)では、統括が planner・implementer・reviewer・gate-reviewer の役割を 1 つずつ順に受け持ち、役割を切り替えるたびに前の役割の判断を引き継がずに `agents/` の各ファイルの手順で作業する。その CLI に無い機能を使う手順(サブエージェントの `effort`・claude-security プラグインの走査など)に当たったら省いた手順と理由を 1 行でユーザーに報告して次の手順へ進む。止まって聞かない。報告が無いとユーザーは手順が省かれたことに気付かない。コードは書かない。書くのは implementer サブエージェント、点検するのは reviewer と gate-reviewer サブエージェントである。ただし試作と診断(5. の未確定事項を確かめる試作を含む)で作業ツリーの外に作る使い捨てのスクリプトは統括が書く(`references/kinds.md` 1.・5.1)。統括がコードを書かない理由は 2 つある。統括の文脈をタスク全体の判断に使い続けること、そして書いた本人がレビューする状態を避けることである。
 
 ## 1. 工程
 
@@ -97,7 +97,7 @@ Claude Code ではサブエージェントを起動するたびに Agent の `ef
 ## 7. ゲートを通す
 
 - 全ステップが承認されたら、push の前に gate-reviewer サブエージェント(`dev-skills:gate-reviewer`)を起動する。渡すのは、対象リポジトリのパス、レビューする範囲(`main..HEAD`)、要件の 3 行(目的・完了条件・対象外)、計画の全体、PR 本文案である。
-- Claude Code では、品質がプロダクトのとき、gate-reviewer を起動する前に統括が組み込みの `/security-review` を実行する。指摘があれば implementer に渡して直させ、直したあとで gate-reviewer を起動する。
+- Claude Code では、品質がプロダクトのとき、gate-reviewer を起動する前に統括が claude-security プラグイン(`claude-security@claude-plugins-official`)の Scan changes を効果 `high` で実行する(`/claude-security scan my branch at high`)。報告は対象リポジトリの `CLAUDE-SECURITY-<timestamp>/` に書き出される。プラグインが導入されていないときは組み込みの `/security-review` で代える。指摘があれば implementer に渡して直させ、直したあとで gate-reviewer を起動する。
 - Claude Code では gate-reviewer の前に敵対役(`references/parallel.md` 5.)を任意で起動できる。統括が再実行して確かめた敵対役の所見は gate-reviewer に渡す。Claude Code では、Codex CLI がある環境で gate-reviewer と `codex review --base main` を並走させる(同 6.)。
 - gate-reviewer はブランチ全体でしか分からないこと(完了条件の充足、ステップ間の整合、残骸、PR 本文との一致)を見て、「マージ可」か「差し戻し」を返す。ステップごとの reviewer が見た内容は蒸し返さない。品質がプロダクトのとき、計画に含まれる secure・observe・recover 由来の変更(ヘルスチェック・メトリクス・拒否のテスト・タイムアウト・エラーページなど)は要件内として扱う。
 - 差し戻しなら、修正点を implementer に渡して直させ、再びゲートを通す。2 回直しても通らないときは、統括がユーザーに状況を報告して判断を仰ぐ。ゲートを push の前に通すのは、CI を回す前に直すほうが安いからである。
