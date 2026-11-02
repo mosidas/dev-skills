@@ -1,8 +1,8 @@
 # 出典
 
-この文書は帰属表示と上流の差分の起点である。版とコミットの列は、取り込んだ時点の値であり、上流の更新を調べるときはこの値からの差分を見る。取り込んだ範囲は書かない。ファイルのどの節に何を取り込んだかは、`git log -S` で該当する語を含むコミットを探し、そのコミットのメッセージと差分で追う。
+この文書は帰属表示と上流の差分の起点である。版とコミットの列は取り込んだ時点の値である。ファイルのどの節に何を取り込んだかは、`git log -S` で該当する語を含むコミットを探し、そのコミットのメッセージと差分で追う。
 
-ライセンスの列の「明示なし」は資料にライセンスの表記が無いことを、「未確認」はライセンスを確かめていないことを示す。この 2 つの資料は文面を転載していない。要点の要約にとどめた。
+ライセンスの列の「明示なし」は資料にライセンスの表記が無いことを、「未確認」はライセンスを確かめていないことを示す。Google『Site Reliability Engineering』・OWASP の 2 件・OpenTelemetry Semantic Conventions・W3C Trace Context・RFC の 2 件・Amazon Builders' Library・Stripe API Reference・Google Search Central は、要点を自分の言葉でまとめ、文面は転載していない。ほかの資料の文面の使い方は、記録のあるものだけを反映先の列に括弧で書いた。
 
 | 出典 | ライセンス | 著作権者 | 版とコミット | 反映先 |
 | :-- | :-- | :-- | :-- | :-- |
@@ -23,8 +23,8 @@
 | [vercel-labs/web-interface-guidelines](https://github.com/vercel-labs/web-interface-guidelines) | MIT | — | 版の記載なし | design-ui |
 | `vercel-labs/agent-skills` の `skills/web-design-guidelines` | 未確認 | — | 版の記載なし | design-ui(web-interface-guidelines の経由先) |
 | [s0xDk/refactoring-ui-skill](https://github.com/s0xDk/refactoring-ui-skill) | MIT | — | 版の記載なし | design-ui |
-| [misskey-dev/misskey のバグ報告テンプレート](https://github.com/misskey-dev/misskey/blob/develop/.github/ISSUE_TEMPLATE/01_bug-report.yml) | AGPL-3.0 | — | 版の記載なし | write-message |
-| [asciidwango/js-primer](https://github.com/asciidwango/js-primer) | CC BY 4.0 | — | 版の記載なし | write-message |
+| [misskey-dev/misskey のバグ報告テンプレート](https://github.com/misskey-dev/misskey/blob/develop/.github/ISSUE_TEMPLATE/01_bug-report.yml) | AGPL-3.0 | — | 版の記載なし | write-message(バグ報告テンプレートの文面は取り込んでいない) |
+| [asciidwango/js-primer](https://github.com/asciidwango/js-primer) | CC BY 4.0 | — | 版の記載なし | write-message(バグ報告テンプレートの文面は取り込んでいない) |
 | [vim-jp/vimdoc-ja](https://github.com/vim-jp/vimdoc-ja) | 未確認 | — | 版の記載なし | write-message(コメントの集計) |
 | [textlint-ja/textlint-rule-preset-ja-technical-writing](https://github.com/textlint-ja/textlint-rule-preset-ja-technical-writing) | 未確認 | — | 版の記載なし | write-message(コメントの集計) |
 | [OpenTelemetry Semantic Conventions](https://opentelemetry.io/docs/specs/semconv/) | Apache-2.0 | — | 1.44.0 | observe |
@@ -36,7 +36,7 @@
 | [RFC 6585 Additional HTTP Status Codes](https://www.rfc-editor.org/rfc/rfc6585.html) | IETF Trust Legal Provisions | — | 2012-04 | recover |
 | [Stripe API Reference "Idempotent requests"](https://docs.stripe.com/api/idempotent_requests) | 明示なし | — | 版の記載なし | recover |
 | [Google Search Central "How HTTP status codes, and network and DNS errors affect Google Search"](https://developers.google.com/search/docs/crawling-indexing/http-network-errors) | CC BY 4.0 | — | 2026-02-04 更新 | recover |
-| Michael T. Nygard『Release It! Second Edition』 | 未確認 | — | 2018 年 | recover |
+| Michael T. Nygard『Release It! Second Edition』 | 未確認 | — | 2018 年 | recover(書名だけを挙げる) |
 | [OWASP Application Security Verification Standard](https://owasp.org/www-project-application-security-verification-standard/) | CC BY-SA 4.0 | — | 5.0.0(2025-05-30 公開) | secure |
 | [OWASP Cheat Sheet Series](https://cheatsheetseries.owasp.org/) | CC BY-SA 4.0 | — | 版番号なし | secure |
 | 木下是雄『理科系の作文技術』 | 未確認 | — | 版の記載なし | write-doc |
@@ -47,21 +47,21 @@
 | [分かり合うための言語コミュニケーション(報告)](https://www.bunka.go.jp/seisaku/bunkashingikai/kokugo/hokoku/wakariau/pdf/r1403493_01.pdf) | 未確認 | — | 平成 30 年 3 月 2 日 | write-message |
 | [平成 25 年度「国語に関する世論調査」報告書](https://www.bunka.go.jp/tokei_hakusho_shuppan/tokeichosa/kokugo_yoronchosa/pdf/92701201_06.pdf) | 未確認 | — | 平成 25 年度 | write-message |
 | [洞澤伸・岡江里子「「バイト敬語」を使う若者たち」](https://gifu-u.repo.nii.ac.jp/record/68522/files/reg_030019001.pdf) | 未確認 | — | 2006 年 | write-message |
-| [ビジネスメールの基本構成(マイナビニュース)](https://news.mynavi.jp/article/businessmail-6/) | 明示なし | — | 版の記載なし | write-message |
-| [メールの書き方について(神田外語大学 学生課)](https://www.kandagaigo.ac.jp/kuis/cms/wp-content/uploads/2020/04/c7fa5f7a72fa9eb5d79262912a336d08.pdf) | 明示なし | — | 版の記載なし | write-message |
-| [Slack 公式ブログのチャットのエチケット](https://slack.com/intl/ja-jp/blog/collaboration/etiquette-tips-in-slack) | 明示なし | — | 版の記載なし | write-message |
-| [ITmedia NEWS の Slack マナーの記事](https://www.itmedia.co.jp/news/articles/2001/09/news073.html) | 明示なし | — | 版の記載なし | write-message |
-| [How to Report Bugs Effectively(Simon Tatham)](https://www.chiark.greenend.org.uk/~sgtatham/bugs.html) | OpenContent License | — | 版の記載なし | write-message |
-| [OSS Issue投稿ガイド(Zenn)](https://zenn.dev/immedio/articles/15c1b953696841) | 明示なし | — | 版の記載なし | write-message |
-| [OSS に Issue 報告する際の作法(DevelopersIO)](https://dev.classmethod.jp/articles/issue-report-to-oss/) | 明示なし | — | 版の記載なし | write-message |
-| [How to write code review comments(Google Engineering Practices)](https://google.github.io/eng-practices/review/reviewer/comments.html) | CC BY 3.0 | — | 版の記載なし | write-message |
+| [ビジネスメールの基本構成(マイナビニュース)](https://news.mynavi.jp/article/businessmail-6/) | 明示なし | — | 版の記載なし | write-message(文面は転載していない) |
+| [メールの書き方について(神田外語大学 学生課)](https://www.kandagaigo.ac.jp/kuis/cms/wp-content/uploads/2020/04/c7fa5f7a72fa9eb5d79262912a336d08.pdf) | 明示なし | — | 版の記載なし | write-message(文面は転載していない) |
+| [Slack 公式ブログのチャットのエチケット](https://slack.com/intl/ja-jp/blog/collaboration/etiquette-tips-in-slack) | 明示なし | — | 版の記載なし | write-message(文面は転載していない) |
+| [ITmedia NEWS の Slack マナーの記事](https://www.itmedia.co.jp/news/articles/2001/09/news073.html) | 明示なし | — | 版の記載なし | write-message(文面は転載していない) |
+| [How to Report Bugs Effectively(Simon Tatham)](https://www.chiark.greenend.org.uk/~sgtatham/bugs.html) | OpenContent License | — | 版の記載なし | write-message(バグ報告テンプレートの文面は取り込んでいない) |
+| [OSS Issue投稿ガイド(Zenn)](https://zenn.dev/immedio/articles/15c1b953696841) | 明示なし | — | 版の記載なし | write-message(文面は取り込まず URL だけを示す) |
+| [OSS に Issue 報告する際の作法(DevelopersIO)](https://dev.classmethod.jp/articles/issue-report-to-oss/) | 明示なし | — | 版の記載なし | write-message(文面は取り込まず URL だけを示す) |
+| [How to write code review comments(Google Engineering Practices)](https://google.github.io/eng-practices/review/reviewer/comments.html) | CC BY 3.0 | — | 版の記載なし | write-message(悪い例を日本語に訳して Before の例文にした) |
 | [Conventional Comments](https://conventionalcomments.org/) | CC BY 3.0 | — | 版の記載なし | write-message |
-| [レビューコメントで頻繁に使うプレフィックス(DevelopersIO)](https://dev.classmethod.jp/articles/prefixes-for-frequently-used-review-comments/) | 明示なし | — | 版の記載なし | write-message |
-| [Wikipedia:Signs of AI writing](https://en.wikipedia.org/wiki/Wikipedia:Signs_of_AI_writing) | CC BY-SA 4.0 | — | 版の記載なし | write-message |
+| [レビューコメントで頻繁に使うプレフィックス(DevelopersIO)](https://dev.classmethod.jp/articles/prefixes-for-frequently-used-review-comments/) | 明示なし | — | 版の記載なし | write-message(文面は取り込まず URL だけを示す) |
+| [Wikipedia:Signs of AI writing](https://en.wikipedia.org/wiki/Wikipedia:Signs_of_AI_writing) | CC BY-SA 4.0 | — | 版の記載なし | write-message(文面を訳さずに規則として取り込んだ) |
 | [大西夢「AI 生成文からみた「自然な日本語」についての研究」(広島大学文学部、卒業論文)](https://home.hiroshima-u.ac.jp/jshira/papers/AI生成文からみた「自然な日本語」についての研究（大西夢）.pdf) | 明示なし | — | 令和 7 年度 | write-message |
-| [マナーべるの記事](https://mannerbell.com/ai-email-revise-manner/) | 明示なし | — | 2026-04-17 の記事 | write-message |
-| [KDDI のコラム](https://biz.kddi.com/content/column/smb/making-of-sentence/) | 明示なし | — | 版の記載なし | write-message |
-| [プレジデントオンラインの記事](https://news.yahoo.co.jp/articles/032bcc2f342a768b8ff275e43fa98dbc14febb1a) | 明示なし | — | 版の記載なし | write-message |
+| [マナーべるの記事](https://mannerbell.com/ai-email-revise-manner/) | 明示なし | — | 2026-04-17 の記事 | write-message(文面は取り込まず URL だけを示す) |
+| [KDDI のコラム](https://biz.kddi.com/content/column/smb/making-of-sentence/) | 明示なし | — | 版の記載なし | write-message(文面は取り込まず URL だけを示す) |
+| [プレジデントオンラインの記事](https://news.yahoo.co.jp/articles/032bcc2f342a768b8ff275e43fa98dbc14febb1a) | 明示なし | — | 版の記載なし | write-message(文面は取り込まず URL だけを示す) |
 | [NN/g](https://www.nngroup.com/articles/) の記事(Tooltip Guidelines・Icon Usability・Progressive Disclosure・Error-Message Guidelines) | 未確認 | — | 版の記載なし | design-ui |
 | [Apple Human Interface Guidelines](https://developer.apple.com/design/human-interface-guidelines/) | 未確認 | — | 版の記載なし | design-ui |
 | [Material Design 3](https://m3.material.io/) と developer.android.com の文書 | 未確認 | — | 版の記載なし | design-ui |
