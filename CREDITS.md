@@ -24,11 +24,11 @@
 | `vercel-labs/agent-skills` の `skills/web-design-guidelines` | 未確認 | — | 版の記載なし | design-ui(web-interface-guidelines の経由先) |
 | [s0xDk/refactoring-ui-skill](https://github.com/s0xDk/refactoring-ui-skill) | MIT | — | 版の記載なし | design-ui |
 | [misskey-dev/misskey のバグ報告テンプレート](https://github.com/misskey-dev/misskey/blob/develop/.github/ISSUE_TEMPLATE/01_bug-report.yml) | AGPL-3.0 | — | 版の記載なし | write-message(バグ報告テンプレートの文面は取り込んでいない) |
-| [asciidwango/js-primer](https://github.com/asciidwango/js-primer) | CC BY 4.0 | — | 版の記載なし | write-message(バグ報告テンプレートの文面は取り込んでいない) |
+| [asciidwango/js-primer](https://github.com/asciidwango/js-primer) | CC BY 4.0 | — | 版の記載なし | write-message([バグ報告テンプレート](https://github.com/asciidwango/js-primer/blob/master/.github/ISSUE_TEMPLATE/bug_report.md)の文面は取り込んでいない) |
 | [vim-jp/vimdoc-ja](https://github.com/vim-jp/vimdoc-ja) | 未確認 | — | 版の記載なし | write-message(コメントの集計) |
 | [textlint-ja/textlint-rule-preset-ja-technical-writing](https://github.com/textlint-ja/textlint-rule-preset-ja-technical-writing) | 未確認 | — | 版の記載なし | write-message(コメントの集計) |
 | [OpenTelemetry Semantic Conventions](https://opentelemetry.io/docs/specs/semconv/) | Apache-2.0 | — | 1.44.0 | observe |
-| Google『Site Reliability Engineering』 | CC BY-NC-ND 4.0 | — | 2017 年版の第 6 章・第 15 章・第 22 章 | observe・recover・retro |
+| Google『Site Reliability Engineering』 | CC BY-NC-ND 4.0 | — | 2017 年版の[第 6 章](https://sre.google/sre-book/monitoring-distributed-systems/)・[第 15 章](https://sre.google/sre-book/postmortem-culture/)・[第 22 章](https://sre.google/sre-book/addressing-cascading-failures/) | observe・recover・retro |
 | [W3C Trace Context Level 1](https://www.w3.org/TR/trace-context/) | W3C Software and Document License | — | W3C 勧告(2021-11-23) | observe |
 | [Kubernetes の liveness/readiness probe](https://kubernetes.io/docs/concepts/configuration/liveness-readiness-startup-probes/) | 未確認 | — | 版の記載なし | observe |
 | [Amazon Builders' Library "Timeouts, retries, and backoff with jitter"](https://builder.aws.com/content/3EumjoZascWd1oZiEgL8ORlv3qE/timeouts-retries-and-backoff-with-jitter) | 明示なし | © Amazon Web Services, Inc. | 版の記載なし | recover |
