@@ -337,7 +337,7 @@ MIT ライセンスで公開する。全文は `LICENSE` にある。
 | [nanaism/yomiyasu](https://github.com/nanaism/yomiyasu) | MIT | v1.1.1(373356e)・v2.0.1(84e1f5b)・v2.3.0(15244a1) | write-doc(`inspection.md`・`paragraph.md`・`readers.md`・`sentence.md`・`types/minutes.md`)・write-message(`SKILL.md`・`keigo.md`) |
 | [mizchi/explainer](https://github.com/mizchi/explainer) | MIT | 版の記載なし | write-doc(`paragraph.md`・`readers.md`) |
 | [heygen-com/hyperframes](https://github.com/heygen-com/hyperframes) | Apache-2.0 | 版の記載なし | write-doc(`paragraph.md`・`readers.md`。explainer を経由) |
-| [carnot-tech/consulting-pptx-skill](https://github.com/carnot-tech/consulting-pptx-skill) | MIT | コミット bc9a587 | write-doc(`format/slide.md`・`paragraph.md`・`sentence.md`・`process.md`・`inspection.md`)・write-slide・draw-diagram(`SKILL.md`) |
+| [carnot-tech/consulting-pptx-skill](https://github.com/carnot-tech/consulting-pptx-skill) | MIT | コミット bc9a587・b8f7dc4 | write-doc(`format/slide.md`・`paragraph.md`・`sentence.md`・`process.md`・`inspection.md`)・write-slide・draw-diagram(`SKILL.md`) |
 | [iKora128/stop-ai-slop-jp](https://github.com/iKora128/stop-ai-slop-jp) | MIT | コミット e09d327 | write-message(`SKILL.md`) |
 | [ayghri/i-have-adhd](https://github.com/ayghri/i-have-adhd) | MIT | 版の記載なし | respond |
 | [cathrynlavery/diagram-design](https://github.com/cathrynlavery/diagram-design) | MIT | v2.6.115(f2f4d49) | draw-diagram(`svg.md`・`render.py`) |
@@ -508,7 +508,7 @@ write-slide の規則は write-doc の `references/format/slide.md` と言語の
 
 プレゼン型の原型は [coji/natural-japanese](https://github.com/coji/natural-japanese)(MIT ライセンス)にある。v1.6.0(コミット 03bc944)の `references/doctypes/slide.md` からは `format/slide.md` 2. のメッセージラインの長さと 6. のラベルの太字を、`references/doctypes/memo.md` からは `paragraph.md` 7. の当てはまらないマスを取り込んだ。
 
-`format/slide.md` 1.・2.・4.〜6. と、`sentence.md`・`paragraph.md` に移した項(1.〜4.・7.)、`process.md`・`inspection.md` の一部は [consulting-pptx-skill](https://github.com/carnot-tech/consulting-pptx-skill)(MIT ライセンス)の `references/slide-rules.md`(コミット bc9a587 時点)を元にする。同じ版の `references/slide-rules.md` からは、社外の資料の敬称(`sentence.md` 6.)、「できる」と「行う」の区別(`sentence.md` 4.)、表紙・タイトル・章名の略語と同じ見せ方の連続(`format/slide.md` 5.)、見出しの種類を指すだけの語・2 軸マトリクス・図の選び方・操作画面とロゴ(`paragraph.md` 7.)、定型ページ(`process.md` 5.)、ページの増減後の番号の照合(`inspection.md` 4.)、消した要素の全ページでの確かめ(`process.md` 7.)を、`SKILL.md` の手順 9 からは見たページの番号の報告(`process.md` 7.)を取り込んだ。同じ版の `references/slide-rules.md` の §8 からは、draw-diagram §2 の括弧・矢印・三角の向きと矢尻の目視も取り込んだ。
+`format/slide.md` 1.・2.・4.〜6. と、`sentence.md`・`paragraph.md` に移した項(1.〜4.・7.)、`process.md`・`inspection.md` の一部は [consulting-pptx-skill](https://github.com/carnot-tech/consulting-pptx-skill)(MIT ライセンス)の `references/slide-rules.md`(コミット bc9a587 時点)を元にする。同じ版の `references/slide-rules.md` からは、社外の資料の敬称(`sentence.md` 6.)、「できる」と「行う」の区別(`sentence.md` 4.)、表紙・タイトル・章名の略語と同じ見せ方の連続(`format/slide.md` 5.)、見出しの種類を指すだけの語・2 軸マトリクス・図の選び方・操作画面とロゴ(`paragraph.md` 7.)、定型ページ(`process.md` 5.)、ページの増減後の番号の照合(`inspection.md` 4.)、消した要素の全ページでの確かめ(`process.md` 7.)を、`SKILL.md` の手順 9 からは見たページの番号の報告(`process.md` 7.)を取り込んだ。同じ版の `references/slide-rules.md` の §8 からは、draw-diagram §2 の括弧・矢印・三角の向きと矢尻の目視も取り込んだ。コミット b8f7dc4 時点の `references/slide-rules.md` からは、§2.25・§2.26 の対象の名指しと判断のページ(`format/slide.md` 4.・5.)、§4.20 のまとめの帯・§6「列に共通する値」「またがる行の置き方」の共通の値・§7.33 の相手の項目名・§7.34 の数字の丸め(`format/slide.md` 5.)、§7.3・§7.4 の箇条の項目数と文末、上流でコミット 906d54b と e1cf63f の 2 回に分けて書かれた §5.5 の塗り(`format/slide.md` 6.)を取り込んだ。同じ版からは、§6「同じ意味の見出しを並べない」(`paragraph.md` 7.)、§8「直し方・渡し方の作法」の判断に使う要素(`process.md` 7.)、§2.23 の判断を左右する数字の照合(`inspection.md` 4.)も取り込んだ。
 
 ### 9.10. write-message
 
