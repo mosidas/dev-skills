@@ -97,7 +97,7 @@ Claude Code ではサブエージェントを起動するたびに Agent の `ef
 ## 7. ゲートを通す
 
 - 全ステップが承認されたら、push の前に gate-reviewer サブエージェント(`dev-skills:gate-reviewer`)を起動する。渡すのは、対象リポジトリのパス、レビューする範囲(`main..HEAD`)、要件の 3 行(目的・完了条件・対象外)、計画の全体、PR 本文案である。
-- Claude Code では、品質がプロダクトのとき、gate-reviewer を起動する前に統括が claude-security プラグイン(`claude-security@claude-plugins-official`)の Scan changes を効果 `high` で実行する(`/claude-security scan my branch at high`)。プラグインが導入されていないときは組み込みの `/security-review` で代える。指摘があれば implementer に渡して直させ、直したあとで gate-reviewer を起動する。
+- Claude Code では、品質がプロダクトのとき、gate-reviewer を起動する前に統括が claude-security プラグイン(`claude-security@claude-plugins-official`)の Scan changes を効果 `high` で実行する(`/claude-security scan my branch at high`)。報告は対象リポジトリの `CLAUDE-SECURITY-<timestamp>/` に書き出される。プラグインが導入されていないときは組み込みの `/security-review` で代える。指摘があれば implementer に渡して直させ、直したあとで gate-reviewer を起動する。
 - Claude Code では gate-reviewer の前に敵対役(`references/parallel.md` 5.)を任意で起動できる。統括が再実行して確かめた敵対役の所見は gate-reviewer に渡す。Claude Code では、Codex CLI がある環境で gate-reviewer と `codex review --base main` を並走させる(同 6.)。
 - gate-reviewer はブランチ全体でしか分からないこと(完了条件の充足、ステップ間の整合、残骸、PR 本文との一致)を見て、「マージ可」か「差し戻し」を返す。ステップごとの reviewer が見た内容は蒸し返さない。品質がプロダクトのとき、計画に含まれる secure・observe・recover 由来の変更(ヘルスチェック・メトリクス・拒否のテスト・タイムアウト・エラーページなど)は要件内として扱う。
 - 差し戻しなら、修正点を implementer に渡して直させ、再びゲートを通す。2 回直しても通らないときは、統括がユーザーに状況を報告して判断を仰ぐ。ゲートを push の前に通すのは、CI を回す前に直すほうが安いからである。
