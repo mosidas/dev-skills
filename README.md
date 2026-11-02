@@ -8,6 +8,7 @@ Claude Code・Codex CLI・Antigravity CLI のプラグインである。開発�
 | :-- | :-- | :-- |
 | `develop` | スキル | 実装タスクを要件の確認から PR まで進める統括の手順。要件(目的・完了条件・対象外・品質(簡易 / プロダクト))の壁打ち、Backlog.md のタスク、GitHub flow、git hook(lefthook・husky)、planner・implementer・reviewer による実装と点検のループ、gate-reviewer によるブランチ全体の点検、push 後の CI 確認を定める。品質がプロダクトのときは secure・observe・recover を適用し、git hook と CI にシークレット検知(gitleaks)と依存監査(osv-scanner)を、CI に SAST(CodeQL か semgrep)を追加し、Claude Code ではゲートの前に `/security-review` を実行する。新しい Web の画面・フォームを作るタスクで UI モックの行が無ければ、要件の確認で UI モックを先に作るか不要かを 1 問聞き、先に作るなら design-ui の工程を示して止まる。UI モックの行は planner に渡す。計画の未確定事項のうち事実で決まるものは統括が調べて決め、調べても決まらないものと本人の判断が必要なものは依存するステップの前に 1 問ずつ聞く。本人の指摘があったタスクでは、閉じる工程で retro を実行する(build の反復を除く)。中断を指示されたら再開メモを Implementation Notes に書いて止まる。再開するときは Notes・ブランチ・PR の状態から再開点を決める。済んだステップは繰り返さない。PR のレビューコメント(bot・Codex CLI・人)を fix・dismiss・ask に分ける。dismiss には反証を返信する。タスクの種類(バグ修正・リファクタ・性能・試作・移行)ごとに最初に固定するものと止まる条件を `references/kinds.md` に持つ。統括は要件の確認で種類を見分けて planner と reviewer に渡す。試作と診断だけの依頼では統括が作業ツリーの外で使い捨てのスクリプトを書く。ブランチと PR を作らない。見た目の試作は design-ui の `references/session.md` に従う。性能の数値を報告と判断に使う前に確かめる 7 つの問い・結論の 4 択(速い・遅い・差なし・判定不能)・数値の書き方を `references/benchmark.md` に持つ。差分の外で動かなくなる箇所の読む対象・変更の安全を支える 1 つの事実・確かさの 5 段(言っただけ・行を指した・到達しないと示した・実行した・アプリで再現した)・危険の扱い・報告の形を `references/blast-radius.md` に持つ。統括は PR 本文の影響範囲にその事実と段を書く。Claude Code で使う任意の工程(同じ課題の競争・分担の点検・敵対役)・Claude Code で Codex CLI がある環境での gate-reviewer と Codex CLI のレビューの並走・サブエージェントを並列に起動する作法(書き込み先の分離・同じブリーフ・脱落は N-1 で続行・SHA と方法の無い結果を合格に数えない)を `references/parallel.md` に持つ。利用者が見る挙動を変えたステップの実物の検証は対象リポジトリに `docs/verify/` があればその手引きで行う |
 | `specify` | スキル | 曖昧な着想から、ユーザーとの対話で「何を作るか」を 1 問ずつ聞き出し、build がそのまま 1 要求 = 1 タスクで分解できる PRD(製品要求仕様書)を書く手順。PRD は雛形 `references/prd.md` から書き、要求ごとに目的・完了条件・対象外・品質の 4 行と、検証できる受け入れ条件を持たせる。PRD の 4.(制約と決定事項)には UI モックの行(brief.md のパス・`未作成`・`不要` のいずれか)を書き、新しい Web の画面・フォームを作る要求で UI モックの行が `未作成` なら、次の一手に design-ui で UI モックを作るかを示す。承認の前に聞く点は要求の粒度・依存・分割と統合・第一人者が加えるもの・結果の正しさを示す外部の検証手段の 5 つである。`scripts/check_prd.py` で PRD の雛形の節の並び・要求ごとの 4 行と受け入れ条件・依存と順序の表・未記入とコメントの残りを検査する。PRD のタスクへの分解と実装は build が行う |
+| `interview` | スキル | 着手の前に本人から「何を作るか」「誰に何を判断してもらうか」を 1 問ずつ聞き出す聞き方と問いの型。聞き方は 1 問ずつ聞く・調べて分かることは先に調べる・本人が判断することを統括が答えない・推奨と根拠を付けて聞く・答えを評価する言葉を挟まない・5〜8 問ごとに埋まった項目と未決の問いを示すの 6 つである。問いの型は範囲・境界・失敗・順序と依存・代替に読み手・判断してもらうこと・反論・根拠を加えた 9 つで、型ごとに実装と文書での書き先を持つ。聞き続けるかは「残る問いを本人が答えずに統括が判断しても本人が直させないか」で判定する。終了条件と答えの書き先は呼び出し元が持つ。呼び出し元は 3 つある。specify は PRD を書く前に使う。develop は本人が「詰めて」と言ったときと完了条件の確かめ方を補えないときに最大 3 問の上限を外して使う。write-doc は brief を既定値で埋められないときと本人が「詰めて」と言ったときに 1 往復の brief の代わりに使う |
 | `build` | スキル | PRD から起こした複数のタスクを develop で 1 つずつ PR まで進める外側のループ。PRD を受け入れ条件つきの backlog のタスクに分解する工程と、未完了のタスクを 1 つ取って develop で PR まで進め、受け入れ条件を検証して Done にする反復を定める。新しい Web の画面・フォームを作る要求で PRD の UI モックの行が `未作成` か無ければ、分解の前に UI モックを先に作るか不要かを 1 問だけ聞き、タスク本文に UI モックの行を書く。反復ではこの問いで止まらない。状態は backlog と進捗ファイルだけに持ち、全タスクの Done・要判断・同じタスクの失敗の上限・反復の回数の上限などで止まる。`scripts/loop.py` が反復ごとに新しい `claude -p` を起動する(Claude Code)。ループを始める前に信頼の 4 条件(手で 1 度やった・道具がある・各段が止められる・繰り返す失敗を道具にした)を確かめる。最初の 1 タスクはユーザーが結果を確かめてから残りを回す。性能か指標の要求があれば検証の仕組みと変更前の値の取得を最初のタスクにする。反復は判断ごとの根拠を Implementation Notes に書く。結果の根拠は記録の要点に書く。受け入れ条件と停止条件を書き換えない。判定不能の受け入れ条件を満たしたことにしない。マージが `許可` のときはマージの直前に main の変更とブランチの変更の重なりを確かめる |
 | `retro` | スキル | 本人とレビューの指摘を 4 分類(文言・挙動・手順・委譲)に分け、原因を 3 分類(守られなかった・無かった・矛盾)と個別で判定して根拠付きの表にし、個別を除く行を本人の承認を得て dev-skills の改善タスクとして起票する手順。原因が「無かった」で直す場所が文書の規範なら、規範にするか(案件の記録・宛先プロファイルに残すか)と、write-doc のどの束に加えるかを判定する。本人の指摘の回数と往復の回数を記録する。表の雛形 `references/report.md` と事例 `references/example.md` を持つ。Google の SRE 本 15 章を出典とする |
 | `explain` | スキル | コードを変えずに読み取りだけで調べて答える手順。問いを 4 種類(仕組み・経緯・学び・再開)に振り分ける。仕組みの問いは規模を判定する。複雑なら 2〜4 の切り口の探索役を並列に起動して説明役が 5 節(概要・主要な概念・動き・所在・落とし穴)にまとめる。経緯の問いはコードの足場を作ってから合成役 1 体がソース管理(git と gh)を調べる。残りの 6 分類(課題管理・長文の文書・チャット・インフラ監視・エラー追跡・分析基盤)は調べずに欠落として書く。合成役は主張を確信度 5 段(直接・裏付け・推定・推測・不明)に分けて本人の仮説を追認しない。学びの問いは理解してほしい点を絞り一般の定義から事例へ進めて最小の完全な答えで止める。再開の問いは範囲と話題を固定して会話の記録・backlog・gh・git から文脈を組み直し状態タグ付きのスレッドで返す。Claude Code では探索役に `Explore` を使い調査役・説明役・合成役に `general-purpose` を使う。サブエージェントは MCP の道具を使えないものとして扱い会話の記録は統括が読む。Codex CLI・Antigravity CLI では統括が切り口と情報源を順に調べる |
@@ -29,7 +30,7 @@ Claude Code・Codex CLI・Antigravity CLI のプラグインである。開発�
 | `hooks/inspect_write.py` | hook(PostToolUse、Claude Code のみ) | 日本語 Markdown の書き込み直後に `lint.py` を実行し、検出があれば書き直しを促す警告を返す |
 | `hooks/inspect_stop.py` | hook(Stop、Claude Code のみ) | セッション完了時に再検査し、重大カテゴリの検出が残るあいだ完了を差し戻す |
 
-スキルは各 CLI が用途を判断して自動で読み込む。Claude Code では `/dev-skills:develop`・`/dev-skills:specify`・`/dev-skills:build`・`/dev-skills:retro`・`/dev-skills:explain`・`/dev-skills:verify`・`/dev-skills:ponytail`・`/dev-skills:secure`・`/dev-skills:observe`・`/dev-skills:recover`・`/dev-skills:write-doc`・`/dev-skills:write-slide`・`/dev-skills:write-message`・`/dev-skills:draw-diagram`・`/dev-skills:design-ui`・`/dev-skills:write-page`、Codex CLI では `$dev-skills:develop`、Antigravity CLI では `/develop` で明示的に呼んでもよい。サブエージェントは Claude Code では `dev-skills:planner` のように plugin 名つきで起動する。Codex CLI と Antigravity CLI はサブエージェントを起動しないため、develop では統括が 4 つの役割を順に受け持つ。respond は Claude Code では SessionStart hook が常時適用し、Codex CLI・Antigravity CLI ではスキルとして読み込む。hooks に呼び出しの操作はない。プラグインを有効にした Claude Code のセッションで、セッション開始、`git commit`・`gh pr create`・`gh pr edit` の実行前、日本語 Markdown の書き込み、セッション完了のたびに自動で発火する。hooks の stdin の形式は CLI ごとに異なるため、Codex CLI と Antigravity CLI では hooks を提供しない。
+スキルは各 CLI が用途を判断して自動で読み込む。Claude Code では `/dev-skills:develop`・`/dev-skills:specify`・`/dev-skills:interview`・`/dev-skills:build`・`/dev-skills:retro`・`/dev-skills:explain`・`/dev-skills:verify`・`/dev-skills:ponytail`・`/dev-skills:secure`・`/dev-skills:observe`・`/dev-skills:recover`・`/dev-skills:write-doc`・`/dev-skills:write-slide`・`/dev-skills:write-message`・`/dev-skills:draw-diagram`・`/dev-skills:design-ui`・`/dev-skills:write-page`、Codex CLI では `$dev-skills:develop`、Antigravity CLI では `/develop` で明示的に呼んでもよい。サブエージェントは Claude Code では `dev-skills:planner` のように plugin 名つきで起動する。Codex CLI と Antigravity CLI はサブエージェントを起動しないため、develop では統括が 4 つの役割を順に受け持つ。respond は Claude Code では SessionStart hook が常時適用し、Codex CLI・Antigravity CLI ではスキルとして読み込む。hooks に呼び出しの操作はない。プラグインを有効にした Claude Code のセッションで、セッション開始、`git commit`・`gh pr create`・`gh pr edit` の実行前、日本語 Markdown の書き込み、セッション完了のたびに自動で発火する。hooks の stdin の形式は CLI ごとに異なるため、Codex CLI と Antigravity CLI では hooks を提供しない。
 
 依頼は次のように書く。統括は依頼を要件の 4 行にまとめて確認する。4 行の形式は `skills/develop/references/requirements.md` にある。
 
@@ -139,7 +140,7 @@ $ codex plugin add dev-skills@personal
 $ agy plugin install <クローンのパス>
 ```
 
-導入先は `~/.gemini/config/plugins/dev-skills/`(コピー)である。クローンを更新したら同じコマンドで導入し直す。スキルは `/develop`・`/specify`・`/build`・`/retro`・`/explain`・`/verify`・`/ponytail`・`/secure`・`/observe`・`/recover`・`/write-doc`・`/write-slide`・`/write-message`・`/respond`・`/draw-diagram`・`/design-ui`・`/write-page` のスラッシュコマンドにもなる。
+導入先は `~/.gemini/config/plugins/dev-skills/`(コピー)である。クローンを更新したら同じコマンドで導入し直す。スキルは `/develop`・`/specify`・`/interview`・`/build`・`/retro`・`/explain`・`/verify`・`/ponytail`・`/secure`・`/observe`・`/recover`・`/write-doc`・`/write-slide`・`/write-message`・`/respond`・`/draw-diagram`・`/design-ui`・`/write-page` のスラッシュコマンドにもなる。
 
 ## 4. hooks
 
@@ -194,6 +195,8 @@ skills/specify/
 ├── SKILL.md               # 着想から PRD を書く工程(聞く・PRD を書く・確かめて終える)
 ├── references/prd.md      # PRD の雛形(節ごとの書き方は各節の直下のコメント)
 └── scripts/check_prd.py   # PRD を雛形の形に照らして検査する。問題と直し方を 1 行ずつ出力する
+skills/interview/
+└── SKILL.md               # 着手前の聞き出し(適用範囲・聞き方・問いの型と実装と文書での書き先・終える判定・3 つの呼び出し元)
 skills/build/
 ├── SKILL.md               # 外側のループの工程(進捗ファイル・分解と信頼の確認・反復・停止と再開・最初の 1 タスクと反復の回し方)
 └── scripts/loop.py        # 反復ごとに新しい `claude -p` を起動し、停止条件を判定する
@@ -327,8 +330,8 @@ MIT ライセンスで公開する。全文は `LICENSE` にある。
 
 | 出典 | ライセンス | 取り込んだ版・コミット | 反映先 |
 | :-- | :-- | :-- | :-- |
-| [cursor/plugins](https://github.com/cursor/plugins) の pstack | MIT | コミット 997ffc7(2026-10-12 時点。specify)・0.15.36(コミット 1ba91fc、2026-10-28) | specify・develop・build・ponytail・recover・retro・respond・agents(`planner.md`・`implementer.md`・`reviewer.md`・`gate-reviewer.md`)・write-doc(`types/README.md`・`sentence.md`・`types/report.md`)・draw-diagram(`SKILL.md`)・design-ui(`migration.md`・`session.md`)・explain・verify・README 1.・6.2・7. |
-| [mattpocock/skills](https://github.com/mattpocock/skills) | MIT | コミット 49dd158(2026-10-12 時点) | specify |
+| [cursor/plugins](https://github.com/cursor/plugins) の pstack | MIT | コミット 997ffc7(2026-10-12 時点。specify)・0.15.36(コミット 1ba91fc、2026-10-28) | specify・interview・develop・build・ponytail・recover・retro・respond・agents(`planner.md`・`implementer.md`・`reviewer.md`・`gate-reviewer.md`)・write-doc(`types/README.md`・`sentence.md`・`types/report.md`)・draw-diagram(`SKILL.md`)・design-ui(`migration.md`・`session.md`)・explain・verify・README 1.・6.2・7. |
+| [mattpocock/skills](https://github.com/mattpocock/skills) | MIT | コミット 49dd158(2026-10-12 時点) | specify・interview |
 | [DietrichGebert/ponytail](https://github.com/DietrichGebert/ponytail) | MIT | v5.1.0 | ponytail |
 | [coji/natural-japanese](https://github.com/coji/natural-japanese) | MIT | v1.5.0(9a78a42)・v1.6.0(03bc944)・v1.6.2(a88b8e9) | write-doc(`inspection.md`・`paragraph.md`・`readers.md`・`sentence.md`・`format/slide.md`・`types/report.md`)・write-slide・write-message(`SKILL.md`) |
 | [nanaism/yomiyasu](https://github.com/nanaism/yomiyasu) | MIT | v1.1.1(373356e)・v2.0.1(84e1f5b)・v2.3.0(15244a1) | write-doc(`inspection.md`・`paragraph.md`・`readers.md`・`sentence.md`・`types/minutes.md`)・write-message(`SKILL.md`・`keigo.md`) |
@@ -390,23 +393,27 @@ MIT ライセンスで公開する。全文は `LICENSE` にある。
 | [React Native: Platform-specific code](https://reactnative.dev/docs/platform-specific-code) | 未確認 | 版の記載なし | design-ui(`native.md`) |
 | [developersdigest](https://www.developersdigest.tech/blog/ai-design-slop-and-how-to-spot-it)・[925studios](https://www.925studios.co/blog/ai-slop-design-tells)・[mania.design](https://www.mania.design/blog/spot-the-slop-a-ui-designers-guide-to-fixing-ai-defaults/)・[dev.to](https://dev.to/james_anderson_h/the-purple-gradient-problem-why-ai-ui-all-looks-alike-and-how-to-fix-it-3j65) の記事 | 未確認 | 版の記載なし | design-ui(`anti-ai.md`) |
 
-### 9.2. specify
+### 9.2. specify と interview
 
-specify は、次の 2 つのリポジトリにある 3 つの手法(grill-me、to-spec と to-tickets、pstack)を参考にした。手法は specify の文体で書き直した。
+specify と interview は、次の 2 つのリポジトリにある 3 つの手法(grill-me と grilling、to-spec と to-tickets、pstack)を参考にした。手法は dev-skills の文体で書き直した。
 
 - cursor/plugins の pstack(MIT ライセンス、Copyright (c) 2026 Lauren Tan、https://github.com/cursor/plugins)。2026-10-12 時点のコミット 997ffc7 の `pstack/skills/figure-it-out/SKILL.md` と `pstack/skills/poteto-mode/playbooks/multi-phase-plan.md` を参考にした。
-- mattpocock/skills(MIT ライセンス、Copyright (c) 2026 Matt Pocock、https://github.com/mattpocock/skills)。2026-10-12 時点のコミット 49dd158 の `skills/productivity/grill-me/SKILL.md`・`skills/engineering/to-spec/SKILL.md`・`skills/engineering/to-tickets/SKILL.md` を参考にした。
+- mattpocock/skills(MIT ライセンス、Copyright (c) 2026 Matt Pocock、https://github.com/mattpocock/skills)。2026-10-12 時点のコミット 49dd158 の `skills/productivity/grill-me/SKILL.md`・`skills/productivity/grilling/SKILL.md`・`skills/engineering/to-spec/SKILL.md`・`skills/engineering/to-tickets/SKILL.md` を参考にした。
 
-取り込んだ範囲は次の 8 点である。文中と括弧内の節番号は `skills/specify/SKILL.md` の節を指す。
+取り込んだ範囲は次の 12 点である。括弧内の節番号は名前を付けたスキルの `SKILL.md` の節を指す。
 
-- 調べて分かることは、聞かずに先に調べる(2.)。
-- 要求一覧は、1 件ずつ深さ優先で聞く(2.)。
-- 問いを 5 つの型から選ぶ(2.)。
-- 5〜8 問ごとに、埋まった節と未決の問いをユーザーに示す(2.)。
-- 1 つの要求を、単独で確かめられる縦の一切れにする(3.)。
-- 依存の制約を満たす範囲で、不確かさの大きい要求を先に並べる(3.)。
-- 承認の前に、要求の粒度・依存・分割と統合の 3 点を聞く(4.)。
-- PRD の雛形 `references/prd.md` に、制約と決定事項の節を設ける。
+- 調べて分かることは聞かずに先に調べる(interview 2.)。
+- 本人が判断することを統括が答えない(interview 2.)。
+- 問いに推奨と根拠を付けて「はい」で推奨を受け入れられる形に書く(interview 2.)。
+- 5〜8 問ごとに埋まった項目と未決の問いを本人に示す(interview 2.)。
+- 問いを型から作る(interview 3.)。
+- 完了の確かめ方を根拠の型として聞く(interview 3.)。
+- 終える前に埋まった項目と未決の問いを示して本人の確認を得る(interview 4.)。
+- 要求一覧は 1 件ずつ深さ優先で聞く(specify 2.)。
+- 1 つの要求を単独で確かめられる縦の一切れにする(specify 3.)。
+- 依存の制約を満たす範囲で不確かさの大きい要求を先に並べる(specify 3.)。
+- 承認の前に要求の粒度・依存・分割と統合の 3 点を聞く(specify 4.)。
+- PRD の雛形 `skills/specify/references/prd.md` に制約と決定事項の節を設ける。
 
 ### 9.3. retro
 
@@ -595,7 +602,7 @@ respond は i-have-adhd(MIT ライセンス、Copyright (c) 2026 Ayoub Ghriss、
 
 ### 9.14. pstack(develop・specify・ponytail・build・recover・retro・respond・agents・write-doc・draw-diagram・design-ui・explain・verify・README)
 
-次の箇所は cursor/plugins の pstack(MIT ライセンス、Copyright (c) 2026 Lauren Tan、https://github.com/cursor/plugins)0.15.36(2026-10-28 時点のコミット 1ba91fc)を元にする。パスは上流のリポジトリ内のものである。specify の PRD の手法の出典は 9.2 にある。
+次の箇所は cursor/plugins の pstack(MIT ライセンス、Copyright (c) 2026 Lauren Tan、https://github.com/cursor/plugins)0.15.36(2026-10-28 時点のコミット 1ba91fc)を元にする。パスは上流のリポジトリ内のものである。specify の PRD の手法と interview の聞き方の出典は 9.2 にある。
 
 - ponytail 5. のテストの判定、`agents/reviewer.md` のテストの観点、`agents/implementer.md` の進め方 2: `pstack/skills/principle-test-behavior-not-implementation/SKILL.md`
 - ponytail 2. の状態の正当性の問い: `pstack/skills/principle-fix-root-causes/SKILL.md`
