@@ -85,6 +85,7 @@ CI があるリポジトリでは、hook と同じ検査を CI にも入れる�
 jobs:
   betterleaks:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     permissions:
       contents: read
     steps:
@@ -124,6 +125,7 @@ betterleaks のバイナリの版は dependabot の更新の対象外である�
 jobs:
   codeql:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     permissions:
       contents: read
       security-events: write
