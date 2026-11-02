@@ -148,84 +148,19 @@ PostToolUse と Stop は日本語文書の検査を行う。発火するのは�
 ## 5. 構成
 
 ```
-.claude-plugin/
-├── plugin.json            # Claude Code 向けのマニフェスト
-└── marketplace.json       # このリポジトリ自身をマーケットプレイスとして宣言する
-.codex-plugin/
-└── plugin.json            # Codex CLI 向けのマニフェスト
-plugin.json                # Antigravity CLI 向けのマニフェスト
-lefthook.yml                # git hook(pre-commit: plugin validate、pre-push: unittest)
-.github/workflows/ci.yml   # CI(ubuntu-latest で unittest と plugin validate --strict、gitleaks)
-.github/dependabot.yml     # GitHub Actions の SHA を週次で更新する
-LICENSE                    # MIT ライセンスの全文
-agents/
-├── planner.md             # 計画(opus、Write/Edit 不可、ponytail 読み込み。品質がプロダクトのとき secure・observe・recover も、UI を含むタスクでは design-ui も読み込む)
-├── implementer.md         # 実装とコミット(opus、ponytail 読み込み。品質がプロダクトのとき secure・observe・recover も、UI を含むタスクでは design-ui も読み込む)
-├── reviewer.md            # ステップの点検と判定(opus、Write/Edit 不可、ponytail 読み込み。品質がプロダクトのとき secure・observe・recover も、UI を含むタスクでは design-ui も読み込む)
-└── gate-reviewer.md       # push 前のブランチ全体の点検(opus、Write/Edit 不可)
-skills/develop/
-├── SKILL.md               # 統括の工程(要件・タスク・ブランチ・計画・実装と点検のループ・ゲート・PR・完了・中断・再開)
-└── references/            # requirements.md(要件の 4 行と UI モックの行の形式・聞く範囲・品質の決め方)、git-flow.md(ブランチ・PR・CI・マージ)、hooks.md(lefthook・husky・シークレット検知・依存監査・CI での監査・SAST)、review-triage.md(PR のレビューコメントの仕分けと却下のパターンの一覧)、kinds.md(種類別の工程: バグ修正・リファクタ・性能・試作・移行の固定するもの・進め方・止まる条件)、benchmark.md(性能の数値の吟味: 7 つの問い・結論の 4 択・数値の書き方)、blast-radius.md(差分の外の影響の点検: 読む対象・安全を支える 1 つの事実・確かさの 5 段・危険の扱い・報告の形)、parallel.md(並列の起動: 共通の作法・同じ課題の競争・分担の点検・敵対役・別系統のレビューの並走)
-skills/specify/
-├── SKILL.md               # 着想から PRD を書く工程(聞く・PRD を書く・確かめて終える)
-├── references/prd.md      # PRD の雛形(節ごとの書き方は各節の直下のコメント)
-└── scripts/check_prd.py   # PRD を雛形の形に照らして検査する。問題と直し方を 1 行ずつ出力する
-skills/interview/
-└── SKILL.md               # 着手前の聞き出し(適用範囲・聞き方・問いの型と実装と文書での書き先・終える判定・3 つの呼び出し元)
-skills/build/
-├── SKILL.md               # 外側のループの工程(進捗ファイル・分解と信頼の確認・反復・停止と再開・最初の 1 タスクと反復の回し方)
-└── scripts/loop.py        # 反復ごとに新しい `claude -p` を起動し、停止条件を判定する
-skills/retro/
-├── SKILL.md               # 指摘からの規範の改善の工程(集める・分類する・原因を判定する・表にして起票する)
-└── references/            # report.md・example.md(表と起票案の雛形・2026-10-14 の事例)
-skills/explain/
-├── SKILL.md               # 読み取りだけの調査の入口(問いの振り分け・共通の作法・学びの問い)
-└── references/            # how.md・why.md・recall.md(仕組みの問い・経緯の問いと確信度 5 段・再開の問いの手順と雛形)
-skills/verify/
-├── SKILL.md               # 検証の手引きの生成と保守(生成の工程・証拠の基準・保守の手順と結果と不変条件・調査役の雛形)
-└── references/            # feature-map/(機能マップの例: 索引の README.md と機能ファイル 2 本)
-skills/write-doc/
-├── SKILL.md               # 規範の入口(束と参照ファイルの表)
-├── references/            # 4 つの束。言語: sentence.md・paragraph.md(文と表記・段落と見出し)、読み手と工程: readers.md・process.md・inspection.md(読み手・brief と骨組みの合意とレビュー役に渡す物・検査)
-│   ├── format/            # 形式の束: markdown.md・html.md・slide.md
-│   └── types/             # 種類の束: procedure.md・spec.md・minutes.md・report.md・article.md・proposal.md と一覧の README.md
-└── scripts/               # lint.py・outline.py・terms.py・semantic.py と動詞・名詞の NG/OK カタログ
-skills/write-slide/
-└── SKILL.md               # スライド構成の規範の入口(読むファイルの表とスライド固有の工程)
-skills/write-message/
-├── SKILL.md               # 短いメッセージの規範の入口(工程・構成・書式・AI らしさの抑制・検査)
-└── references/            # keigo.md・places.md(敬語の規範・場ごとの規範)
-skills/respond/
-└── SKILL.md               # 会話の応答の形を定める規範(本人の特性を前提に、最初の行に答え・最後の行に次の行動を書く規則群)
-skills/ponytail/
-├── SKILL.md               # コードを最小に保つ規範(はしご・規則・単純にしないもの・原則の索引)
-└── references/            # design.md(設計の原則: ドメインを構造で表す・型で守る・境界の内側の構造・直列化の前に共有をなくす・設計の赤信号)、typescript.md(design.md 2.2 の TypeScript での書き方: 規則 14 項目・規則ごとの例・`as` を外すときの見分け)
-skills/secure/
-└── SKILL.md               # コードの安全性の規範(入力検証・認証認可・シークレット・依存・ログ・エラー応答)
-skills/observe/
-└── SKILL.md               # コードの可観測性の規範(構造化ログ・相関 ID・メトリクス・トレース・ヘルスチェック・エラーの分類・完了条件)
-skills/recover/
-└── SKILL.md               # 失敗時の挙動の規範(失敗の列挙・タイムアウト・リトライと冪等・二重送信の防止・フォールバック・エラーページ・中間状態の露出防止・完了条件)
-skills/draw-diagram/
-├── SKILL.md               # 作図の規範の入口
-├── references/            # mermaid.md・svg.md・examples/(`.mmd` の書き方・SVG の書式と寸法・サンプル)
-└── scripts/render.py      # `.mmd` と SVG の対応照合・禁止要素の検査・斜めの接続線の検出・Chrome headless の PNG 出力
-skills/write-page/
-└── SKILL.md               # HTML の説明資料の規範の入口(読むファイルの表と HTML 固有の工程)
-skills/design-ui/
-├── SKILL.md               # UI 設計規範の入口(モードの選択・工程・スケール)
-└── references/            # anti-ai.md・text.md・checklist.md・native.md・session.md・brief.md・migration.md(汎用の既定の一覧・UI テキストの最小化と利用者向けの文言の規範・実装の品質床・ネイティブアプリ固有の規範・UI モックを作る工程・UI モックの brief の雛形・見た目を変えない実装の置き換えの工程)
-hooks/
-├── hooks.json             # SessionStart・PreToolUse・PostToolUse・Stop の配線
-├── guard_session_url.py   # PreToolUse: コミットと PR 本文のセッション URL を拒否する
-├── inject_respond.py      # SessionStart: respond スキルの本文を注入する
-├── inspect_write.py       # PostToolUse: 書き込み直後の検査と警告
-├── inspect_stop.py        # Stop: 再検査と重大カテゴリによる完了ブロック
-├── inspect_lib.py         # 共通処理(設定・対象判定・lint 実行・警告文・状態)
-├── inspection.config.json # 検査設定の正本
-└── rewrite_guides.json    # カテゴリごとの書き直し指針・言い換え例
-tests/                     # カタログと hooks の単体テスト、test_render.py(draw-diagram の render.py)、test_build_loop.py(build の loop.py)、test_check_prd.py(specify の check_prd.py)、test_manifest_version.py(2 つのマニフェストの version の一致)、corpus/(境界値コーパス)
-evals/                     # claude plugin eval のケース(prompt.md と graders/)。結果の出力先 results/ は git 管理外
+.claude-plugin/   # Claude Code 向けのマニフェストと marketplace.json
+.codex-plugin/    # Codex CLI 向けのマニフェスト
+plugin.json       # Antigravity CLI 向けのマニフェスト
+skills/           # スキル(1 スキル 1 ディレクトリ。SKILL.md と references/・scripts/)
+agents/           # develop が起動する 4 つのサブエージェント
+hooks/            # hooks.json の配線・hook のスクリプト・検査の設定
+tests/            # unittest の単体テストと境界値コーパス
+evals/            # claude plugin eval のケース。結果の出力先 results/ は git 管理外
+.github/          # CI・Dependabot・CODEOWNERS
+lefthook.yml      # git hook(pre-commit: plugin validate、pre-push: unittest)
+AGENTS.md         # このリポジトリで作業するエージェント向けの言語規約
+LICENSE           # MIT ライセンスの全文
+CREDITS.md        # 取り込んだ外部の資料の出典
 ```
 
 ## 6. 開発
