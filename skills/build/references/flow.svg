@@ -16,7 +16,7 @@
   <!-- ユーザー -->
   <rect class="frame" x="20" y="20" width="240" height="500" rx="8"/>
   <text class="title" x="36" y="40">ユーザー</text>
-  <rect class="box" data-id="instruct" x="40" y="60" width="200" height="60" rx="6"/><text x="140" y="86" text-anchor="middle">PRD を渡し、承認する</text><text class="label" x="140" y="104" text-anchor="middle">タスク一覧・マージ許可・失敗の上限</text>
+  <rect class="box" data-id="instruct" x="40" y="60" width="200" height="60" rx="6"/><text x="140" y="86" text-anchor="middle">PRD を渡し、承認する</text><text class="label" x="140" y="104" text-anchor="middle">タスク一覧・失敗の上限</text>
   <rect class="box" data-id="run" x="40" y="200" width="200" height="60" rx="6"/><text x="140" y="234" text-anchor="middle">loop.py を起動する</text>
   <rect class="box" data-id="answer" x="40" y="420" width="200" height="60" rx="6"/><text x="140" y="446" text-anchor="middle">要判断に回答する</text><text class="label" x="140" y="464" text-anchor="middle">停止の行を なし に戻す</text>
 

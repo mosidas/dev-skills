@@ -50,7 +50,7 @@ gh run view <run-id> --log-failed        # 失敗したステップのログだ�
 
 ## 5. マージ
 
-ユーザーの指示を得てから実行する。
+CI の通過・gate-reviewer の「マージ可」・ask のレビューコメントが無いこと、の 3 つが揃ったら統括が実行する(develop 8.)。ユーザーの指示は待たない。
 
 ```sh
 gh pr merge <番号> --merge --delete-branch   # 承認が必須で自己承認できないリポジトリでは --admin を足す
