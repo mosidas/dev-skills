@@ -103,6 +103,23 @@ class PhraseCatalogTest(unittest.TestCase):
         self.assertEqual(len(warn_findings), 1)
         self.assertEqual(warn_findings[0].severity, "warn")
 
+    def test_README_の推敲で足した語を活用形ごとに検出する(self) -> None:
+        """TASK-198。「を入れる」は常体・敬体・否定・活用を、「にある。」は参照文を検出する。"""
+        for text in (
+            "Go をインストールせずに Node.js を入れる。",
+            "Go 1.26 以上を入れたうえで実行する。",
+            "Node.js を入れて実行する。",
+            "Wails CLI を入れます。",
+            "Wails CLI を入れない。",
+            "Finder から開く手順は docs/finder-quick-action.md にある。",
+        ):
+            with self.subTest(text=text):
+                findings = lint.detect_forbidden_phrases([(1, text)])
+                self.assertEqual(len(findings), 1, text)
+                self.assertEqual(findings[0].category, "forbidden_phrase")
+                self.assertEqual(findings[0].severity, "info")
+        self.assertEqual(lint.detect_forbidden_phrases([(1, "値を入力する。")]), [])
+
     def test_yomiyasu_由来の語を検出する(self) -> None:
         """yomiyasu 由来の 41 語は、ng か forms を含む例文でカタログの severity として 1 件だけ検出される。
 
