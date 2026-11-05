@@ -112,6 +112,9 @@ class PhraseCatalogTest(unittest.TestCase):
             "Wails CLI を入れます。",
             "Wails CLI を入れない。",
             "Finder から開く手順は docs/finder-quick-action.md にある。",
+            "Finder から開く手順は docs/finder-quick-action.md にあります。",
+            "「正規表現」にチェックを入れる。",
+            "原因は設定にある。",
         ):
             with self.subTest(text=text):
                 findings = lint.detect_forbidden_phrases([(1, text)])
