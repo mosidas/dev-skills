@@ -43,7 +43,7 @@ uv run <スキルのディレクトリ>/scripts/semantic.py <file.md> [--json] [
 
 | hook | 発火 | 動作 |
 | :-- | :-- | :-- |
-| PostToolUse(Write / Edit / MultiEdit / NotebookEdit) | 日本語 Markdown の書き込み直後 | lint.py を `--json` で実行し、検出があれば警告をエージェントへ返す。処理は止めない(書き込みは成立済み)。書き直しの結果へ再び検査がかかる |
+| PostToolUse(Write / Edit / MultiEdit / NotebookEdit) | 日本語 Markdown の書き込み直後 | lint.py を `--json` で実行し、検出があるか、lint.py が分担の通知を出したとき(見出しが 10 を超える文書)に警告をエージェントへ返す。処理は止めない(書き込みは成立済み)。書き直しの結果へ再び検査がかかる |
 | Stop | セッション完了時 | このセッションで検査したファイルを再検査し、重大カテゴリの検出が残るあいだ完了をブロックする(`stop_max_blocks` 回が上限) |
 
 発火するのは、拡張子が `.md` / `.markdown` で、日本語文字が `min_japanese_chars`(既定 30)文字以上あり、`exclude` に一致せず、文書種別の `inspect` が `true` の書き込みに限る。設定の正本はプラグインの `hooks/inspection.config.json` である。利用側プロジェクトの恒久的な変更は `.claude/write-doc-inspection.json` に同じキーで書く(浅い上書き。プラグインを更新しても残る)。

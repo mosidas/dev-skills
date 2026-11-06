@@ -1999,7 +1999,7 @@ def review_delegation_notice(heading_count: int) -> str | None:
         return None
     return (
         f"見出しが {heading_count} 個(10 超)の文書である。推敲は観点別または章別に"
-        "別のエージェントへ分担して推敲させる(references/inspection.md 4.・5.)。"
+        "別のエージェントへ分担する(references/inspection.md 4.・5.)。"
     )
 
 

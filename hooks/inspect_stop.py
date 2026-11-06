@@ -55,10 +55,10 @@ def main() -> None:
         inspect, doctype = lib.should_inspect(path, config, project)
         if not inspect:
             continue
-        findings = lib.run_lint(path, doctype.get("genre"), config)
-        if findings is None:
+        result = lib.run_lint(path, doctype.get("genre"), config)
+        if result is None:
             continue
-        findings = lib.blocking_findings(lib.filter_findings(findings, doctype), config)
+        findings = lib.blocking_findings(lib.filter_findings(result.findings, doctype), config)
         if findings:
             remaining[file] = findings
 

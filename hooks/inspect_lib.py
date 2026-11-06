@@ -22,6 +22,7 @@ import subprocess
 import sys
 import tempfile
 from pathlib import Path
+from typing import NamedTuple
 
 WRITE_TOOLS = {"Write", "Edit", "MultiEdit", "NotebookEdit"}
 PATH_KEYS = ("file_path", "notebook_path", "path")
@@ -186,8 +187,16 @@ def lint_command() -> list[str] | None:
     return ["uv", "run", str(lint_py)]
 
 
-def run_lint(path: Path, genre: str | None, config: dict) -> list[dict] | None:
-    """lint.py を `--json` で実行して findings を返す。実行できなければ None(検査を諦める)。"""
+class LintResult(NamedTuple):
+    findings: list[dict]
+    notice: str | None
+
+
+def run_lint(path: Path, genre: str | None, config: dict) -> LintResult | None:
+    """lint.py を `--json` で実行して検出と分担の通知を返す。実行できなければ None(検査を諦める)。
+
+    notice は lint.py が見出しの多い文書に出す工程の指示であり、出さなければ None である。
+    """
     cmd = lint_command()
     if cmd is None:
         return None
@@ -212,7 +221,11 @@ def run_lint(path: Path, genre: str | None, config: dict) -> list[dict] | None:
     findings = output.get("findings")
     if not isinstance(findings, list):
         return None
-    return [f for f in findings if isinstance(f, dict)]
+    notice = output.get("notice")
+    return LintResult(
+        [f for f in findings if isinstance(f, dict)],
+        notice if isinstance(notice, str) else None,
+    )
 
 
 def filter_findings(findings: list[dict], doctype: dict) -> list[dict]:
@@ -316,17 +329,25 @@ def format_warning(
     guides: dict,
     blocking: list[dict],
     phrase_okays: dict[str, list[str]] | None = None,
+    notice: str | None = None,
 ) -> str:
     """PostToolUse でエージェントへ返す警告文。
 
     語の置換でなく文単位の書き直しを求め、カテゴリごとの言い換え指針を同梱する。
     機械検出に出ない不自然さの判定(LLM 判定)もここで指示する。
+    notice(lint.py の分担の通知)があれば先頭の行の次に置く。検出が無ければ通知だけを返す。
     """
+    lines = [f"write-doc 検査: {path} に {len(findings)} 件の検出。"]
+    if notice is not None:
+        lines += ["", f"分担: {notice}"]
+    if not findings:
+        return "\n".join(lines)
+    if notice is not None:
+        lines.append("")
     ordered = sort_findings(findings)
     limit = int(config.get("max_findings_in_warning", 10))
     shown = ordered[:limit]
-    lines = [
-        f"write-doc 検査: {path} に {len(findings)} 件の検出。",
+    lines += [
         "検出箇所を含む文を丸ごと書き直すこと。指摘された語だけを類語に置き換えて済ませない"
         "(文の構造ごと組み替える)。",
         "",

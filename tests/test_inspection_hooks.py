@@ -44,6 +44,23 @@ if "INFOONLY" in text:
 print(json.dumps({"findings": findings}))
 '''
 
+# 本物の lint の main() を検出器だけ差し替えて動かすスタブ(見出しの数え方と分担の通知は本物)。
+REAL_MAIN_LINT = f'''
+import sys
+sys.path.insert(0, {str(helpers.REPO_ROOT / "skills" / "write-doc" / "scripts")!r})
+import lint
+lint.run_lint = lambda text, genre=None, experimental=False: ([], {{"total_findings": 0, "by_category": {{}}}})
+sys.exit(lint.main())
+'''
+
+
+def headings(count: int) -> str:
+    return "".join(f"## {n}. 節\n\n本文。\n\n" for n in range(1, count + 1))
+
+
+def bold_headings(count: int) -> str:
+    return "".join(f"**{n}. 題**\n\n本文。\n\n" for n in range(1, count + 1))
+
 
 class LibTestCase(helpers.TempDirTestCase):
     """ライブラリ関数のテストの基底(検査対象のファイルと設定を組み立てる)。"""
@@ -194,6 +211,23 @@ class FormatWarningTest(LibTestCase):
         )
         self.assertIn("ほか 15 件", reason)
 
+    def test_分担の通知を検出と並べて含める(self) -> None:
+        findings = [
+            {"line": 3, "category": "forbidden_phrase", "severity": "warn", "excerpt": "重要なのは"}
+        ]
+        reason = lib.format_warning(
+            Path("doc.md"), findings, self.config(), {}, [], notice="通知の文"
+        )
+        self.assertIn("- L3 [warn] forbidden_phrase", reason)
+        self.assertIn("分担: 通知の文", reason)
+
+    def test_検出が無く通知だけなら書き直しを指示しない(self) -> None:
+        reason = lib.format_warning(
+            Path("doc.md"), [], self.config(), {}, [], notice="通知の文"
+        )
+        self.assertIn("分担: 通知の文", reason)
+        self.assertNotIn("丸ごと書き直す", reason)
+
     def test_同梱の指針が全カテゴリを持つ(self) -> None:
         """lint.py の検出カテゴリすべてに書き直しの指針が対応づく。"""
         lint_src = (
@@ -330,6 +364,16 @@ class HookProcessTestCase(helpers.TempDirTestCase):
         path.write_text(JAPANESE_TEXT + marker + "\n", encoding="utf-8")
         return path
 
+    def use_real_main_lint(self) -> None:
+        stub = self.tmp / "real_main_lint.py"
+        stub.write_text(REAL_MAIN_LINT, encoding="utf-8")
+        self.env[lib.LINT_CMD_ENV] = f'"{sys.executable}" "{stub}"'
+
+    def write_body(self, rel: str, body: str) -> Path:
+        path = self.project / rel
+        path.write_text(JAPANESE_TEXT + body, encoding="utf-8")
+        return path
+
     def decision(self, proc: subprocess.CompletedProcess) -> dict:
         self.assertEqual(proc.returncode, 0, proc.stderr)
         self.assertTrue(proc.stdout.strip(), "JSON 出力が無い")
@@ -385,6 +429,31 @@ class InspectWriteTest(HookProcessTestCase):
         state = json.loads(states[0].read_text(encoding="utf-8"))
         self.assertEqual(state["files"], [str(path.resolve())])
 
+    def test_見出しが10を超える文書では検出が0件でも分担の通知を返す(self) -> None:
+        self.use_real_main_lint()
+        path = self.write_body("doc.md", headings(11))
+        decision = self.decision(self.run_hook(INSPECT_WRITE, self.write_payload(path)))
+        self.assertIn("別のエージェント", decision["reason"])
+        self.assertIn("inspection.md 4.・5.", decision["reason"])
+        self.assertNotIn("丸ごと書き直す", decision["reason"])
+
+    def test_太字だけの見出しが10を超える文書でも分担の通知を返す(self) -> None:
+        self.use_real_main_lint()
+        path = self.write_body("doc.md", bold_headings(11))
+        decision = self.decision(self.run_hook(INSPECT_WRITE, self.write_payload(path)))
+        self.assertIn("別のエージェント", decision["reason"])
+
+    def test_見出しが10の文書では通知を出さない(self) -> None:
+        self.use_real_main_lint()
+        path = self.write_body("doc.md", headings(10))
+        proc = self.run_hook(INSPECT_WRITE, self.write_payload(path))
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        self.assertEqual(proc.stdout, "")
+        states = list(self.state_dir.rglob("*.json"))
+        self.assertEqual(len(states), 1, "検査が走って状態に記録された")
+        state = json.loads(states[0].read_text(encoding="utf-8"))
+        self.assertEqual(state["files"], [str(path.resolve())])
+
 
 class InspectStopTest(HookProcessTestCase):
     def record(self, rel: str, marker: str = "") -> Path:
@@ -423,6 +492,14 @@ class InspectStopTest(HookProcessTestCase):
         proc = self.run_hook(INSPECT_STOP, self.stop_payload())
         self.assertEqual(proc.stdout, "")
         self.assertIn("上限", proc.stderr)
+
+    def test_分担の通知だけでは完了をブロックしない(self) -> None:
+        self.use_real_main_lint()
+        path = self.write_body("doc.md", headings(11))
+        self.decision(self.run_hook(INSPECT_WRITE, self.write_payload(path)))
+        proc = self.run_hook(INSPECT_STOP, self.stop_payload())
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        self.assertEqual(proc.stdout, "")
 
     def test_状態が無ければ何もしない(self) -> None:
         proc = self.run_hook(INSPECT_STOP, self.stop_payload())
