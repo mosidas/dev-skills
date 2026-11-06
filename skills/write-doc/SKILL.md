@@ -21,7 +21,7 @@ description: 日本語の開発ドキュメント・技術文書(README、仕様
 | 読み手と工程 | `references/readers.md` | 読み手の分類(本人向け・他者向け)と、分類ごとに省いてよいもの、確認できないときの事実と推測の書き分け | 書き始める前 |
 | 読み手と工程 | `references/process.md` | 工程の一覧、着手時の brief、骨組みの合意、疑問の一覧、肉付けの規則、推敲役に渡す物、指摘を受けた後 | 書き始める前と、工程を進めるとき |
 | 読み手と工程 | `references/inspection.md` | 検査スクリプト(`scripts/`。依存はスクリプト内で宣言済みで、`uv run` で実行する)と hooks の使い方、検出への対応、長い文書の推敲の分担、別のエージェントによる推敲、判断台帳、収束条件 | 書いた後に点検・推敲するとき |
-| 形式 | `references/format/markdown.md` | Markdown の見出しの階層、記法(GFM・frontmatter・アラート) | Markdown の文書を書く・直すとき |
+| 形式 | `references/format/markdown.md` | Markdown の見出しの階層、記法(GFM・frontmatter・アラート・作り手のための参照の書き場所) | Markdown の文書を書く・直すとき |
 | 形式 | `references/format/html.md` | HTML で配布する文書の折りたたみのラベル、HTML の資料の規則(表の列の並び、一覧の全件表示、操作と表示先の近接、折りたたみの有無、表の面、行幅、図の幅、タブと節の対応、中間ファイルの参照) | HTML の文書を書く・直すとき。HTML で配布する説明資料は write-page から読む |
 | 形式 | `references/format/slide.md` | スライドの型(プレゼン型・説明資料型)、メッセージライン、タイトル、ページの作り方、文体と強調 | スライドを作る・直すとき。write-slide から読む |
 | 種類 | `references/types/`(一覧は `references/types/README.md`) | 文書の種類ごとの読み手・節の並び・足す規則・外してよい規則。手順書・仕様書と規約・議事録・調査レポート・技術記事・企画書と PRD・README(雛形は `references/templates/readme.md`) | brief で種類を決めたとき |

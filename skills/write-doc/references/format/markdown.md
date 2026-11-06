@@ -9,5 +9,5 @@
 
 - Markdown 形式で記述し、GitHub での表示を前提に [GitHub Flavored Markdown](https://github.github.com/gfm/) に従う。
 - 作成日・版・対象コミットなどのメタ情報は frontmatter に書く。本文へ書くのは、読み手の判断に関わる場合に限る。
-- 他者向けの文書では、作り手が後でたどるための参照(素材と中間ファイルのパス・作業の経過)を frontmatter にも本文にも書かず、ファイルの末尾に HTML コメントで書く。読み手はそのパスを開けない(`../readers.md` 3.)。パスはリポジトリからの相対パスで書く。HTML コメントはファイルのソースに残るため、絶対パスを書くとホームディレクトリの名前が配布先に渡る。
+- 他者向けの文書では、作り手が後でたどるための参照(素材と中間ファイルのパス・タスクの識別子)を frontmatter にも本文にも書かず、ファイルの末尾に HTML コメントで書く。読み手はそのパスを開けない(`../readers.md` 3.)。パスはリポジトリからの相対パスで書く。HTML コメントはファイルのソースに残るため、絶対パスを書くとホームディレクトリの名前が配布先に渡る。
 - 必要に応じて[アラート記法](https://docs.github.com/ja/get-started/writing-on-github/getting-started-with-writing-and-formatting-on-github/basic-writing-and-formatting-syntax#alerts)を使用してよい。
