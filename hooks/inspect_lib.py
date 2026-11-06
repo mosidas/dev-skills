@@ -435,25 +435,23 @@ def save_state(path: Path, state: dict) -> None:
         pass
 
 
-def record_inspected(path: Path, project: Path | None, session_id: str) -> None:
+def record_inspected(path: Path, project: Path | None, session_id: str, notify: bool) -> bool:
+    """検査したファイルを記録する。notify なら分担の通知を出したことも同じ更新で記録する。
+
+    この起動で通知を出すか(notify で、このファイルへ未通知だったか)を返す。
+    """
     state_file = state_path(project, session_id)
     state = load_state(state_file)
     abs_path = str(path.resolve())
-    if abs_path not in state["files"]:
+    changed = abs_path not in state["files"]
+    if changed:
         state["files"].append(abs_path)
+    first_notice = notify and abs_path not in state["notified"]
+    if first_notice:
+        state["notified"].append(abs_path)
+    if changed or first_notice:
         save_state(state_file, state)
-
-
-def mark_notified(path: Path, project: Path | None, session_id: str) -> bool:
-    """分担の通知をこのファイルへ出したと記録する。初回なら True、記録済みなら False を返す。"""
-    state_file = state_path(project, session_id)
-    state = load_state(state_file)
-    abs_path = str(path.resolve())
-    if abs_path in state["notified"]:
-        return False
-    state["notified"].append(abs_path)
-    save_state(state_file, state)
-    return True
+    return first_notice
 
 
 def emit(decision: dict) -> None:

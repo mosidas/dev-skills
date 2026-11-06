@@ -293,8 +293,8 @@ class StateTest(LibTestCase):
     def test_検査したファイルを重複なく記録する(self) -> None:
         with mock.patch.object(lib.tempfile, "gettempdir", return_value=str(self.tmp)):
             path = self.write("doc.md", JAPANESE_TEXT)
-            lib.record_inspected(path, self.tmp, "s1")
-            lib.record_inspected(path, self.tmp, "s1")
+            lib.record_inspected(path, self.tmp, "s1", notify=False)
+            lib.record_inspected(path, self.tmp, "s1", notify=False)
             state = lib.load_state(lib.state_path(self.tmp, "s1"))
         self.assertEqual(state["files"], [str(path.resolve())])
         self.assertEqual(state["stop_blocks"], 0)
@@ -503,6 +503,16 @@ class NoticeOnceTest(HookProcessTestCase):
         self.assertIn("分担: 通知の文", self.write_reason(path))
         self.assertEqual(self.decision(self.run_hook(INSPECT_STOP, self.stop_payload()))["decision"], "block")
         self.assertNotIn("分担:", self.write_reason(path))
+
+    def test_重大カテゴリが残ったまま_Stop_が上限に達した後は再び通知を出さない(self) -> None:
+        path = self.write_doc("doc.md", "NGWORD NOTICE")
+        self.assertIn("分担: 通知の文", self.write_reason(path))
+        for _ in range(3):  # 既定の stop_max_blocks = 3
+            self.assertEqual(self.decision(self.run_hook(INSPECT_STOP, self.stop_payload()))["decision"], "block")
+        self.assertEqual(self.run_hook(INSPECT_STOP, self.stop_payload()).stdout, "", "上限に達して完了を許可する")
+        reason = self.write_reason(path)
+        self.assertIn("forbidden_phrase", reason)
+        self.assertNotIn("分担:", reason)
 
     def test_2回目は検出だけを警告する(self) -> None:
         path = self.write_doc("doc.md", "NGWORD NOTICE")
