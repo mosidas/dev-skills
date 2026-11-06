@@ -347,7 +347,8 @@ class SelfScopeNoteTest(unittest.TestCase):
         for text in [
             "資料に書いてある内容の説明は本メモでは省略した。",
             "- 本書には決定事項だけを記録しました。",
-            "本書では会議の要点を記録しました。",
+            "本書は決定事項だけを記録した。",
+            "本稿では結論のみ記載した。",
             "本資料の 3 章では手順の説明を省略した。",
         ]:
             with self.subTest(text=text):
@@ -358,7 +359,7 @@ class SelfScopeNoteTest(unittest.TestCase):
                 self.assertIn("削る", findings[0].detail)
                 self.assertIn("paragraph.md 3.", findings[0].detail)
 
-    def test_範囲の導入と連体修飾と語の途中とコードと場所の案内は検出しない(self) -> None:
+    def test_範囲の導入と連体修飾と語の途中とコードと内容や場所の案内は検出しない(self) -> None:
         for text in [
             "本書は検査 hook の設定を扱う。",
             "本メモに記録した決定事項は次の 3 つである。",
@@ -366,6 +367,11 @@ class SelfScopeNoteTest(unittest.TestCase):
             "例として `本メモでは省略した` と書く。",
             "本資料の 3 章に手順を記載した。",
             "本書の付録に用語集を記載した。",
+            "本書は 3 章に手順を記載した。",
+            "本資料は次の 3 章で手順の詳細を記載しました。",
+            "本資料には付録を記載した。",
+            "本書は、2026 年 1 月の障害の原因と対策を記録した。",
+            "本書の 2 章では A だけを扱い、詳細は付録に記載した。",
         ]:
             with self.subTest(text=text):
                 self.assertEqual(self.detect(text), [])
