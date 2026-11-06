@@ -8,7 +8,9 @@ from __future__ import annotations
 
 import json
 import sys
+import types
 import unittest
+from unittest import mock
 
 import helpers
 
@@ -17,6 +19,18 @@ SCRIPTS = helpers.REPO_ROOT / "skills" / "write-doc" / "scripts"
 sys.path.insert(0, str(SCRIPTS))
 
 import lint  # noqa: E402
+import textcore  # noqa: E402
+
+
+def run_lint_without_sudachi(text: str) -> list:
+    """形態素を返さない sudachipy の代わりで run_lint を通し、検出の一覧を返す。"""
+    tokenizer = types.SimpleNamespace(tokenize=lambda text, mode: [])
+    fake = types.ModuleType("sudachipy")
+    fake.Dictionary = lambda: types.SimpleNamespace(create=lambda: tokenizer)
+    fake.SplitMode = types.SimpleNamespace(A="A", B="B", C="C")
+    with mock.patch.dict(sys.modules, {"sudachipy": fake}), mock.patch.object(textcore, "_tokenizer_obj", None):
+        findings, _ = lint.run_lint(text)
+    return findings
 
 
 class MaskTest(unittest.TestCase):
@@ -333,6 +347,8 @@ class SelfScopeNoteTest(unittest.TestCase):
         for text in [
             "資料に書いてある内容の説明は本メモでは省略した。",
             "- 本書には決定事項だけを記録しました。",
+            "本書では会議の要点を記録しました。",
+            "本資料の 3 章では手順の説明を省略した。",
         ]:
             with self.subTest(text=text):
                 findings = self.detect(text)
@@ -342,15 +358,21 @@ class SelfScopeNoteTest(unittest.TestCase):
                 self.assertIn("削る", findings[0].detail)
                 self.assertIn("paragraph.md 3.", findings[0].detail)
 
-    def test_範囲の導入と連体修飾と語の途中とコードは検出しない(self) -> None:
+    def test_範囲の導入と連体修飾と語の途中とコードと場所の案内は検出しない(self) -> None:
         for text in [
             "本書は検査 hook の設定を扱う。",
             "本メモに記録した決定事項は次の 3 つである。",
             "日本書紀の記述は省略した。",
             "例として `本メモでは省略した` と書く。",
+            "本資料の 3 章に手順を記載した。",
+            "本書の付録に用語集を記載した。",
         ]:
             with self.subTest(text=text):
                 self.assertEqual(self.detect(text), [])
+
+    def test_run_lint_の結果に含まれる(self) -> None:
+        findings = run_lint_without_sudachi("資料に書いてある内容の説明は本メモでは省略した。\n")
+        self.assertEqual([f.line for f in findings if f.category == "self_scope_note"], [1])
 
 
 class MissingBlankLineTest(unittest.TestCase):
@@ -393,6 +415,10 @@ class MissingBlankLineTest(unittest.TestCase):
         ]:
             with self.subTest(text=text):
                 self.assertEqual(self.lines(text), set())
+
+    def test_run_lint_の結果に含まれる(self) -> None:
+        findings = run_lint_without_sudachi(self.TEMPLATE)
+        self.assertEqual({f.line for f in findings if f.category == "missing_blank_line"}, {2, 5, 8, 9})
 
 
 if __name__ == "__main__":
