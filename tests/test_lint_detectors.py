@@ -371,5 +371,5 @@ class ReviewDelegationNoticeTest(unittest.TestCase):
         self.assertEqual(lint.count_headings(text), 0)
 
     def test_コードブロックとフロントマターの太字は見出しに数えない(self) -> None:
-        text = "---\ntitle: **題の太字**\n---\n\n**本当の見出し**\n\n```md\n**コードの太字**\n```\n"
+        text = "---\ntitle: 題\n**題の太字**\n---\n\n**本当の見出し**\n\n```md\n**コードの太字**\n```\n"
         self.assertEqual(lint.count_headings(text), 1)
