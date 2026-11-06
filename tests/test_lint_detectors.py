@@ -407,6 +407,12 @@ class MissingBlankLineTest(unittest.TestCase):
         self.assertIn("議事録", excerpt)
         self.assertIn("---", excerpt)
 
+    def test_空行なしで続く等号の下線を検出する(self) -> None:
+        self.assertEqual(self.lines("本文の行\n==="), {2})
+
+    def test_太字の行の直後の等号の下線は下線の行だけを検出する(self) -> None:
+        self.assertEqual(self.lines("**題**\n==="), {2})
+
     def test_表示が崩れない書き方は検出しない(self) -> None:
         for text in [
             "---\ntitle: 議事録\n---\n\n本文。",
@@ -417,6 +423,15 @@ class MissingBlankLineTest(unittest.TestCase):
             "**題**\n## 見出し",
             "**題**\n- 箇条",
             "**題**\n> 引用",
+            "# 見出し\n---",
+            "- 箇条の項目\n---",
+            "| 項目 | 値 |\n---",
+            "**題**  \n本文",
+            "**題**\n<br>",
+            "**題**\n```\nコード\n```",
+            "**題**\n| 項目 | 値 |",
+            "**題**\n***\n本文",
+            "**題**\n___\n本文",
         ]:
             with self.subTest(text=text):
                 self.assertEqual(self.lines(text), set())

@@ -1881,19 +1881,21 @@ def detect_structural_ai_habits(raw_text: str) -> tuple[list[Finding], dict]:
     return findings, stats
 
 
-# 段落の直後に空行なしで続くと、前の行を setext の見出しにする行
-SETEXT_UNDERLINE_RE = re.compile(r"^ {0,3}-{3,}[ \t]*$")
+# 段落の直後に空行なしで続くと、直前の段落を setext の見出しにする行
+SETEXT_UNDERLINE_RE = re.compile(r"^ {0,3}(?:-{3,}|=+)[ \t]*$")
+THEMATIC_BREAK_RE = re.compile(r"^ {0,3}([-*_])(?:[ \t]*\1){2,}[ \t]*$")
 
 
 def detect_missing_blank_line(raw_text: str) -> list[Finding]:
     """空行が無いため Markdown のプレビューで表示が崩れる行を検出する。
-    setext の見出しになる `---` と、次の行と 1 つの段落に連結される太字だけの行。
+    setext の見出しになる下線(`---` か `===`)と、次の行と 1 つの段落に連結される太字だけの行。
     """
     raw = mask_html_comments(raw_text).split("\n")
     kept = mask_markdown_structure(raw_text, keep_structure_text=True).split("\n")
     findings: list[Finding] = []
     for i, line in enumerate(raw):
-        # shortcut: 1 以外の番号の箇条・箇条の続きの行の後の --- を区別しない, 誤検出の報告があれば段落の開始を追う判定へ引き上げる
+        # shortcut: 1 以外の番号の箇条・引用と箇条の中・かな漢字の無い行・2 本以下の -- を見逃し、
+        # 字下げ 4 のコードと HTML ブロックの中の下線を誤検出する, 報告があれば CommonMark のブロックの判定へ引き上げる
         if (
             i > 0
             and SETEXT_UNDERLINE_RE.match(line)
@@ -1910,8 +1912,8 @@ def detect_missing_blank_line(raw_text: str) -> list[Finding]:
                     excerpt=f"{raw[i - 1].strip()[:30]} / {line.strip()[:10]}",
                     severity="warn",
                     detail=(
-                        "前の行の直後に空行なしで `---` が続き、前の行が見出し(setext)として表示される。"
-                        "前の行と `---` の間に空行を入れる"
+                        "前の行の直後に空行なしで下線(`---` か `===`)が続き、直前の段落が見出し(setext)として表示される。"
+                        "前の行と下線の間に空行を入れる"
                     ),
                 )
             )
@@ -1931,6 +1933,7 @@ def detect_missing_blank_line(raw_text: str) -> list[Finding]:
                     _CODE_FENCE_RE,
                     _TABLE_ROW_RE,
                     SETEXT_UNDERLINE_RE,
+                    THEMATIC_BREAK_RE,
                 )
             )
         ):
