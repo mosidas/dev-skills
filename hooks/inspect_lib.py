@@ -443,13 +443,13 @@ def record_inspected(path: Path, project: Path | None, session_id: str, notify: 
     state_file = state_path(project, session_id)
     state = load_state(state_file)
     abs_path = str(path.resolve())
-    changed = abs_path not in state["files"]
-    if changed:
+    added = abs_path not in state["files"]
+    if added:
         state["files"].append(abs_path)
     first_notice = notify and abs_path not in state["notified"]
     if first_notice:
         state["notified"].append(abs_path)
-    if changed or first_notice:
+    if added or first_notice:
         save_state(state_file, state)
     return first_notice
 

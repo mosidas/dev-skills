@@ -512,7 +512,7 @@ class NoticeOnceTest(HookProcessTestCase):
         self.assertEqual(self.decision(self.run_hook(INSPECT_STOP, self.stop_payload()))["decision"], "block")
         self.assertNotIn("分担:", self.write_reason(path))
 
-    def test_重大カテゴリが残ったまま_Stop_が上限に達した後は再び通知を出さない(self) -> None:
+    def test_ブロックの上限に達した後は検出が解消された_Stop_まで再び通知を出さない(self) -> None:
         path = self.write_doc("doc.md", "NGWORD NOTICE")
         self.assertIn("分担: 通知の文", self.write_reason(path))
         for _ in range(3):  # 既定の stop_max_blocks = 3
@@ -520,7 +520,12 @@ class NoticeOnceTest(HookProcessTestCase):
         self.assertEqual(self.run_hook(INSPECT_STOP, self.stop_payload()).stdout, "", "上限に達して完了を許可する")
         reason = self.write_reason(path)
         self.assertIn("forbidden_phrase", reason)
-        self.assertNotIn("分担:", reason)
+        self.assertNotIn("分担:", reason, "検出が残るあいだは上限の後も通知を出さない")
+        path = self.write_doc("doc.md", "NOTICE")
+        self.assertEqual(self.write_reason(path), "", "検出を解消しても Stop の前は通知を出さない")
+        self.assertEqual(self.run_hook(INSPECT_STOP, self.stop_payload()).stdout, "")
+        self.assertEqual(list(self.state_dir.rglob("*.json")), [], "解消された完了で状態ファイルが削除される")
+        self.assertIn("分担: 通知の文", self.write_reason(path), "状態ファイルの削除の後は再び通知を出す")
 
     def test_2回目は検出だけを警告する(self) -> None:
         path = self.write_doc("doc.md", "NGWORD NOTICE")
