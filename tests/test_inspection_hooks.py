@@ -222,6 +222,26 @@ class FormatWarningTest(LibTestCase):
         reason = lib.format_warning(Path("doc.md"), findings, self.config(), guides, [])
         self.assertIn("決められなければ残す", reason)
 
+    def test_共通の指示は指針が残すとする文を残すと指示する(self) -> None:
+        findings = [
+            {"line": 2, "category": "self_scope_note", "severity": "warn", "excerpt": "本書のコード例では import 文を省略しました。"}
+        ]
+        guides = lib.load_guides(HOOKS)
+        reason = lib.format_warning(Path("doc.md"), findings, self.config(), guides, [])
+        common = reason.split("検出:")[0]
+        self.assertIn("カテゴリ別の指針に従って直す", common)
+        self.assertIn("指針が残すとする文は残す", common)
+
+    def test_空行の指針は下線の直前と太字の行の直後に空行を入れると指示する(self) -> None:
+        findings = [
+            {"line": 2, "category": "missing_blank_line", "severity": "warn", "excerpt": "**1. 題**"}
+        ]
+        guides = lib.load_guides(HOOKS)
+        reason = lib.format_warning(Path("doc.md"), findings, self.config(), guides, [])
+        self.assertIn("下線の行は直前に", reason)
+        self.assertIn("太字だけの行は直後に", reason)
+        self.assertNotIn("直前か直後", reason)
+
     def test_警告の件数は上限で打ち切る(self) -> None:
         findings = [
             {"line": i, "category": "translationese", "severity": "info", "excerpt": "x"}

@@ -749,7 +749,7 @@ def detect_self_scope_note(
                     severity="warn",
                     detail=(
                         f"文書自身を指す語と、省いたこと、または記録した範囲を限ることを述べる過去形の述語の組: 「{m.group()}」。"
-                        "読者に向けた中身でなければ文を削る(paragraph.md 3.)"
+                        "読者に向けた中身でなければ文を削る。決められなければ残す(paragraph.md 3.)"
                     ),
                 )
             )

@@ -358,6 +358,7 @@ class SelfScopeNoteTest(unittest.TestCase):
                 self.assertEqual(findings[0].category, "self_scope_note")
                 self.assertEqual(findings[0].severity, "warn")
                 self.assertIn("削る", findings[0].detail)
+                self.assertIn("決められなければ残す", findings[0].detail)
                 self.assertIn("paragraph.md 3.", findings[0].detail)
 
     def test_範囲の導入と連体修飾と語の途中とコードと内容や場所の案内は検出しない(self) -> None:
