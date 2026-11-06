@@ -168,6 +168,11 @@ class ConfigTest(LibTestCase):
         categories = [rule["category"] for rule in config["blocking"]]
         self.assertIn("forbidden_phrase", categories)
 
+    def test_文書自身の範囲を述べる文は完了をブロックしない(self) -> None:
+        config = lib.load_config(HOOKS, None)
+        categories = [rule["category"] for rule in config["blocking"]]
+        self.assertNotIn("self_scope_note", categories)
+
 
 class LintCommandTest(LibTestCase):
     def test_プラグイン同梱の_lint_py_を_uv_run_で叩く(self) -> None:

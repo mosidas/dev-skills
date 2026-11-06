@@ -324,6 +324,35 @@ class SplitUnitsTest(unittest.TestCase):
                 self.assertNotIn(absent, body)
 
 
+class SelfScopeNoteTest(unittest.TestCase):
+    def detect(self, text: str) -> list:
+        lines = lint.iter_lines_with_no(lint.mask_markdown_structure(text, keep_structure_text=True))
+        return lint.detect_self_scope_note(lines)
+
+    def test_文書自身の範囲を述べる過去形の文を検出する(self) -> None:
+        for text in [
+            "資料に書いてある内容の説明は本メモでは省略した。",
+            "- 本書には決定事項だけを記録しました。",
+        ]:
+            with self.subTest(text=text):
+                findings = self.detect(text)
+                self.assertEqual(len(findings), 1)
+                self.assertEqual(findings[0].category, "self_scope_note")
+                self.assertEqual(findings[0].severity, "warn")
+                self.assertIn("削る", findings[0].detail)
+                self.assertIn("paragraph.md 3.", findings[0].detail)
+
+    def test_範囲の導入と連体修飾と語の途中とコードは検出しない(self) -> None:
+        for text in [
+            "本書は検査 hook の設定を扱う。",
+            "本メモに記録した決定事項は次の 3 つである。",
+            "日本書紀の記述は省略した。",
+            "例として `本メモでは省略した` と書く。",
+        ]:
+            with self.subTest(text=text):
+                self.assertEqual(self.detect(text), [])
+
+
 if __name__ == "__main__":
     unittest.main()
 

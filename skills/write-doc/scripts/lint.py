@@ -155,6 +155,12 @@ FILLER_PATTERNS: list[tuple[str, str]] = [
     ),
 ]
 
+# 「記載している」の現在形は扱う範囲の導入として正当に使われるため、述語は過去形に限る。
+SELF_SCOPE_NOTE_RE = re.compile(
+    r"(?<![一-龠々])本(?:メモ|書|稿|資料)[^。！？\n]{0,40}?"
+    r"(?:(?:省略|割愛|記録|記載)し(?:た|ました)|省(?:いた|きました)|記し(?:た|ました))(?=[。！？]|$)"
+)
+
 # 中身の薄い評価の文（「操作性が高い。」のように名詞の評価を述語で言い直すだけの文）。
 # 出典: yomiyasu v2.2.0(a34d94f)の references/lists/thin-evaluation.txt・references/slop-catalog.md 5 章(MIT)。
 # 35 組のうち技術文書向けの 15 組だけを取り込み、製品レビュー向けの 20 組(〜心地・質感・携帯性・保温性など)は除いた。
@@ -717,6 +723,31 @@ def detect_filler_phrases(
                         detail=f"{label}: 「{_strip_line_marker(m.group())}」",
                     )
                 )
+    return findings
+
+
+def detect_self_scope_note(
+    lines: list[tuple[int, str]], raw_lines_by_no: dict[int, str] | None = None
+) -> list[Finding]:
+    findings = []
+    for no, line in lines:
+        raw_line = _raw_or_masked(raw_lines_by_no, no, line)
+        for m in SELF_SCOPE_NOTE_RE.finditer(line):
+            start = max(0, m.start() - 10)
+            end = m.end() + 10
+            excerpt = raw_line[start:end] if len(raw_line) >= end else line[start:end]
+            findings.append(
+                Finding(
+                    line=no,
+                    category="self_scope_note",
+                    excerpt=excerpt.strip(),
+                    severity="warn",
+                    detail=(
+                        f"文書自身を指す語と、省いたこと・記録した範囲を述べる過去形の述語の組: 「{m.group()}」。"
+                        "読者に向けた中身でなければ文を削る(paragraph.md 3.)"
+                    ),
+                )
+            )
     return findings
 
 
@@ -1907,6 +1938,7 @@ def run_lint(
     findings += detect_forbidden_phrases(lex_lines, raw_lines_by_no)
     findings += detect_translationese(lex_lines, raw_lines_by_no)
     findings += detect_filler_phrases(lex_lines, raw_lines_by_no)
+    findings += detect_self_scope_note(lex_lines, raw_lines_by_no)
     findings += detect_thin_evaluation(lex_lines, raw_lines_by_no)
     findings += detect_antithesis_repetition(
         lines,
