@@ -21,11 +21,11 @@ description: HTML で配布する説明資料(図・表・切り替えの UI を
 
 | ファイル | 扱う規範 | 読むとき |
 | :-- | :-- | :-- |
-| `../write-doc/references/process.md` | 工程の一覧、着手時の brief、骨組みの合意、疑問の一覧、肉付けの規則、レビュー役に渡す物、指摘を受けた後 | 書き始める前と、工程を進めるとき |
+| `../write-doc/references/process.md` | 工程の一覧、着手時の brief、骨組みの合意、疑問の一覧、肉付けの規則、推敲役に渡す物、指摘を受けた後 | 書き始める前と、工程を進めるとき |
 | `../write-doc/references/format/html.md` | 折りたたみのラベル、HTML の資料の規則(表の列の並び、一覧の全件表示、操作と表示先の近接、折りたたみの有無、表の面、行幅、図の幅、タブと節の対応、中間ファイルの参照) | 構成を決めるときと、HTML を生成するとき |
 | `../write-doc/references/sentence.md` | 語の選び方、文の組み立て、動詞と語彙、事実・意見・確信度、翻訳調、表記、記号、出典 | 本文を書くとき |
 | `../write-doc/references/paragraph.md` | 段落、論証、構成、接地と省略、見出し、表と図 | 節の役割を決めるときと、本文を組むとき |
-| `../write-doc/references/inspection.md` | 検査スクリプト、検出への対応(文書ごとの確かめ)、別のエージェントによるレビュー | 書いた後に点検するとき |
+| `../write-doc/references/inspection.md` | 検査スクリプト、検出への対応(文書ごとの確かめ)、別のエージェントによる推敲 | 書いた後に点検するとき |
 
 ## 3. HTML 固有の工程
 
@@ -42,7 +42,7 @@ description: HTML で配布する説明資料(図・表・切り替えの UI を
 - スクリプトの検査: 生成スクリプトを `node --check <script>`(Node.js)か `python3 -m py_compile <script>`(Python)で構文検査する。生成した HTML の `<script>` の中身も、ファイルに抜き出して `node --check` にかける。生成スクリプトが通っても、埋め込んだ JavaScript の構文誤りは検出されない。
 - 切り替えの UI の検査: JavaScript を無効にした表示(全本文と図が縦に並ぶ形)を撮り、すべての節・表・図があることを確かめる。headless の撮影ではタブを押せないため、タブごとの表示は、本人に見せる前に統括がブラウザーで開き、各タブを順に押して表示先が変わることを確かめる。ブラウザーを開けない環境では、その旨を本人に伝える。
 - 見た目の検査: `../design-ui/references/session.md` 3.4. の手順で、生成した HTML を frames.html の iframe(幅 1280 と幅 390)に入れ、`render.py` の `screenshot()` でウィンドウ幅 1700 で 1 枚に撮る。headless Chrome はウィンドウを 500px 未満に縮めないため、幅 390 を直接は撮れない。高さは、ページ全体が入る値を引数で渡し、PNG の下端で本文が切れていたら上げて撮り直す。Claude Code では統括が Read で PNG を開いて点検し、画像を表示できない CLI では PNG のパスを示して本人に確かめてもらう。見るのは、横スクロール、図の縮小による文字の潰れ、表の面と背景の区別、切り替えの UI と表示先の位置である。design-ui の `../design-ui/SKILL.md` 3. の 5 と同じく、1 巡の確認、見つかった欠陥の一括修正、確認の 1 巡で止める。
-- 別のエージェントによるレビュー: `process.md` 6. の物に加えて、生成した HTML、PNG、`../write-doc/references/format/html.md` を渡す。
+- 別のエージェントによる推敲: `process.md` 6. の物に加えて、生成した HTML、PNG、`../write-doc/references/format/html.md` を渡す。
 
 ## 4. 他スキルとの関係
 
