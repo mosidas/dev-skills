@@ -1907,7 +1907,7 @@ def detect_missing_blank_line(raw_text: str) -> list[Finding]:
                 Finding(
                     line=i + 1,
                     category="missing_blank_line",
-                    excerpt=line.strip()[:40],
+                    excerpt=f"{raw[i - 1].strip()[:30]} / {line.strip()[:10]}",
                     severity="warn",
                     detail=(
                         "前の行の直後に空行なしで `---` が続き、前の行が見出し(setext)として表示される。"

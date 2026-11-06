@@ -402,6 +402,11 @@ class MissingBlankLineTest(unittest.TestCase):
                 self.assertEqual(f.severity, "warn")
                 self.assertIn("空行を入れる", f.detail)
 
+    def test_見出しになる前の行を_excerpt_に含める(self) -> None:
+        excerpt = next(f.excerpt for f in lint.detect_missing_blank_line(self.TEMPLATE) if f.line == 2)
+        self.assertIn("議事録", excerpt)
+        self.assertIn("---", excerpt)
+
     def test_表示が崩れない書き方は検出しない(self) -> None:
         for text in [
             "---\ntitle: 議事録\n---\n\n本文。",
