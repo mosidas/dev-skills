@@ -47,6 +47,8 @@ from pathlib import Path
 from textcore import (
     Finding,
     SENTENCE_SPLIT_RE,
+    _BLOCKQUOTE_RE,
+    _CODE_FENCE_RE,
     _HEADING_RE,
     _LIST_ITEM_RE,
     _TABLE_DELIMITER_RE,
@@ -1876,6 +1878,74 @@ def detect_structural_ai_habits(raw_text: str) -> tuple[list[Finding], dict]:
     return findings, stats
 
 
+# 段落の直後に空行なしで続くと、前の行を setext の見出しにする行
+SETEXT_UNDERLINE_RE = re.compile(r"^ {0,3}-{3,}[ \t]*$")
+
+
+def detect_missing_blank_line(raw_text: str) -> list[Finding]:
+    """空行が無いため Markdown のプレビューで表示が崩れる行を検出する。
+    setext の見出しになる `---` と、次の行と 1 つの段落に連結される太字だけの行。
+    """
+    raw = mask_html_comments(raw_text).split("\n")
+    kept = mask_markdown_structure(raw_text, keep_structure_text=True).split("\n")
+    findings: list[Finding] = []
+    for i, line in enumerate(raw):
+        # shortcut: 1 以外の番号の箇条・箇条の続きの行の後の --- を区別しない, 誤検出の報告があれば段落の開始を追う判定へ引き上げる
+        if (
+            i > 0
+            and SETEXT_UNDERLINE_RE.match(line)
+            and kept[i - 1].strip()
+            and not any(
+                r.match(raw[i - 1])
+                for r in (_HEADING_RE, _LIST_ITEM_RE, _BLOCKQUOTE_RE, _TABLE_ROW_RE)
+            )
+        ):
+            findings.append(
+                Finding(
+                    line=i + 1,
+                    category="missing_blank_line",
+                    excerpt=line.strip()[:40],
+                    severity="warn",
+                    detail=(
+                        "前の行の直後に空行なしで `---` が続き、前の行が見出し(setext)として表示される。"
+                        "前の行と `---` の間に空行を入れる"
+                    ),
+                )
+            )
+        next_line = raw[i + 1] if i + 1 < len(raw) else ""
+        if (
+            kept[i].strip()
+            and BOLD_ONLY_LINE_RE.match(line.rstrip())
+            and not line.endswith("  ")
+            and next_line.strip()
+            and not next_line.lstrip().startswith("<")
+            and not any(
+                r.match(next_line)
+                for r in (
+                    _HEADING_RE,
+                    _LIST_ITEM_RE,
+                    _BLOCKQUOTE_RE,
+                    _CODE_FENCE_RE,
+                    _TABLE_ROW_RE,
+                    SETEXT_UNDERLINE_RE,
+                )
+            )
+        ):
+            findings.append(
+                Finding(
+                    line=i + 1,
+                    category="missing_blank_line",
+                    excerpt=line.strip()[:40],
+                    severity="warn",
+                    detail=(
+                        "太字だけの行の直後に空行が無く、次の行と 1 つの段落に連結される。"
+                        "太字の行の後に空行を入れる"
+                    ),
+                )
+            )
+    return findings
+
+
 # ---------------------------------------------------------------------------
 # メイン処理
 # ---------------------------------------------------------------------------
@@ -1934,6 +2004,7 @@ def run_lint(
 
     findings: list[Finding] = []
     findings += structural_findings
+    findings += detect_missing_blank_line(raw_text)
     # --- 表層（正規表現）ベースの検出器 ---
     findings += detect_forbidden_phrases(lex_lines, raw_lines_by_no)
     findings += detect_translationese(lex_lines, raw_lines_by_no)

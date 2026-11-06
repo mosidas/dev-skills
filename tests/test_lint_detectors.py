@@ -353,6 +353,48 @@ class SelfScopeNoteTest(unittest.TestCase):
                 self.assertEqual(self.detect(text), [])
 
 
+class MissingBlankLineTest(unittest.TestCase):
+    TEMPLATE = "\n".join([
+        "**部署名#11 議事録**",
+        "---",
+        "作成：名前",
+        "日付： 2026-01-01 14:00-15:00",
+        "---",
+        "**[議題]**",
+        "1. 題",
+        "**[内容]**",
+        "**1. 題**",
+        "本文",
+    ])
+
+    def lines(self, text: str) -> set[int]:
+        return {f.line for f in lint.detect_missing_blank_line(text)}
+
+    def test_空行の無い雛形で表示が崩れる行を検出する(self) -> None:
+        self.assertEqual(self.lines(self.TEMPLATE), {2, 5, 8, 9})
+
+    def test_検出の文に直し方がある(self) -> None:
+        for f in lint.detect_missing_blank_line(self.TEMPLATE):
+            with self.subTest(line=f.line):
+                self.assertEqual(f.category, "missing_blank_line")
+                self.assertEqual(f.severity, "warn")
+                self.assertIn("空行を入れる", f.detail)
+
+    def test_表示が崩れない書き方は検出しない(self) -> None:
+        for text in [
+            "---\ntitle: 議事録\n---\n\n本文。",
+            "本文。\n\n---",
+            "**題**\n\n本文",
+            "```\n**題**\n本文\n```",
+            "```\n本文\n---\n```",
+            "**題**\n## 見出し",
+            "**題**\n- 箇条",
+            "**題**\n> 引用",
+        ]:
+            with self.subTest(text=text):
+                self.assertEqual(self.lines(text), set())
+
+
 if __name__ == "__main__":
     unittest.main()
 
