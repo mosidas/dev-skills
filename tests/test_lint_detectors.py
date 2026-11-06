@@ -348,3 +348,28 @@ class ReviewDelegationNoticeTest(unittest.TestCase):
     def test_インデントコードの井桁は見出しに数えない(self) -> None:
         text = "## 1. 節\n\n本文。\n\n    # コメント\n    ## これも見出しではない\n\t# タブのコード\n"
         self.assertEqual(lint.count_headings(text), 1)
+
+    def test_太字だけの行が10を超えると分担の通知を出す(self) -> None:
+        text = "\n".join(f"**{i}. 議題の名前**\n\n本文。\n" for i in range(1, 12))
+        self.assertEqual(lint.count_headings(text), 11)
+        notice = lint.review_delegation_notice(lint.count_headings(text))
+        self.assertIsNotNone(notice)
+        self.assertIn("別のエージェント", notice)
+
+    def test_太字だけの行が10以下なら通知を出さない(self) -> None:
+        text = "\n".join(f"**{i}. 議題の名前**\n\n本文。\n" for i in range(1, 11))
+        self.assertEqual(lint.count_headings(text), 10)
+        self.assertIsNone(lint.review_delegation_notice(lint.count_headings(text)))
+
+    def test_太字だけの行と井桁の見出しを合わせて数える(self) -> None:
+        sharp = "\n".join(f"## 節{i}\n\n本文。\n" for i in range(1, 7))
+        bold = "\n".join(f"**[内容{i}]**\n\n本文。\n" for i in range(1, 6))
+        self.assertEqual(lint.count_headings(sharp + "\n" + bold), 11)
+
+    def test_太字のラベルや文中の太字は見出しに数えない(self) -> None:
+        text = "**ラベル**: 値\n\n本文に **強調** がある。\n\n- **項目**\n"
+        self.assertEqual(lint.count_headings(text), 0)
+
+    def test_コードブロックとフロントマターの太字は見出しに数えない(self) -> None:
+        text = "---\ntitle: **題の太字**\n---\n\n**本当の見出し**\n\n```md\n**コードの太字**\n```\n"
+        self.assertEqual(lint.count_headings(text), 1)

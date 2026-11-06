@@ -1696,6 +1696,8 @@ def detect_inanimate_subject_morph(tokenized: list[TokenizedSentence]) -> list[F
 # ラベルの太字は、作者の読み比べで残したほうが読みやすく探しやすかった。
 # ---------------------------------------------------------------------------
 BOLD_SPAN_RE = re.compile(r"\*\*[^*\n]+\*\*")
+# 太字だけの行(議事録などで見出しの代わりに使う形)。行末の空白は呼び出し側で除く
+BOLD_ONLY_LINE_RE = re.compile(r"^ {0,3}\*\*[^*\n]+\*\*$")
 # 行頭(箇条の頭を含む)の「**ラベル**:」は項目を探す目印なので数えない
 BOLD_LABEL_RE = re.compile(r"^\s*(?:[-*+]|\d+[.)])?\s*\*\*[^*\n]+\*\*\s*[:：]", re.M)
 BOLD_DENSITY_PER_1000_THRESHOLD = 3.0
@@ -1983,11 +1985,12 @@ _GFM_HEADING_RE = re.compile(r"^ {0,3}#")
 
 
 def count_headings(raw_text: str) -> int:
-    """コードブロック・フロントマターを除いた Markdown の見出し行を数える。"""
+    """コードブロック・フロントマターを除いた `#` の見出しと太字だけの行を数える。"""
     masked = mask_markdown_structure(raw_text, keep_structure_text=True)
     # _HEADING_RE は行頭の空白を許すため、4 スペース・タブで始まるインデントコードの
     # `# コメント` も拾う。GFM の見出しは行頭の空白 3 つまでなので、それより深い行は除く。
-    return sum(1 for line in masked.split("\n") if _HEADING_RE.match(line) and _GFM_HEADING_RE.match(line))
+    return sum(1 for line in masked.split("\n") if (_HEADING_RE.match(line) and _GFM_HEADING_RE.match(line))
+               or BOLD_ONLY_LINE_RE.match(line.rstrip()))
 
 
 def review_delegation_notice(heading_count: int) -> str | None:
@@ -1996,7 +1999,7 @@ def review_delegation_notice(heading_count: int) -> str | None:
         return None
     return (
         f"見出しが {heading_count} 個(10 超)の文書である。推敲は観点別または章別に"
-        "別のエージェントへ分担してレビューさせる(references/inspection.md 4.・5.)。"
+        "別のエージェントへ分担して推敲させる(references/inspection.md 4.・5.)。"
     )
 
 
