@@ -214,6 +214,14 @@ class FormatWarningTest(LibTestCase):
         self.assertIn("例:", reason)  # rewrite_guides.json の言い換え例
         self.assertIn("完了がブロックされる", reason)
 
+    def test_文書自身の範囲を述べる文の指針は決められなければ残すと指示する(self) -> None:
+        findings = [
+            {"line": 2, "category": "self_scope_note", "severity": "warn", "excerpt": "本書のコード例では import 文を省略しました。"}
+        ]
+        guides = lib.load_guides(HOOKS)
+        reason = lib.format_warning(Path("doc.md"), findings, self.config(), guides, [])
+        self.assertIn("決められなければ残す", reason)
+
     def test_警告の件数は上限で打ち切る(self) -> None:
         findings = [
             {"line": i, "category": "translationese", "severity": "info", "excerpt": "x"}

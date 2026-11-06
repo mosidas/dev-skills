@@ -350,6 +350,7 @@ class SelfScopeNoteTest(unittest.TestCase):
             "本書は決定事項だけを記録した。",
             "本稿では結論のみ記載した。",
             "本資料の 3 章では手順の説明を省略した。",
+            "本メモでは資料の説明を省いた。",
         ]:
             with self.subTest(text=text):
                 findings = self.detect(text)
