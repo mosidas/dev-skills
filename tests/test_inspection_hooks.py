@@ -41,7 +41,10 @@ if "NGWORD" in text:
 if "INFOONLY" in text:
     findings.append({"line": 2, "category": "translationese", "severity": "info",
                      "excerpt": "することができる", "detail": "翻訳調"})
-print(json.dumps({"findings": findings}))
+output = {"findings": findings}
+if "NOTICE" in text:
+    output["notice"] = "" if "EMPTYNOTICE" in text else "通知の文"
+print(json.dumps(output))
 '''
 
 # 本物の lint の main() を検出器だけ差し替えて動かすスタブ(見出しの数え方と分担の通知は本物)。
@@ -351,6 +354,12 @@ class HookProcessTestCase(helpers.TempDirTestCase):
             env=env or self.env,
         )
 
+    def write_reason(self, path: Path) -> str:
+        """write hook を起動し、警告の文を返す(何も出力しなければ空文字)。"""
+        proc = self.run_hook(INSPECT_WRITE, self.write_payload(path))
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        return json.loads(proc.stdout)["reason"] if proc.stdout.strip() else ""
+
     def write_payload(self, path: Path, tool: str = "Write") -> dict:
         return {
             "session_id": "sess-1",
@@ -463,6 +472,44 @@ class InspectWriteTest(HookProcessTestCase):
         self.assertEqual(len(states), 1, "検査が走って状態に記録された")
         state = json.loads(states[0].read_text(encoding="utf-8"))
         self.assertEqual(state["files"], [str(path.resolve())])
+
+    def test_空の通知では何も出力しない(self) -> None:
+        path = self.write_doc("doc.md", "EMPTYNOTICE")
+        self.assertEqual(self.write_reason(path), "")
+
+
+class NoticeOnceTest(HookProcessTestCase):
+    def test_同じファイルへの通知は初回だけ出す(self) -> None:
+        self.use_real_main_lint()
+        path = self.write_body("doc.md", headings(11))
+        self.assertIn("別のエージェント", self.write_reason(path), "1 回目は通知を出す")
+        self.assertEqual(self.write_reason(path), "", "2 回目は何も出さない")
+
+    def test_別のファイルには通知を出す(self) -> None:
+        self.use_real_main_lint()
+        self.write_reason(self.write_body("a.md", headings(11)))
+        self.assertIn("別のエージェント", self.write_reason(self.write_body("b.md", headings(11))))
+
+    def test_Stop_が状態を消した後は再び通知を出す(self) -> None:
+        self.use_real_main_lint()
+        path = self.write_body("doc.md", headings(11))
+        self.write_reason(path)
+        proc = self.run_hook(INSPECT_STOP, self.stop_payload())
+        self.assertEqual(proc.stdout, "")
+        self.assertIn("別のエージェント", self.write_reason(path))
+
+    def test_Stop_がブロックを数えても通知済みの記録は残る(self) -> None:
+        path = self.write_doc("doc.md", "NGWORD NOTICE")
+        self.assertIn("分担: 通知の文", self.write_reason(path))
+        self.assertEqual(self.decision(self.run_hook(INSPECT_STOP, self.stop_payload()))["decision"], "block")
+        self.assertNotIn("分担:", self.write_reason(path))
+
+    def test_2回目は検出だけを警告する(self) -> None:
+        path = self.write_doc("doc.md", "NGWORD NOTICE")
+        self.write_reason(path)
+        reason = self.write_reason(path)
+        self.assertIn("forbidden_phrase", reason)
+        self.assertNotIn("分担:", reason)
 
 
 class InspectStopTest(HookProcessTestCase):

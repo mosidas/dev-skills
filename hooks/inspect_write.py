@@ -5,7 +5,8 @@
 lint.py(`skills/write-doc/scripts/lint.py`)を `--json` で実行し、検出があれば
 警告(該当文を丸ごと書き直す指示・カテゴリ別の言い換え指針・機械検出に出ない不自然さの
 自己判定の指示)をエージェントへ返す。lint.py が分担の通知(見出しが 10 を超える文書)を
-出したときは、検出が無くても通知を警告として返す。書き込み自体は成立済みであり、処理は止めない。
+出したときは、検出が無くても通知を警告として返す。通知は状態ファイルが消えるまで(1 回の応答のあいだ)
+同じファイルに対して初回だけ出す。書き込み自体は成立済みであり、処理は止めない。
 書き直しの結果には再びこの hook がかかる。
 
 検査したファイルはセッション状態に記録し、Stop hook(`inspect_stop.py`)の再検査対象にする。
@@ -62,14 +63,16 @@ def main() -> None:
     findings = lib.filter_findings(result.findings, doctype)
 
     session_id = payload.get("session_id")
-    lib.record_inspected(path, project, session_id if isinstance(session_id, str) else "")
+    session = session_id if isinstance(session_id, str) else ""
+    lib.record_inspected(path, project, session)
 
-    if not findings and result.notice is None:
+    notice = result.notice if result.notice is not None and lib.mark_notified(path, project, session) else None
+    if not findings and notice is None:
         return
     guides = lib.load_guides(HOOK_DIR)
     blocking = lib.blocking_findings(findings, config)
     reason = lib.format_warning(
-        path, findings, config, guides, blocking, lib.load_phrase_okays(), notice=result.notice
+        path, findings, config, guides, blocking, lib.load_phrase_okays(), notice=notice
     )
     lib.emit({"decision": "block", "reason": reason})
 

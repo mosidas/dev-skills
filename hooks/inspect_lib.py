@@ -224,7 +224,7 @@ def run_lint(path: Path, genre: str | None, config: dict) -> LintResult | None:
     notice = output.get("notice")
     return LintResult(
         [f for f in findings if isinstance(f, dict)],
-        notice if isinstance(notice, str) else None,
+        notice if isinstance(notice, str) and notice else None,
     )
 
 
@@ -412,11 +412,15 @@ def state_path(project: Path | None, session_id: str) -> Path:
     return Path(tempfile.gettempdir()) / STATE_DIR_NAME / f"{digest}-{safe_session}.json"
 
 
+def _str_list(value: object) -> list[str]:
+    return [v for v in value if isinstance(v, str)] if isinstance(value, list) else []
+
+
 def load_state(path: Path) -> dict:
     state = _load_json(path)
-    files = state.get("files")
     return {
-        "files": [f for f in files if isinstance(f, str)] if isinstance(files, list) else [],
+        "files": _str_list(state.get("files")),
+        "notified": _str_list(state.get("notified")),
         "stop_blocks": int(state.get("stop_blocks", 0) or 0),
     }
 
@@ -438,6 +442,18 @@ def record_inspected(path: Path, project: Path | None, session_id: str) -> None:
     if abs_path not in state["files"]:
         state["files"].append(abs_path)
         save_state(state_file, state)
+
+
+def mark_notified(path: Path, project: Path | None, session_id: str) -> bool:
+    """分担の通知をこのファイルへ出したと記録する。初回なら True、記録済みなら False を返す。"""
+    state_file = state_path(project, session_id)
+    state = load_state(state_file)
+    abs_path = str(path.resolve())
+    if abs_path in state["notified"]:
+        return False
+    state["notified"].append(abs_path)
+    save_state(state_file, state)
+    return True
 
 
 def emit(decision: dict) -> None:
