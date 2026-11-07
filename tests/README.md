@@ -31,7 +31,6 @@ python3 -m unittest discover -s tests -t tests -p test_phrase_catalog.py
 | `test_build_loop.py` | `skills/build/scripts/loop.py` | 進捗ファイルの解析(見出し・区切りの行と `失敗(解決済み)` を数えない、停止の行と失敗の上限の検証)、停止の判定(全 Done で 0・要判断で起動しない・同一タスクの失敗が上限に達したら止まり別タスクの合計では止まらない)、進捗ファイルが更新されないとき・非 0 終了・反復の上限での停止、`--` より後ろの引数の受け渡し |
 | `test_yomiyasu_edge_cases.py` | `tests/corpus/yomiyasu_edge_cases/` | yomiyasu 由来の語と定型句(前置フィラー・定型クロージング)が、日常語の境界値 48 本のうち字義どおりの `壊れる` を含む 5 本では `壊れ` だけを検出し、残りの 43 本には発火しないこと |
 | `test_skill_references.py` | `skills/`・`agents/`・`hooks/`・`README.md`・`tests/README.md`・`evals/` | `write-doc/references/` へのパスと、全スキルの SKILL.md・references/ と write-doc の scripts/ にある相対参照(`sentence.md`・`references/format/html.md` など)と、他スキルの `SKILL.md`・`references/` への相対参照(`../draw-diagram/references/svg.md`・`../../../draw-diagram/references/svg.md` など)が実在すること。write-doc 内の相対参照は write-doc の中と `skills/` 直下を基準に解決する。write-slide・write-page の SKILL.md が 60 行以下であること |
-| `test_manifest_version.py` | `.claude-plugin/plugin.json`・`.codex-plugin/plugin.json` | version が両方にあり一致すること |
 | `corpus/yomiyasu_edge_cases/` | — | 境界値コーパス 48 本(出典 nanaism/yomiyasu の `tests/corpus/edge_cases`、MIT、`LICENSE` 同梱) |
 
 lint.py の実行は環境変数 `WRITING_INSPECTION_LINT_CMD` でスタブへ差し替える。テストは `uv` と sudachipy に依存しない。

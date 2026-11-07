@@ -152,9 +152,9 @@ backlog task create $'<タイトル>' -l build-<slug> -d $'<要件の 4 行>' --
 
 ## 6. 反復を回す
 
-最初の 1 タスクは反復を 1 回だけ回す。ユーザーがその結果(PR の差分・受け入れ条件の根拠・記録の行)を確かめてから残りを回す。Claude Code では loop.py に `--max-iterations 1` を付ける。loop.py は 1 回の反復の後に止まる。3. の 4 つの条件が揃うまでは 2 回目以降も 1 回ずつ回す。分解か進捗ファイルに誤りがあっても直すのは 1 タスク分で済む。
+最初の 1 タスクは反復を 1 回だけ回す。ユーザーがその結果(PR の差分・受け入れ条件の根拠・記録の行)を確かめてから残りを回す。loop.py に `--max-iterations 1` を付ける。loop.py は 1 回の反復の後に止まる。3. の 4 つの条件が揃うまでは 2 回目以降も 1 回ずつ回す。分解か進捗ファイルに誤りがあっても直すのは 1 タスク分で済む。
 
-Claude Code では、loop.py が反復のたびに新しい `claude -p` のプロセスを起動する。backlog を初期化したリポジトリのルートで実行する。
+loop.py は反復のたびに新しい `claude -p` のプロセスを起動する。backlog を初期化したリポジトリのルートで実行する。
 
 ```sh
 python3 <プラグインのパス>/skills/build/scripts/loop.py backlog/build/<slug>.md --max-iterations 20 -- --permission-mode auto --max-budget-usd 20
@@ -166,20 +166,11 @@ python3 <プラグインのパス>/skills/build/scripts/loop.py backlog/build/<s
 - 反復のプロンプトは loop.py の `PROMPT` にある「dev-skills の build スキルの「反復する」工程を 1 回行う。進捗ファイル: <絶対パス>」である。
 - `claude -p` は、バックグラウンドのサブエージェントの完了を待ってから終了する(Claude Code 2.1.290 で確認した)。
 
-Codex CLI・Antigravity CLI 向けのスクリプトは提供しない。次のどちらかのコマンドを 1 回ずつ実行し、毎回進捗ファイルを読んで、5. の停止条件に当たったら止める。
-
-```sh
-codex exec "dev-skills の build スキルの「反復する」工程を 1 回行う。進捗ファイル: <絶対パス>"
-agy --new-project -p='dev-skills の build スキルの「反復する」工程を 1 回行う。進捗ファイル: <絶対パス>'
-```
-
-サブエージェントを起動しない CLI では、develop の定めどおり、統括が planner・implementer・reviewer・gate-reviewer の役割を順に受け持つ。
-
 ## 7. 参照ファイル
 
 | ファイル | 内容 | 読むとき |
 | :-- | :-- | :-- |
-| `scripts/loop.py` | 反復を繰り返し起動し、停止条件を判定するスクリプト | Claude Code で反復を回すとき |
+| `scripts/loop.py` | 反復を繰り返し起動し、停止条件を判定するスクリプト | 反復を回すとき |
 | `references/flow.mmd` | 工程の図の構造(ノードと辺) | 工程の図を直すとき |
 | `references/flow.svg` | 工程の図(1. に埋め込む) | 工程の全体を見るとき |
 | `../specify/references/prd.md` | specify の PRD の雛形。節ごとの書き方を、各節の直下のコメントに書いている | 分解するとき |

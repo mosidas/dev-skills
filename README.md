@@ -1,6 +1,6 @@
 # dev-skills
 
-Claude Code・Codex CLI・Antigravity CLI のプラグインである。開発作業で使うスキルとサブエージェントを 3 つの CLI に提供し、Claude Code にはセッション開始時に respond を注入し、日本語 Markdown を書き込むたびに検査し、コミットと PR 本文のセッション URL を拒否する hooks も提供する。
+Claude Code のプラグインである。開発作業で使うスキルとサブエージェントを提供し、セッション開始時に respond を注入し、日本語 Markdown を書き込むたびに検査し、コミットと PR 本文のセッション URL を拒否する hooks も提供する。
 
 ## 1. 提供するもの
 
@@ -25,12 +25,12 @@ Claude Code・Codex CLI・Antigravity CLI のプラグインである。開発�
 | `draw-diagram` | スキル | 説明のための図を、`.mmd` で構造を固めてから SVG に描く作図の規範 |
 | `write-page` | スキル | HTML で配布する 1 ページの説明資料を作る・直すときの入口 |
 | `design-ui` | スキル | 画面・コンポーネント・ページを設計・実装する規範と、実装の前に UI モックを本人と往復して作る工程 |
-| `hooks/inject_respond.py` | hook(SessionStart、Claude Code のみ) | セッション開始時に `skills/respond/SKILL.md` の本文を注入する |
-| `hooks/guard_session_url.py` | hook(PreToolUse、Claude Code のみ) | コミットと PR 本文に入るセッション URL を実行前に止める |
-| `hooks/inspect_write.py` | hook(PostToolUse、Claude Code のみ) | 日本語 Markdown の書き込み直後に `lint.py` を実行し、検出があれば書き直しを促す警告を、見出しが 10 を超える文書では推敲の分担の通知を返す(通知は同じファイルに対して状態ファイルが削除されるまで初回だけ出す。Stop は重大カテゴリの検出が残っていない完了のときに状態ファイルを削除するので、通常は 1 回の応答につき初回だけになる。検出が残ったままブロックの上限に達すると、重大カテゴリの検出がすべて解消された完了(状態ファイルの削除)まで再び出ない) |
-| `hooks/inspect_stop.py` | hook(Stop、Claude Code のみ) | セッション完了時に再検査し、重大カテゴリの検出が残るあいだ完了を差し戻す |
+| `hooks/inject_respond.py` | hook(SessionStart) | セッション開始時に `skills/respond/SKILL.md` の本文を注入する |
+| `hooks/guard_session_url.py` | hook(PreToolUse) | コミットと PR 本文に入るセッション URL を実行前に止める |
+| `hooks/inspect_write.py` | hook(PostToolUse) | 日本語 Markdown の書き込み直後に `lint.py` を実行し、検出があれば書き直しを促す警告を、見出しが 10 を超える文書では推敲の分担の通知を返す(通知は同じファイルに対して状態ファイルが削除されるまで初回だけ出す。Stop は重大カテゴリの検出が残っていない完了のときに状態ファイルを削除するので、通常は 1 回の応答につき初回だけになる。検出が残ったままブロックの上限に達すると、重大カテゴリの検出がすべて解消された完了(状態ファイルの削除)まで再び出ない) |
+| `hooks/inspect_stop.py` | hook(Stop) | セッション完了時に再検査し、重大カテゴリの検出が残るあいだ完了を差し戻す |
 
-スキルは各 CLI が用途を判断して自動で読み込む。Claude Code では `/dev-skills:<スキル名>`、Codex CLI では `$dev-skills:develop`、Antigravity CLI では `/develop` で明示的に呼んでもよい。サブエージェントは Claude Code では `dev-skills:planner` のように plugin 名つきで起動する。Codex CLI と Antigravity CLI はサブエージェントを起動しないため、develop では統括が 4 つの役割を順に受け持つ。respond は Claude Code では SessionStart hook が常時適用し、Codex CLI・Antigravity CLI ではスキルとして読み込む。hooks に呼び出しの操作はない。プラグインを有効にした Claude Code のセッションで、セッション開始、`git commit`・`gh pr create`・`gh pr edit` の実行前、日本語 Markdown の書き込み、セッション完了のたびに自動で発火する。hooks の stdin の形式は CLI ごとに異なるため、Codex CLI と Antigravity CLI では hooks を提供しない。
+スキルは Claude Code が用途を判断して自動で読み込む。`/dev-skills:<スキル名>` で明示的に呼んでもよい。サブエージェントは `dev-skills:planner` のように plugin 名つきで起動する。respond は SessionStart hook が常時適用する。hooks に呼び出しの操作はない。プラグインを有効にしたセッションで、セッション開始、`git commit`・`gh pr create`・`gh pr edit` の実行前、日本語 Markdown の書き込み、セッション完了のたびに自動で発火する。
 
 依頼は次のように書く。統括は依頼を要件の 4 行にまとめて確認する。4 行の形式は `skills/develop/references/requirements.md` にある。
 
@@ -48,11 +48,9 @@ Claude Code・Codex CLI・Antigravity CLI のプラグインである。開発�
 - `uv` が使えること。`lint.py` は形態素解析に sudachipy を使い、依存は `uv run` がスクリプト先頭の宣言から解決する。`uv` が無い環境では hooks は検査を行わず、スキルは規範に沿って目視で点検する。
 - `semantic.py`(文埋め込みで話題の平板さを検出する opt-in の検出器)だけは torch と sentence-transformers に依存し、初回実行時にモデル約 1GB をダウンロードする。hooks からは呼ばない。
 - `draw-diagram` の `render.py` による PNG 出力は Google Chrome を必要とする(パスは環境変数 `CHROME_BIN` で変更できる)。Chrome が無い環境では `--png` を付けずに実行し、照合と検査だけを行う。Claude Code のサンドボックス内では Chrome が起動できないため、PNG 出力はサンドボックス外で実行する。`design-ui` の UI モックの撮影も `render.py` で Chrome を使い、撮れないときは PNG の代わりに mock.html のパスを示して往復を続ける。
-- `build` の反復は `backlog`(Backlog.md の CLI)・`gh` と、反復を起動する CLI(Claude Code では `claude`)を使う。
+- `build` の反復は `backlog`(Backlog.md の CLI)・`gh` と、`claude` を使う。
 
 ## 3. 導入
-
-### 3.1. Claude Code
 
 ```console
 $ claude plugin marketplace add mosidas/dev-skills
@@ -82,40 +80,6 @@ $ claude plugin install dev-skills@mosidas
 ```
 
 hooks はセッション開始時に読み込まれるため、有効化した後は新しいセッションから発火する。
-
-### 3.2. Codex CLI
-
-マニフェストは `.codex-plugin/plugin.json` である。Codex CLI はマーケットプレイス経由でプラグインを導入するため、個人マーケットプレイス `~/.agents/plugins/marketplace.json`(ルートはホームディレクトリ。自動で発見される)にこのリポジトリのクローンを登録し、`codex plugin add` で導入する。
-
-```json
-{
-  "name": "personal",
-  "plugins": [
-    {
-      "name": "dev-skills",
-      "source": { "source": "local", "path": "./repos/dev-skills" },
-      "policy": { "installation": "AVAILABLE", "authentication": "ON_INSTALL" },
-      "category": "Productivity"
-    }
-  ]
-}
-```
-
-```console
-$ codex plugin add dev-skills@personal
-```
-
-導入先は `~/.codex/plugins/cache/personal/dev-skills/<version>/` である。クローンを更新したら同じコマンドで導入し直す。スキルは `$dev-skills:write-doc` の名前で読み込まれる。Codex CLI のプラグインは hooks を扱わない(`codex features list` の `plugin_hooks` は removed)。
-
-### 3.3. Antigravity CLI
-
-マニフェストはリポジトリ直下の `plugin.json` である。クローンのパスを指定して導入する。
-
-```console
-$ agy plugin install <クローンのパス>
-```
-
-導入先は `~/.gemini/config/plugins/dev-skills/`(コピー)である。クローンを更新したら同じコマンドで導入し直す。スキルは `/develop`・`/specify`・`/interview`・`/build`・`/retro`・`/explain`・`/verify`・`/ponytail`・`/secure`・`/observe`・`/recover`・`/write-doc`・`/write-slide`・`/write-message`・`/respond`・`/draw-diagram`・`/design-ui`・`/write-page` のスラッシュコマンドにもなる。
 
 ## 4. hooks
 
@@ -149,8 +113,6 @@ PostToolUse と Stop は日本語文書の検査を行う。発火するのは�
 
 ```
 .claude-plugin/   # Claude Code 向けのマニフェストと marketplace.json
-.codex-plugin/    # Codex CLI 向けのマニフェスト
-plugin.json       # Antigravity CLI 向けのマニフェスト
 skills/           # スキル(1 スキル 1 ディレクトリ。SKILL.md と references/・scripts/)
 agents/           # develop が起動する 4 つのサブエージェント
 hooks/            # hooks.json の配線・hook のスクリプト・検査の設定
@@ -173,14 +135,12 @@ CREDITS.md        # 取り込んだ外部の資料の出典
 $ python3 -m unittest discover -s tests -t tests
 ```
 
-プラグインの内容を変更したら、`.claude-plugin/plugin.json` と `.codex-plugin/plugin.json` の `version` を同じ値に上げる。`claude plugin update` は version が同じだと最新と判定し、変更を取り込まない。
+プラグインの内容を変更したら、`.claude-plugin/plugin.json` の `version` を上げる。`claude plugin update` は version が同じだと最新と判定し、変更を取り込まない。
 
-マニフェストの検査は次のコマンドで行う。Codex CLI の検査スクリプトは同梱スキル `plugin-creator` のもので、`interface` の 5 項目と `defaultPrompt` を必須とする。
+マニフェストの検査は次のコマンドで行う。
 
 ```console
 $ claude plugin validate . --strict
-$ uv run --with pyyaml python3 ~/.codex/skills/.system/plugin-creator/scripts/validate_plugin.py .
-$ agy plugin validate .
 ```
 
 ### 6.2. スキルを書くときの規則
