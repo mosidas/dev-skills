@@ -22,6 +22,7 @@ import subprocess
 import sys
 import tempfile
 from pathlib import Path
+from typing import NamedTuple
 
 WRITE_TOOLS = {"Write", "Edit", "MultiEdit", "NotebookEdit"}
 PATH_KEYS = ("file_path", "notebook_path", "path")
@@ -186,8 +187,16 @@ def lint_command() -> list[str] | None:
     return ["uv", "run", str(lint_py)]
 
 
-def run_lint(path: Path, genre: str | None, config: dict) -> list[dict] | None:
-    """lint.py を `--json` で実行して findings を返す。実行できなければ None(検査を諦める)。"""
+class LintResult(NamedTuple):
+    findings: list[dict]
+    notice: str | None
+
+
+def run_lint(path: Path, genre: str | None, config: dict) -> LintResult | None:
+    """lint.py を `--json` で実行して検出と分担の通知を返す。実行できなければ None(検査を諦める)。
+
+    notice は lint.py が見出しの多い文書に出す工程の指示であり、出さなければ None である。
+    """
     cmd = lint_command()
     if cmd is None:
         return None
@@ -212,7 +221,11 @@ def run_lint(path: Path, genre: str | None, config: dict) -> list[dict] | None:
     findings = output.get("findings")
     if not isinstance(findings, list):
         return None
-    return [f for f in findings if isinstance(f, dict)]
+    notice = output.get("notice")
+    return LintResult(
+        [f for f in findings if isinstance(f, dict)],
+        notice if isinstance(notice, str) and notice else None,
+    )
 
 
 def filter_findings(findings: list[dict], doctype: dict) -> list[dict]:
@@ -316,19 +329,29 @@ def format_warning(
     guides: dict,
     blocking: list[dict],
     phrase_okays: dict[str, list[str]] | None = None,
+    notice: str | None = None,
 ) -> str:
     """PostToolUse でエージェントへ返す警告文。
 
-    語の置換でなく文単位の書き直しを求め、カテゴリごとの言い換え指針を同梱する。
+    検出箇所を含む文をカテゴリ別の指針に従って直すよう求め(語の置換では済ませない。指針が残すとする文は残す)、
+    カテゴリごとの指針を同梱する。
     機械検出に出ない不自然さの判定(LLM 判定)もここで指示する。
+    notice(lint.py の分担の通知)があれば先頭の行の次に置く。検出が無ければ通知だけを返す。
     """
+    lines = [f"write-doc 検査: {path} に {len(findings)} 件の検出。"]
+    if notice is not None:
+        lines += ["", f"分担: {notice}"]
+    if not findings:
+        return "\n".join(lines)
+    if notice is not None:
+        lines.append("")
     ordered = sort_findings(findings)
     limit = int(config.get("max_findings_in_warning", 10))
     shown = ordered[:limit]
-    lines = [
-        f"write-doc 検査: {path} に {len(findings)} 件の検出。",
-        "検出箇所を含む文を丸ごと書き直すこと。指摘された語だけを類語に置き換えて済ませない"
-        "(文の構造ごと組み替える)。",
+    lines += [
+        "検出箇所を含む文は、カテゴリ別の指針に従って直す。語や文の検出は、文を丸ごと書き直すか削る。"
+        "指摘された語だけを類語に置き換えて済ませない(文の構造ごと組み替える)。"
+        "指針が残すとする文は残す。",
         "",
         "検出:",
     ]
@@ -391,11 +414,15 @@ def state_path(project: Path | None, session_id: str) -> Path:
     return Path(tempfile.gettempdir()) / STATE_DIR_NAME / f"{digest}-{safe_session}.json"
 
 
+def _str_list(value: object) -> list[str]:
+    return [v for v in value if isinstance(v, str)] if isinstance(value, list) else []
+
+
 def load_state(path: Path) -> dict:
     state = _load_json(path)
-    files = state.get("files")
     return {
-        "files": [f for f in files if isinstance(f, str)] if isinstance(files, list) else [],
+        "files": _str_list(state.get("files")),
+        "notified": _str_list(state.get("notified")),
         "stop_blocks": int(state.get("stop_blocks", 0) or 0),
     }
 
@@ -410,13 +437,23 @@ def save_state(path: Path, state: dict) -> None:
         pass
 
 
-def record_inspected(path: Path, project: Path | None, session_id: str) -> None:
+def record_inspected(path: Path, project: Path | None, session_id: str, notify: bool) -> bool:
+    """検査したファイルを記録する。notify なら分担の通知を出したことも同じ更新で記録する。
+
+    この起動で通知を出すか(notify で、このファイルへ未通知だったか)を返す。
+    """
     state_file = state_path(project, session_id)
     state = load_state(state_file)
     abs_path = str(path.resolve())
-    if abs_path not in state["files"]:
+    added = abs_path not in state["files"]
+    if added:
         state["files"].append(abs_path)
+    first_notice = notify and abs_path not in state["notified"]
+    if first_notice:
+        state["notified"].append(abs_path)
+    if added or first_notice:
         save_state(state_file, state)
+    return first_notice
 
 
 def emit(decision: dict) -> None:

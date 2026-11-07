@@ -8,7 +8,9 @@ from __future__ import annotations
 
 import json
 import sys
+import types
 import unittest
+from unittest import mock
 
 import helpers
 
@@ -17,6 +19,18 @@ SCRIPTS = helpers.REPO_ROOT / "skills" / "write-doc" / "scripts"
 sys.path.insert(0, str(SCRIPTS))
 
 import lint  # noqa: E402
+import textcore  # noqa: E402
+
+
+def run_lint_without_sudachi(text: str) -> list:
+    """形態素を返さない sudachipy の代わりで run_lint を通し、検出の一覧を返す。"""
+    tokenizer = types.SimpleNamespace(tokenize=lambda text, mode: [])
+    fake = types.ModuleType("sudachipy")
+    fake.Dictionary = lambda: types.SimpleNamespace(create=lambda: tokenizer)
+    fake.SplitMode = types.SimpleNamespace(A="A", B="B", C="C")
+    with mock.patch.dict(sys.modules, {"sudachipy": fake}), mock.patch.object(textcore, "_tokenizer_obj", None):
+        findings, _ = lint.run_lint(text)
+    return findings
 
 
 class MaskTest(unittest.TestCase):
@@ -324,6 +338,117 @@ class SplitUnitsTest(unittest.TestCase):
                 self.assertNotIn(absent, body)
 
 
+class SelfScopeNoteTest(unittest.TestCase):
+    def detect(self, text: str) -> list:
+        lines = lint.iter_lines_with_no(lint.mask_markdown_structure(text, keep_structure_text=True))
+        return lint.detect_self_scope_note(lines)
+
+    def test_文書自身の範囲を述べる過去形の文を検出する(self) -> None:
+        for text in [
+            "資料に書いてある内容の説明は本メモでは省略した。",
+            "- 本書には決定事項だけを記録しました。",
+            "本書は決定事項だけを記録した。",
+            "本稿では結論のみ記載した。",
+            "本資料の 3 章では手順の説明を省略した。",
+            "本メモでは資料の説明を省いた。",
+        ]:
+            with self.subTest(text=text):
+                findings = self.detect(text)
+                self.assertEqual(len(findings), 1)
+                self.assertEqual(findings[0].category, "self_scope_note")
+                self.assertEqual(findings[0].severity, "warn")
+                self.assertIn("削る", findings[0].detail)
+                self.assertIn("決められなければ残す", findings[0].detail)
+                self.assertIn("paragraph.md 3.", findings[0].detail)
+
+    def test_範囲の導入と連体修飾と語の途中とコードと内容や場所の案内は検出しない(self) -> None:
+        for text in [
+            "本書は検査 hook の設定を扱う。",
+            "本メモに記録した決定事項は次の 3 つである。",
+            "日本書紀の記述は省略した。",
+            "例として `本メモでは省略した` と書く。",
+            "本資料の 3 章に手順を記載した。",
+            "本書の付録に用語集を記載した。",
+            "本書は 3 章に手順を記載した。",
+            "本資料は次の 3 章で手順の詳細を記載しました。",
+            "本資料には付録を記載した。",
+            "本書は、2026 年 1 月の障害の原因と対策を記録した。",
+            "本書の 2 章では A だけを扱い、詳細は付録に記載した。",
+        ]:
+            with self.subTest(text=text):
+                self.assertEqual(self.detect(text), [])
+
+    def test_run_lint_の結果に含まれる(self) -> None:
+        findings = run_lint_without_sudachi("資料に書いてある内容の説明は本メモでは省略した。\n")
+        self.assertEqual([f.line for f in findings if f.category == "self_scope_note"], [1])
+
+
+class MissingBlankLineTest(unittest.TestCase):
+    TEMPLATE = "\n".join([
+        "**部署名#11 議事録**",
+        "---",
+        "作成：名前",
+        "日付： 2026-01-01 14:00-15:00",
+        "---",
+        "**[議題]**",
+        "1. 題",
+        "**[内容]**",
+        "**1. 題**",
+        "本文",
+    ])
+
+    def lines(self, text: str) -> set[int]:
+        return {f.line for f in lint.detect_missing_blank_line(text)}
+
+    def test_空行の無い雛形で表示が崩れる行を検出する(self) -> None:
+        self.assertEqual(self.lines(self.TEMPLATE), {2, 5, 8, 9})
+
+    def test_検出の文に直し方がある(self) -> None:
+        for f in lint.detect_missing_blank_line(self.TEMPLATE):
+            with self.subTest(line=f.line):
+                self.assertEqual(f.category, "missing_blank_line")
+                self.assertEqual(f.severity, "warn")
+                self.assertIn("空行を入れる", f.detail)
+
+    def test_見出しになる前の行を_excerpt_に含める(self) -> None:
+        excerpt = next(f.excerpt for f in lint.detect_missing_blank_line(self.TEMPLATE) if f.line == 2)
+        self.assertIn("議事録", excerpt)
+        self.assertIn("---", excerpt)
+
+    def test_空行なしで続く等号の下線を検出する(self) -> None:
+        self.assertEqual(self.lines("本文の行\n==="), {2})
+
+    def test_太字の行の直後の等号の下線は下線の行だけを検出する(self) -> None:
+        self.assertEqual(self.lines("**題**\n==="), {2})
+
+    def test_表示が崩れない書き方は検出しない(self) -> None:
+        for text in [
+            "---\ntitle: 議事録\n---\n\n本文。",
+            "本文。\n\n---",
+            "**題**\n\n本文",
+            "```\n**題**\n本文\n```",
+            "```\n本文\n---\n```",
+            "**題**\n## 見出し",
+            "**題**\n- 箇条",
+            "**題**\n> 引用",
+            "# 見出し\n---",
+            "- 箇条の項目\n---",
+            "| 項目 | 値 |\n---",
+            "**題**  \n本文",
+            "**題**\n<br>",
+            "**題**\n```\nコード\n```",
+            "**題**\n| 項目 | 値 |",
+            "**題**\n***\n本文",
+            "**題**\n___\n本文",
+        ]:
+            with self.subTest(text=text):
+                self.assertEqual(self.lines(text), set())
+
+    def test_run_lint_の結果に含まれる(self) -> None:
+        findings = run_lint_without_sudachi(self.TEMPLATE)
+        self.assertEqual({f.line for f in findings if f.category == "missing_blank_line"}, {2, 5, 8, 9})
+
+
 if __name__ == "__main__":
     unittest.main()
 
@@ -347,4 +472,29 @@ class ReviewDelegationNoticeTest(unittest.TestCase):
 
     def test_インデントコードの井桁は見出しに数えない(self) -> None:
         text = "## 1. 節\n\n本文。\n\n    # コメント\n    ## これも見出しではない\n\t# タブのコード\n"
+        self.assertEqual(lint.count_headings(text), 1)
+
+    def test_太字だけの行が10を超えると分担の通知を出す(self) -> None:
+        text = "\n".join(f"**{i}. 議題の名前**\n\n本文。\n" for i in range(1, 12))
+        self.assertEqual(lint.count_headings(text), 11)
+        notice = lint.review_delegation_notice(lint.count_headings(text))
+        self.assertIsNotNone(notice)
+        self.assertIn("別のエージェント", notice)
+
+    def test_太字だけの行が10以下なら通知を出さない(self) -> None:
+        text = "\n".join(f"**{i}. 議題の名前**\n\n本文。\n" for i in range(1, 11))
+        self.assertEqual(lint.count_headings(text), 10)
+        self.assertIsNone(lint.review_delegation_notice(lint.count_headings(text)))
+
+    def test_太字だけの行と井桁の見出しを合わせて数える(self) -> None:
+        sharp = "\n".join(f"## 節{i}\n\n本文。\n" for i in range(1, 7))
+        bold = "\n".join(f"**[内容{i}]**\n\n本文。\n" for i in range(1, 6))
+        self.assertEqual(lint.count_headings(sharp + "\n" + bold), 11)
+
+    def test_太字のラベルや文中の太字は見出しに数えない(self) -> None:
+        text = "**ラベル**: 値\n\n本文に **強調** がある。\n\n- **項目**\n"
+        self.assertEqual(lint.count_headings(text), 0)
+
+    def test_コードブロックとフロントマターの太字は見出しに数えない(self) -> None:
+        text = "---\ntitle: 題\n**題の太字**\n---\n\n**本当の見出し**\n\n```md\n**コードの太字**\n```\n"
         self.assertEqual(lint.count_headings(text), 1)

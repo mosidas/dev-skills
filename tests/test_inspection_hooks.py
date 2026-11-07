@@ -41,8 +41,28 @@ if "NGWORD" in text:
 if "INFOONLY" in text:
     findings.append({"line": 2, "category": "translationese", "severity": "info",
                      "excerpt": "することができる", "detail": "翻訳調"})
-print(json.dumps({"findings": findings}))
+output = {"findings": findings}
+if "NOTICE" in text:
+    output["notice"] = "" if "EMPTYNOTICE" in text else "通知の文"
+print(json.dumps(output))
 '''
+
+# 本物の lint の main() を検出器だけ差し替えて動かすスタブ(見出しの数え方と分担の通知は本物)。
+REAL_MAIN_LINT = f'''
+import sys
+sys.path.insert(0, {str(helpers.REPO_ROOT / "skills" / "write-doc" / "scripts")!r})
+import lint
+lint.run_lint = lambda text, genre=None, experimental=False: ([], {{"total_findings": 0, "by_category": {{}}}})
+sys.exit(lint.main())
+'''
+
+
+def headings(count: int) -> str:
+    return "".join(f"## {n}. 節\n\n本文。\n\n" for n in range(1, count + 1))
+
+
+def bold_headings(count: int) -> str:
+    return "".join(f"**{n}. 題**\n\n本文。\n\n" for n in range(1, count + 1))
 
 
 class LibTestCase(helpers.TempDirTestCase):
@@ -151,6 +171,16 @@ class ConfigTest(LibTestCase):
         categories = [rule["category"] for rule in config["blocking"]]
         self.assertIn("forbidden_phrase", categories)
 
+    def test_文書自身の範囲を述べる文は完了をブロックしない(self) -> None:
+        config = lib.load_config(HOOKS, None)
+        categories = [rule["category"] for rule in config["blocking"]]
+        self.assertNotIn("self_scope_note", categories)
+
+    def test_空行が無くて表示が崩れる行は完了をブロックしない(self) -> None:
+        config = lib.load_config(HOOKS, None)
+        categories = [rule["category"] for rule in config["blocking"]]
+        self.assertNotIn("missing_blank_line", categories)
+
 
 class LintCommandTest(LibTestCase):
     def test_プラグイン同梱の_lint_py_を_uv_run_で叩く(self) -> None:
@@ -184,6 +214,34 @@ class FormatWarningTest(LibTestCase):
         self.assertIn("例:", reason)  # rewrite_guides.json の言い換え例
         self.assertIn("完了がブロックされる", reason)
 
+    def test_文書自身の範囲を述べる文の指針は決められなければ残すと指示する(self) -> None:
+        findings = [
+            {"line": 2, "category": "self_scope_note", "severity": "warn", "excerpt": "本書のコード例では import 文を省略しました。"}
+        ]
+        guides = lib.load_guides(HOOKS)
+        reason = lib.format_warning(Path("doc.md"), findings, self.config(), guides, [])
+        self.assertIn("決められなければ残す", reason)
+
+    def test_共通の指示は指針が残すとする文を残すと指示する(self) -> None:
+        findings = [
+            {"line": 2, "category": "self_scope_note", "severity": "warn", "excerpt": "本書のコード例では import 文を省略しました。"}
+        ]
+        guides = lib.load_guides(HOOKS)
+        reason = lib.format_warning(Path("doc.md"), findings, self.config(), guides, [])
+        common = reason.split("検出:")[0]
+        self.assertIn("カテゴリ別の指針に従って直す", common)
+        self.assertIn("指針が残すとする文は残す", common)
+
+    def test_空行の指針は下線の直前と太字の行の直後に空行を入れると指示する(self) -> None:
+        findings = [
+            {"line": 2, "category": "missing_blank_line", "severity": "warn", "excerpt": "**1. 題**"}
+        ]
+        guides = lib.load_guides(HOOKS)
+        reason = lib.format_warning(Path("doc.md"), findings, self.config(), guides, [])
+        self.assertIn("下線の行は直前に", reason)
+        self.assertIn("太字だけの行は直後に", reason)
+        self.assertNotIn("直前か直後", reason)
+
     def test_警告の件数は上限で打ち切る(self) -> None:
         findings = [
             {"line": i, "category": "translationese", "severity": "info", "excerpt": "x"}
@@ -193,6 +251,23 @@ class FormatWarningTest(LibTestCase):
             Path("doc.md"), findings, self.config(max_findings_in_warning=5), {}, []
         )
         self.assertIn("ほか 15 件", reason)
+
+    def test_分担の通知を検出と並べて含める(self) -> None:
+        findings = [
+            {"line": 3, "category": "forbidden_phrase", "severity": "warn", "excerpt": "重要なのは"}
+        ]
+        reason = lib.format_warning(
+            Path("doc.md"), findings, self.config(), {}, [], notice="通知の文"
+        )
+        self.assertIn("- L3 [warn] forbidden_phrase", reason)
+        self.assertIn("分担: 通知の文", reason)
+
+    def test_検出が無く通知だけなら書き直しを指示しない(self) -> None:
+        reason = lib.format_warning(
+            Path("doc.md"), [], self.config(), {}, [], notice="通知の文"
+        )
+        self.assertIn("分担: 通知の文", reason)
+        self.assertNotIn("丸ごと書き直す", reason)
 
     def test_同梱の指針が全カテゴリを持つ(self) -> None:
         """lint.py の検出カテゴリすべてに書き直しの指針が対応づく。"""
@@ -246,8 +321,8 @@ class StateTest(LibTestCase):
     def test_検査したファイルを重複なく記録する(self) -> None:
         with mock.patch.object(lib.tempfile, "gettempdir", return_value=str(self.tmp)):
             path = self.write("doc.md", JAPANESE_TEXT)
-            lib.record_inspected(path, self.tmp, "s1")
-            lib.record_inspected(path, self.tmp, "s1")
+            lib.record_inspected(path, self.tmp, "s1", notify=False)
+            lib.record_inspected(path, self.tmp, "s1", notify=False)
             state = lib.load_state(lib.state_path(self.tmp, "s1"))
         self.assertEqual(state["files"], [str(path.resolve())])
         self.assertEqual(state["stop_blocks"], 0)
@@ -307,6 +382,12 @@ class HookProcessTestCase(helpers.TempDirTestCase):
             env=env or self.env,
         )
 
+    def write_reason(self, path: Path) -> str:
+        """write hook を起動し、警告の文を返す(何も出力しなければ空文字)。"""
+        proc = self.run_hook(INSPECT_WRITE, self.write_payload(path))
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        return json.loads(proc.stdout)["reason"] if proc.stdout.strip() else ""
+
     def write_payload(self, path: Path, tool: str = "Write") -> dict:
         return {
             "session_id": "sess-1",
@@ -328,6 +409,16 @@ class HookProcessTestCase(helpers.TempDirTestCase):
         path = self.project / rel
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(JAPANESE_TEXT + marker + "\n", encoding="utf-8")
+        return path
+
+    def use_real_main_lint(self) -> None:
+        stub = self.tmp / "real_main_lint.py"
+        stub.write_text(REAL_MAIN_LINT, encoding="utf-8")
+        self.env[lib.LINT_CMD_ENV] = f'"{sys.executable}" "{stub}"'
+
+    def write_body(self, rel: str, body: str) -> Path:
+        path = self.project / rel
+        path.write_text(JAPANESE_TEXT + body, encoding="utf-8")
         return path
 
     def decision(self, proc: subprocess.CompletedProcess) -> dict:
@@ -385,6 +476,84 @@ class InspectWriteTest(HookProcessTestCase):
         state = json.loads(states[0].read_text(encoding="utf-8"))
         self.assertEqual(state["files"], [str(path.resolve())])
 
+    def test_見出しが10を超える文書では検出が0件でも分担の通知を返す(self) -> None:
+        self.use_real_main_lint()
+        path = self.write_body("doc.md", headings(11))
+        decision = self.decision(self.run_hook(INSPECT_WRITE, self.write_payload(path)))
+        self.assertIn("別のエージェント", decision["reason"])
+        self.assertIn("inspection.md 4.・5.", decision["reason"])
+        self.assertNotIn("丸ごと書き直す", decision["reason"])
+
+    def test_太字だけの見出しが10を超える文書でも分担の通知を返す(self) -> None:
+        self.use_real_main_lint()
+        path = self.write_body("doc.md", bold_headings(11))
+        decision = self.decision(self.run_hook(INSPECT_WRITE, self.write_payload(path)))
+        self.assertIn("別のエージェント", decision["reason"])
+
+    def test_見出しが10の文書では通知を出さない(self) -> None:
+        self.use_real_main_lint()
+        path = self.write_body("doc.md", headings(10))
+        proc = self.run_hook(INSPECT_WRITE, self.write_payload(path))
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        self.assertEqual(proc.stdout, "")
+        states = list(self.state_dir.rglob("*.json"))
+        self.assertEqual(len(states), 1, "検査が走って状態に記録された")
+        state = json.loads(states[0].read_text(encoding="utf-8"))
+        self.assertEqual(state["files"], [str(path.resolve())])
+
+    def test_空の通知では何も出力しない(self) -> None:
+        path = self.write_doc("doc.md", "EMPTYNOTICE")
+        self.assertEqual(self.write_reason(path), "")
+
+
+class NoticeOnceTest(HookProcessTestCase):
+    def test_同じファイルへの通知は初回だけ出す(self) -> None:
+        self.use_real_main_lint()
+        path = self.write_body("doc.md", headings(11))
+        self.assertIn("別のエージェント", self.write_reason(path), "1 回目は通知を出す")
+        self.assertEqual(self.write_reason(path), "", "2 回目は何も出さない")
+
+    def test_別のファイルには通知を出す(self) -> None:
+        self.use_real_main_lint()
+        self.write_reason(self.write_body("a.md", headings(11)))
+        self.assertIn("別のエージェント", self.write_reason(self.write_body("b.md", headings(11))))
+
+    def test_Stop_が状態を消した後は再び通知を出す(self) -> None:
+        self.use_real_main_lint()
+        path = self.write_body("doc.md", headings(11))
+        self.write_reason(path)
+        proc = self.run_hook(INSPECT_STOP, self.stop_payload())
+        self.assertEqual(proc.stdout, "")
+        self.assertIn("別のエージェント", self.write_reason(path))
+
+    def test_Stop_がブロックを数えても通知済みの記録は残る(self) -> None:
+        path = self.write_doc("doc.md", "NGWORD NOTICE")
+        self.assertIn("分担: 通知の文", self.write_reason(path))
+        self.assertEqual(self.decision(self.run_hook(INSPECT_STOP, self.stop_payload()))["decision"], "block")
+        self.assertNotIn("分担:", self.write_reason(path))
+
+    def test_ブロックの上限に達した後は検出が解消された_Stop_まで再び通知を出さない(self) -> None:
+        path = self.write_doc("doc.md", "NGWORD NOTICE")
+        self.assertIn("分担: 通知の文", self.write_reason(path))
+        for _ in range(3):  # 既定の stop_max_blocks = 3
+            self.assertEqual(self.decision(self.run_hook(INSPECT_STOP, self.stop_payload()))["decision"], "block")
+        self.assertEqual(self.run_hook(INSPECT_STOP, self.stop_payload()).stdout, "", "上限に達して完了を許可する")
+        reason = self.write_reason(path)
+        self.assertIn("forbidden_phrase", reason)
+        self.assertNotIn("分担:", reason, "検出が残るあいだは上限の後も通知を出さない")
+        path = self.write_doc("doc.md", "NOTICE")
+        self.assertEqual(self.write_reason(path), "", "検出を解消しても Stop の前は通知を出さない")
+        self.assertEqual(self.run_hook(INSPECT_STOP, self.stop_payload()).stdout, "")
+        self.assertEqual(list(self.state_dir.rglob("*.json")), [], "解消された完了で状態ファイルが削除される")
+        self.assertIn("分担: 通知の文", self.write_reason(path), "状態ファイルの削除の後は再び通知を出す")
+
+    def test_2回目は検出だけを警告する(self) -> None:
+        path = self.write_doc("doc.md", "NGWORD NOTICE")
+        self.write_reason(path)
+        reason = self.write_reason(path)
+        self.assertIn("forbidden_phrase", reason)
+        self.assertNotIn("分担:", reason)
+
 
 class InspectStopTest(HookProcessTestCase):
     def record(self, rel: str, marker: str = "") -> Path:
@@ -423,6 +592,14 @@ class InspectStopTest(HookProcessTestCase):
         proc = self.run_hook(INSPECT_STOP, self.stop_payload())
         self.assertEqual(proc.stdout, "")
         self.assertIn("上限", proc.stderr)
+
+    def test_分担の通知だけでは完了をブロックしない(self) -> None:
+        self.use_real_main_lint()
+        path = self.write_body("doc.md", headings(11))
+        self.decision(self.run_hook(INSPECT_WRITE, self.write_payload(path)))
+        proc = self.run_hook(INSPECT_STOP, self.stop_payload())
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        self.assertEqual(proc.stdout, "")
 
     def test_状態が無ければ何もしない(self) -> None:
         proc = self.run_hook(INSPECT_STOP, self.stop_payload())

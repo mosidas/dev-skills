@@ -47,6 +47,8 @@ from pathlib import Path
 from textcore import (
     Finding,
     SENTENCE_SPLIT_RE,
+    _BLOCKQUOTE_RE,
+    _CODE_FENCE_RE,
     _HEADING_RE,
     _LIST_ITEM_RE,
     _TABLE_DELIMITER_RE,
@@ -154,6 +156,15 @@ FILLER_PATTERNS: list[tuple[str, str]] = [
         "文末の付け足し",
     ),
 ]
+
+# 「記載している」の現在形は扱う範囲の導入として正当に使われるため、述語は過去形に限る。
+# 「記録・記載・記した」は文書の内容や場所を案内する文と区別するため、限定の語(だけ・のみ)が述語の直前にある文に限る。
+SELF_SCOPE_NOTE_RE = re.compile(
+    r"(?<![一-龠々])本(?:メモ|書|稿|資料)[^。！？\n]{0,40}?"
+    r"(?:(?:省略|割愛)し(?:た|ました)|省(?:いた|きました))(?=[。！？]|$)"
+    r"|(?<![一-龠々])本(?:メモ|書|稿|資料)[^。！？\n]{0,40}?(?:だけ|のみ)を?"
+    r"(?:(?:記録|記載)し(?:た|ました)|記し(?:た|ました))(?=[。！？]|$)"
+)
 
 # 中身の薄い評価の文（「操作性が高い。」のように名詞の評価を述語で言い直すだけの文）。
 # 出典: yomiyasu v2.2.0(a34d94f)の references/lists/thin-evaluation.txt・references/slop-catalog.md 5 章(MIT)。
@@ -717,6 +728,31 @@ def detect_filler_phrases(
                         detail=f"{label}: 「{_strip_line_marker(m.group())}」",
                     )
                 )
+    return findings
+
+
+def detect_self_scope_note(
+    lines: list[tuple[int, str]], raw_lines_by_no: dict[int, str] | None = None
+) -> list[Finding]:
+    findings = []
+    for no, line in lines:
+        raw_line = _raw_or_masked(raw_lines_by_no, no, line)
+        for m in SELF_SCOPE_NOTE_RE.finditer(line):
+            start = max(0, m.start() - 10)
+            end = m.end() + 10
+            excerpt = raw_line[start:end] if len(raw_line) >= end else line[start:end]
+            findings.append(
+                Finding(
+                    line=no,
+                    category="self_scope_note",
+                    excerpt=excerpt.strip(),
+                    severity="warn",
+                    detail=(
+                        f"文書自身を指す語と、省いたこと、または記録した範囲を限ることを述べる過去形の述語の組: 「{m.group()}」。"
+                        "読者に向けた中身でなければ文を削る。決められなければ残す(paragraph.md 3.)"
+                    ),
+                )
+            )
     return findings
 
 
@@ -1696,6 +1732,8 @@ def detect_inanimate_subject_morph(tokenized: list[TokenizedSentence]) -> list[F
 # ラベルの太字は、作者の読み比べで残したほうが読みやすく探しやすかった。
 # ---------------------------------------------------------------------------
 BOLD_SPAN_RE = re.compile(r"\*\*[^*\n]+\*\*")
+# 行末の空白は呼び出し側で除く
+BOLD_ONLY_LINE_RE = re.compile(r"^ {0,3}\*\*[^*\n]+\*\*$")
 # 行頭(箇条の頭を含む)の「**ラベル**:」は項目を探す目印なので数えない
 BOLD_LABEL_RE = re.compile(r"^\s*(?:[-*+]|\d+[.)])?\s*\*\*[^*\n]+\*\*\s*[:：]", re.M)
 BOLD_DENSITY_PER_1000_THRESHOLD = 3.0
@@ -1843,6 +1881,77 @@ def detect_structural_ai_habits(raw_text: str) -> tuple[list[Finding], dict]:
     return findings, stats
 
 
+# 段落の直後に空行なしで続くと、直前の段落を setext の見出しにする行
+SETEXT_UNDERLINE_RE = re.compile(r"^ {0,3}(?:-{3,}|=+)[ \t]*$")
+THEMATIC_BREAK_RE = re.compile(r"^ {0,3}([-*_])(?:[ \t]*\1){2,}[ \t]*$")
+
+
+def detect_missing_blank_line(raw_text: str) -> list[Finding]:
+    """空行が無いため Markdown のプレビューで表示が崩れる行を検出する。
+    setext の見出しになる下線(`---` か `===`)と、次の行と 1 つの段落に連結される太字だけの行。
+    """
+    raw = mask_html_comments(raw_text).split("\n")
+    kept = mask_markdown_structure(raw_text, keep_structure_text=True).split("\n")
+    findings: list[Finding] = []
+    for i, line in enumerate(raw):
+        # shortcut: 1 以外の番号の箇条・引用と箇条の中・かな漢字の無い行・2 本以下の -- を見逃し、
+        # 字下げ 4 のコードと HTML ブロックの中の下線を誤検出する, 報告があれば CommonMark のブロックの判定へ引き上げる
+        if (
+            i > 0
+            and SETEXT_UNDERLINE_RE.match(line)
+            and kept[i - 1].strip()
+            and not any(
+                r.match(raw[i - 1])
+                for r in (_HEADING_RE, _LIST_ITEM_RE, _BLOCKQUOTE_RE, _TABLE_ROW_RE)
+            )
+        ):
+            findings.append(
+                Finding(
+                    line=i + 1,
+                    category="missing_blank_line",
+                    excerpt=f"{raw[i - 1].strip()[:30]} / {line.strip()[:10]}",
+                    severity="warn",
+                    detail=(
+                        "前の行の直後に空行なしで下線(`---` か `===`)が続き、直前の段落が見出し(setext)として表示される。"
+                        "前の行と下線の間に空行を入れる"
+                    ),
+                )
+            )
+        next_line = raw[i + 1] if i + 1 < len(raw) else ""
+        if (
+            kept[i].strip()
+            and BOLD_ONLY_LINE_RE.match(line.rstrip())
+            and not line.endswith("  ")
+            and next_line.strip()
+            and not next_line.lstrip().startswith("<")
+            and not any(
+                r.match(next_line)
+                for r in (
+                    _HEADING_RE,
+                    _LIST_ITEM_RE,
+                    _BLOCKQUOTE_RE,
+                    _CODE_FENCE_RE,
+                    _TABLE_ROW_RE,
+                    SETEXT_UNDERLINE_RE,
+                    THEMATIC_BREAK_RE,
+                )
+            )
+        ):
+            findings.append(
+                Finding(
+                    line=i + 1,
+                    category="missing_blank_line",
+                    excerpt=line.strip()[:40],
+                    severity="warn",
+                    detail=(
+                        "太字だけの行の直後に空行が無く、次の行と 1 つの段落に連結される。"
+                        "太字の行の後に空行を入れる"
+                    ),
+                )
+            )
+    return findings
+
+
 # ---------------------------------------------------------------------------
 # メイン処理
 # ---------------------------------------------------------------------------
@@ -1901,10 +2010,12 @@ def run_lint(
 
     findings: list[Finding] = []
     findings += structural_findings
+    findings += detect_missing_blank_line(raw_text)
     # --- 表層（正規表現）ベースの検出器 ---
     findings += detect_forbidden_phrases(lex_lines, raw_lines_by_no)
     findings += detect_translationese(lex_lines, raw_lines_by_no)
     findings += detect_filler_phrases(lex_lines, raw_lines_by_no)
+    findings += detect_self_scope_note(lex_lines, raw_lines_by_no)
     findings += detect_thin_evaluation(lex_lines, raw_lines_by_no)
     findings += detect_antithesis_repetition(
         lines,
@@ -1983,11 +2094,12 @@ _GFM_HEADING_RE = re.compile(r"^ {0,3}#")
 
 
 def count_headings(raw_text: str) -> int:
-    """コードブロック・フロントマターを除いた Markdown の見出し行を数える。"""
+    """コードブロック・フロントマターを除いた `#` の見出しと太字だけの行を数える。"""
     masked = mask_markdown_structure(raw_text, keep_structure_text=True)
     # _HEADING_RE は行頭の空白を許すため、4 スペース・タブで始まるインデントコードの
     # `# コメント` も拾う。GFM の見出しは行頭の空白 3 つまでなので、それより深い行は除く。
-    return sum(1 for line in masked.split("\n") if _HEADING_RE.match(line) and _GFM_HEADING_RE.match(line))
+    return sum(1 for line in masked.split("\n") if (_HEADING_RE.match(line) and _GFM_HEADING_RE.match(line))
+               or BOLD_ONLY_LINE_RE.match(line.rstrip()))
 
 
 def review_delegation_notice(heading_count: int) -> str | None:
@@ -1996,7 +2108,7 @@ def review_delegation_notice(heading_count: int) -> str | None:
         return None
     return (
         f"見出しが {heading_count} 個(10 超)の文書である。推敲は観点別または章別に"
-        "別のエージェントへ分担してレビューさせる(references/inspection.md 4.・5.)。"
+        "別のエージェントへ分担する(references/inspection.md 4.・5.)。"
     )
 
 

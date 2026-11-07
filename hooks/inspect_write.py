@@ -3,16 +3,20 @@
 
 書き込まれたファイルが日本語の Markdown なら、プラグイン同梱の write-doc スキルの
 lint.py(`skills/write-doc/scripts/lint.py`)を `--json` で実行し、検出があれば
-警告(該当文を丸ごと書き直す指示・カテゴリ別の言い換え指針・機械検出に出ない不自然さの
-自己判定の指示)をエージェントへ返す。書き込み自体は成立済みであり、処理は止めない。
+警告(検出箇所を含む文をカテゴリ別の指針に従って直す指示・カテゴリ別の指針・機械検出に出ない不自然さの
+自己判定の指示)をエージェントへ返す。lint.py が分担の通知(見出しが 10 を超える文書)を
+出したときは、検出が無くても通知を警告として返す。通知は同じファイルに対して状態ファイルが削除されるまで
+初回だけ出す。Stop は重大カテゴリの検出が残っていない完了のときに状態ファイルを削除するので、通常は
+1 回の応答につき初回だけになる。検出が残ったままブロックの上限に達すると、重大カテゴリの検出がすべて解消された完了(状態ファイルの削除)まで再び出ない。
+書き込み自体は成立済みであり、処理は止めない。
 書き直しの結果には再びこの hook がかかる。
 
 検査したファイルはセッション状態に記録し、Stop hook(`inspect_stop.py`)の再検査対象にする。
 
 入出力の契約:
   標準入力  PostToolUse の JSON(`tool_name`・`tool_input`・`cwd`・`session_id` を読む)
-  exit 0    検出なし・検査対象外・検査不能(何も出力しない)
-  exit 0 + JSON 出力  検出あり。`{"decision": "block", "reason": <警告文>}` が
+  exit 0    検出も分担の通知もなし・検査対象外・検査不能(何も出力しない)
+  exit 0 + JSON 出力  検出または分担の通知あり。`{"decision": "block", "reason": <警告文>}` が
             エージェントへ自動フィードバックされる(ツールの実行は取り消されない)
 
 uv・lint.py・設定が欠けている場合や lint が失敗した場合は検査を諦めて何もしない
@@ -55,20 +59,21 @@ def main() -> None:
     if not inspect:
         return
 
-    findings = lib.run_lint(path, doctype.get("genre"), config)
-    if findings is None:
+    result = lib.run_lint(path, doctype.get("genre"), config)
+    if result is None:
         return
-    findings = lib.filter_findings(findings, doctype)
+    findings = lib.filter_findings(result.findings, doctype)
 
     session_id = payload.get("session_id")
-    lib.record_inspected(path, project, session_id if isinstance(session_id, str) else "")
-
-    if not findings:
+    session = session_id if isinstance(session_id, str) else ""
+    notify = lib.record_inspected(path, project, session, notify=result.notice is not None)
+    notice = result.notice if notify else None
+    if not findings and notice is None:
         return
     guides = lib.load_guides(HOOK_DIR)
     blocking = lib.blocking_findings(findings, config)
     reason = lib.format_warning(
-        path, findings, config, guides, blocking, lib.load_phrase_okays()
+        path, findings, config, guides, blocking, lib.load_phrase_okays(), notice=notice
     )
     lib.emit({"decision": "block", "reason": reason})
 
