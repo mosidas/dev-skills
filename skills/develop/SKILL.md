@@ -5,7 +5,7 @@ description: 機能追加・バグ修正・リファクタリングなど、コ�
 
 # 開発の手順
 
-本スキルは統括セッションが読む。統括の仕事は計画・委譲・検収・PR である。サブエージェントを起動できない CLI(Codex CLI・Antigravity CLI)では、統括が planner・implementer・reviewer・gate-reviewer の役割を 1 つずつ順に受け持ち、役割を切り替えるたびに前の役割の判断を引き継がずに `agents/` の各ファイルの手順で作業する。その CLI に無い機能を使う手順(サブエージェントの `effort`・claude-security プラグインの走査など)に当たったら省いた手順と理由を 1 行でユーザーに報告して次の手順へ進む。止まって聞かない。報告が無いとユーザーは手順が省かれたことに気付かない。コードは書かない。書くのは implementer サブエージェント、点検するのは reviewer と gate-reviewer サブエージェントである。ただし試作と診断(5. の未確定事項を確かめる試作を含む)で作業ツリーの外に作る使い捨てのスクリプトは統括が書く(`references/kinds.md` 1.・5.1)。統括がコードを書かない理由は 2 つある。統括の文脈をタスク全体の判断に使い続けること、そして書いた本人がレビューする状態を避けることである。
+本スキルは統括セッションが読む。統括の仕事は計画・委譲・検収・PR である。環境に無い機能を使う手順(claude-security プラグインの走査など)に当たったら省いた手順と理由を 1 行でユーザーに報告して次の手順へ進む。止まって聞かない。報告が無いとユーザーは手順が省かれたことに気付かない。コードは書かない。書くのは implementer サブエージェント、点検するのは reviewer と gate-reviewer サブエージェントである。ただし試作と診断(5. の未確定事項を確かめる試作を含む)で作業ツリーの外に作る使い捨てのスクリプトは統括が書く(`references/kinds.md` 1.・5.1)。統括がコードを書かない理由は 2 つある。統括の文脈をタスク全体の判断に使い続けること、そして書いた本人がレビューする状態を避けることである。
 
 ## 1. 工程
 
@@ -78,7 +78,7 @@ backlog task edit <id> --append-notes $'判断: <選んだこと・したこと>
 
 ステップごとに次を繰り返す。サブエージェントは毎回新しく起動し、前のステップの会話を引き継がない。前のステップの試行錯誤が次のステップの判断に混ざるのを防ぎ、reviewer が実装の経緯を知らずに結果だけを見る状態を保つためである。
 
-Claude Code ではサブエージェントを起動するたびに Agent の `effort` をジョブに合わせて選ぶ。planner と gate-reviewer の起動にも当てはまる。`effort` を渡さなければセッションの値で動く。この値を出発点にする。最も難しいジョブ(横断的な設計・並行処理・自明でない欠陥の点検)ではセッションの値が `high` より低いときだけ `high` を渡す。定型作業(誤字の修正・設定値の変更・機械的な置き換え)ではセッションの値が `low` より高いときだけ `low` を渡す。選ぶのは起動ごとの引数である。agents の frontmatter は書き換えない。この選び方は Claude Code に限る。Codex CLI・Antigravity CLI では統括が役割を受け持つためである。
+サブエージェントを起動するたびに Agent の `effort` をジョブに合わせて選ぶ。planner と gate-reviewer の起動にも当てはまる。`effort` を渡さなければセッションの値で動く。この値を出発点にする。最も難しいジョブ(横断的な設計・並行処理・自明でない欠陥の点検)ではセッションの値が `high` より低いときだけ `high` を渡す。定型作業(誤字の修正・設定値の変更・機械的な置き換え)ではセッションの値が `low` より高いときだけ `low` を渡す。選ぶのは起動ごとの引数である。agents の frontmatter は書き換えない。この選び方は Claude Code に限る。Codex CLI・Antigravity CLI では統括が役割を受け持つためである。
 
 1. ステップ開始時の HEAD の SHA を `git rev-parse HEAD` で取り、文字列として控える。シェル変数は次のコマンドに引き継がれないので使わない。この SHA が reviewer に渡す範囲の起点になる。
 2. implementer サブエージェント(`dev-skills:implementer`)を起動する。渡すのは、対象リポジトリのパス、ブランチ名、そのステップの計画(変更するファイル・手順・完了条件・検証コマンド)、変更してよい範囲、要件の品質の行である。implementer は実装してテストを通し、コミットして、変更ファイルとテスト結果を報告する。Claude Code ではこのループで起動するサブエージェントに大きな出力(テストの全ログ・長い差分・調査の生データ)を作業ツリーの外のファイルに書かせてパスと要約で報告させる。
@@ -97,8 +97,8 @@ Claude Code ではサブエージェントを起動するたびに Agent の `ef
 ## 7. ゲートを通す
 
 - 全ステップが承認されたら、push の前に gate-reviewer サブエージェント(`dev-skills:gate-reviewer`)を起動する。渡すのは、対象リポジトリのパス、レビューする範囲(`main..HEAD`)、要件の 3 行(目的・完了条件・対象外)、計画の全体、PR 本文案である。
-- Claude Code では、品質がプロダクトのとき、gate-reviewer を起動する前に統括が claude-security プラグイン(`claude-security@claude-plugins-official`)の Scan changes を効果 `high` で実行する(`/claude-security scan my branch at high`)。報告は対象リポジトリの `CLAUDE-SECURITY-<timestamp>/` に書き出される。プラグインが導入されていないときは組み込みの `/security-review` で代える。指摘があれば implementer に渡して直させ、直したあとで gate-reviewer を起動する。
-- Claude Code では gate-reviewer の前に敵対役(`references/parallel.md` 5.)を任意で起動できる。統括が再実行して確かめた敵対役の所見は gate-reviewer に渡す。Claude Code では、Codex CLI がある環境で gate-reviewer と `codex review --base main` を並走させる(同 6.)。
+- 品質がプロダクトのとき、gate-reviewer を起動する前に統括が claude-security プラグイン(`claude-security@claude-plugins-official`)の Scan changes を効果 `high` で実行する(`/claude-security scan my branch at high`)。報告は対象リポジトリの `CLAUDE-SECURITY-<timestamp>/` に書き出される。プラグインが導入されていないときは組み込みの `/security-review` で代える。指摘があれば implementer に渡して直させ、直したあとで gate-reviewer を起動する。
+- gate-reviewer の前に敵対役(`references/parallel.md` 5.)を任意で起動できる。統括が再実行して確かめた敵対役の所見は gate-reviewer に渡す。Codex CLI がある環境で gate-reviewer と `codex review --base main` を並走させる(同 6.)。
 - gate-reviewer はブランチ全体でしか分からないこと(完了条件の充足、ステップ間の整合、残骸、PR 本文との一致)を見て、「マージ可」か「差し戻し」を返す。ステップごとの reviewer が見た内容は蒸し返さない。品質がプロダクトのとき、計画に含まれる secure・observe・recover 由来の変更(ヘルスチェック・メトリクス・拒否のテスト・タイムアウト・エラーページなど)は要件内として扱う。
 - 差し戻しなら、修正点を implementer に渡して直させ、再びゲートを通す。2 回直しても通らないときは、統括がユーザーに状況を報告して判断を仰ぐ。ゲートを push の前に通すのは、CI を回す前に直すほうが安いからである。
 
@@ -157,7 +157,7 @@ build の反復が In Progress のタスクを取ったときも本節で再開�
 | `references/kinds.md` | バグ修正・リファクタ・性能・試作・移行の種類ごとに最初に固定するもの・進め方・止まる条件 | 要件を確かめるときに種類を見分けるとき |
 | `references/benchmark.md` | 性能の数値を吟味する 7 つの問い・結論の 4 択と判定不能の条件・数値の書き方 | 性能の数値を報告するとき・数値で案を比べるとき・PR 本文に数値を書くとき |
 | `references/blast-radius.md` | 差分の外で動かなくなる箇所の読む対象・変更の安全を支える 1 つの事実・確かさの 5 段・危険の扱い・報告の形 | PR 本文の影響範囲を書くとき、Implementation Notes に変更の安全の根拠を書くとき |
-| `references/parallel.md` | サブエージェントを並列に起動する共通の作法(書き込み先の分離・同じブリーフ・脱落・SHA と方法)・同じ課題の競争・分担の点検・敵対役・別系統のレビューの並走 | Claude Code でサブエージェントを並列に起動するとき(計画の案を並べるとき・範囲を分けて点検するとき・7. の前に敵対役を起動するとき) |
+| `references/parallel.md` | サブエージェントを並列に起動する共通の作法(書き込み先の分離・同じブリーフ・脱落・SHA と方法)・同じ課題の競争・分担の点検・敵対役・別系統のレビューの並走 | サブエージェントを並列に起動するとき(計画の案を並べるとき・範囲を分けて点検するとき・7. の前に敵対役を起動するとき) |
 | `references/hooks.md` | git hook(lefthook・husky)の導入、シークレット検知と依存監査、CI での同じ検査と SAST | hook が無いリポジトリで作業を始めるとき、品質がプロダクトのとき |
 
 サブエージェントの定義(`agents/`)は統括が読まなくてよい。役割と出力形式はサブエージェント自身が持つ。

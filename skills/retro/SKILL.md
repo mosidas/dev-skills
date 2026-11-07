@@ -42,10 +42,9 @@ description: タスクで受けた本人の指摘とレビューの指摘から�
   gh api repos/<owner>/<repo>/pulls/<n>/comments
   ```
 
-- memory(Claude Code のみ): `grep -l "type: feedback" ~/.claude/projects/<project>/memory/*.md` で feedback のファイルを探す。`~/.claude/projects/<project>/memory/` には、セッションに読み込まれた MEMORY.md のディレクトリ(コンテキストに表示されるパス)を使う。手で組み立てるときの `<project>` は、作業ディレクトリの絶対パスの英数字以外の文字(`/`・`.`・`_` など)を `-` に置き換えた文字列であり、`ls ~/.claude/projects/` で実在を照合する。frontmatter の `metadata.modified` の日時で、扱いを次のように分ける。
+- memory: `grep -l "type: feedback" ~/.claude/projects/<project>/memory/*.md` で feedback のファイルを探す。`~/.claude/projects/<project>/memory/` には、セッションに読み込まれた MEMORY.md のディレクトリ(コンテキストに表示されるパス)を使う。手で組み立てるときの `<project>` は、作業ディレクトリの絶対パスの英数字以外の文字(`/`・`.`・`_` など)を `-` に置き換えた文字列であり、`ls ~/.claude/projects/` で実在を照合する。frontmatter の `metadata.modified` の日時で、扱いを次のように分ける。
   - タスクの期間中に作成・更新された feedback は、新しい指摘として拾う。
   - それより前の feedback は、守られたかを照合する規則として 5. で使う。
-  - Codex CLI・Antigravity CLI では、この入力を省く。
 - セッション: 統括が会話から本人の指摘を拾う。会話が残っていなければ、Implementation Notes にある「ユーザーの指摘」の記述から拾う。
 
 集めるときは、次の規則に従う。
@@ -82,7 +81,7 @@ description: タスクで受けた本人の指摘とレビューの指摘から�
 ### 5.1 判定に使う規範の版
 
 - 現行の版には、指摘を受けて後から追加した規則が含まれることがある。そのため、指摘の時点で使われていた版で判定する。
-- Claude Code では、使われた版が `~/.claude/plugins/cache/<marketplace>/dev-skills/<version>/` に残る。指摘の日時に有効だった版のディレクトリを読む。各版の導入日時は `ls -lt ~/.claude/plugins/cache/<marketplace>/dev-skills/` で見分ける。更新日時が同じ版が並んで見分けられないときは、次の git の手順で特定する。
+- 使われた版は `~/.claude/plugins/cache/<marketplace>/dev-skills/<version>/` に残る。指摘の日時に有効だった版のディレクトリを読む。各版の導入日時は `ls -lt ~/.claude/plugins/cache/<marketplace>/dev-skills/` で見分ける。更新日時が同じ版が並んで見分けられないときは、次の git の手順で特定する。
 - 版が分からないときは、指摘の日時より前のコミットを特定し、その時点のファイルを読む。
 
   ```sh

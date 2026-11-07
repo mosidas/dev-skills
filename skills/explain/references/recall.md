@@ -29,12 +29,11 @@
 | backlog | `backlog search "<話題>" --type task --plain` で探す。`backlog task list --status "In Progress" --plain` で進行中を拾う。`backlog task <id> --plain` で状態と Implementation Notes を読む | すべて |
 | gh | `gh pr list --state all --author "@me" --search "<話題>" --json number,title,state,headRefName,mergedAt,url` | すべて |
 | git | `git log --since="<期間>" --oneline --all`・`git branch --list`・`git status`・`git stash list` | すべて |
-| 会話の記録 | `~/.claude/projects/<slug>/*.jsonl` | Claude Code のみ |
+| 会話の記録 | `~/.claude/projects/<slug>/*.jsonl` | あり |
 
 - 会話の記録の `<slug>` は retro 3. の memory の段落と同じ規則で求める。
 - 直下の `*.jsonl` が 1 つの会話であり 1 行が 1 件のメッセージである。サブエージェントの記録は `<セッション id>/subagents/` にあり本体の会話と分かれている。
 - 会話の記録は統括が読む。サブエージェントは作業ディレクトリの外のファイルを読めないものとして扱う(SKILL.md 3.)。
-- Codex CLI・Antigravity CLI では会話の記録の置き場が違う。backlog・gh・git だけを入力にする。
 
 ## 4. 会話の記録
 
