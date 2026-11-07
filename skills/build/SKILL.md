@@ -170,7 +170,7 @@ python3 <プラグインのパス>/skills/build/scripts/loop.py backlog/build/<s
 
 | ファイル | 内容 | 読むとき |
 | :-- | :-- | :-- |
-| `scripts/loop.py` | 反復を繰り返し起動し、停止条件を判定するスクリプト | Claude Code で反復を回すとき |
+| `scripts/loop.py` | 反復を繰り返し起動し、停止条件を判定するスクリプト | 反復を回すとき |
 | `references/flow.mmd` | 工程の図の構造(ノードと辺) | 工程の図を直すとき |
 | `references/flow.svg` | 工程の図(1. に埋め込む) | 工程の全体を見るとき |
 | `../specify/references/prd.md` | specify の PRD の雛形。節ごとの書き方を、各節の直下のコメントに書いている | 分解するとき |
