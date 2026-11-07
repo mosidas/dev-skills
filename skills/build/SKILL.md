@@ -166,9 +166,6 @@ python3 <プラグインのパス>/skills/build/scripts/loop.py backlog/build/<s
 - 反復のプロンプトは loop.py の `PROMPT` にある「dev-skills の build スキルの「反復する」工程を 1 回行う。進捗ファイル: <絶対パス>」である。
 - `claude -p` は、バックグラウンドのサブエージェントの完了を待ってから終了する(Claude Code 2.1.290 で確認した)。
 
-
-サブエージェントを起動しない CLI では、develop の定めどおり、統括が planner・implementer・reviewer・gate-reviewer の役割を順に受け持つ。
-
 ## 7. 参照ファイル
 
 | ファイル | 内容 | 読むとき |
