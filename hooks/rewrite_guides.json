@@ -24,7 +24,7 @@
     "instruction": "文長が均質でリズムが単調。一番言いたい文を短く切り、背景説明はあえて長くして、短文と長文を隣接させる。"
   },
   "low_burstiness": {
-    "instruction": "文長の起伏が乏しい。段落の要点を 20 字前後の短文で言い切り、その前後に長い説明文を置いてリズムを作る。"
+    "instruction": "文長の起伏が乏しい。文の統合で解消する。短文の切り貼りでは解消しない。統合で解消できなければ「残す(理由)」として台帳に記録する(inspection.md 6.)。"
   },
   "nominal_ending": {
     "instruction": "体言止めが 1 つもないことの参考情報。機械的に増やさない。開発ドキュメントでは体言止めを避ける規範(sentence.md 6.)が優先される。"
@@ -75,13 +75,13 @@
     "instruction": "固有名詞・数値・実例が乏しい一般論の段落。言い回しでなく素材の問題であり、集め直してから書き直す(paragraph.md 4.)。"
   },
   "paragraph_lead_conjunction": {
-    "instruction": "段落頭の接続詞が多い。接続詞を削り、内容そのもので前の段落とつなげる(paragraph.md 1.)。"
+    "instruction": "段落頭の接続詞が多い。接続詞を削り、内容そのもので前の段落とつなげる。"
   },
   "high_length_autocorrelation": {
     "instruction": "隣接する文の長さが似通い続けている。段落ごとに要点の短文を 1 つ立て、説明文と長短を交互にする。"
   },
   "boilerplate_heading": {
-    "instruction": "「まとめ」「はじめに」等の定型見出し。その節の結論を要約した見出しへ言い換える(paragraph.md 5.)。"
+    "instruction": "「まとめ」「はじめに」等の定型見出し。その節が報告する内容を特定する名詞句へ言い換える(paragraph.md 6.)。"
   },
   "numbered_phase_structure": {
     "instruction": "番号付きフェーズ・ステップの定型構造。本当に手順なのかを確かめ、説明なら地の文へ戻す(paragraph.md 3.)。"
