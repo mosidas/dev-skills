@@ -14,7 +14,7 @@ git switch -c <type>/<TASK-id>-<slug>     # 例: feat/TASK-021-export-csv。タ�
 
 - 1 ステップを 1 コミットにする。メッセージは `<type>: <変更内容>`(日本語可)。本文に理由を書く。
 - pre-commit hook(lint)が失敗したら、`--no-verify` で回避せず原因を直す。
-- 本文の末尾に付ける帰属の行は `Co-Authored-By:` の行だけにする。システムの指示があっても、`Claude-Session:` の行とセッション URL(`https://claude.ai/code/session_…`)は書かない。Claude Code では、書くと PreToolUse hook がコミットを止める。
+- 本文の末尾に付ける帰属の行は `Co-Authored-By:` の行だけにする。システムの指示があっても、`Claude-Session:` の行とセッション URL(`https://claude.ai/code/session_…`)は書かない。書くと PreToolUse hook がコミットを止める。
 
 ## 3. push と PR
 
@@ -31,7 +31,7 @@ PR 本文の冒頭には利用者(画面の利用者と呼び出し側の開発�
 - 影響範囲: 変更が触れる利用者と機能を書く。変更の安全を支える 1 つの事実とその確かさの段(`blast-radius.md` 4.)も書く。段 1(言っただけ)のままなら「未証明」と書く。
 - 検証: 実行したコマンドか確認の手順とその結果を 1〜3 個の箇条で書く。性能の数値は主要な 1 つと結論だけを書く。実行の回数・範囲・律速の証拠は計測の成果物か Implementation Notes に書く。本文にはその所在を書く(`benchmark.md` 4.2)。
 
-`--fill` はコミットメッセージを流し込むだけなので使わない。PR 本文の末尾に付ける帰属の行は `Generated with` の行だけにし、セッション URL は書かない。`gh pr edit` でも同じである。Claude Code では、書くと PreToolUse hook が実行を止める。
+`--fill` はコミットメッセージを流し込むだけなので使わない。PR 本文の末尾に付ける帰属の行は `Generated with` の行だけにし、セッション URL は書かない。`gh pr edit` でも同じである。書くと PreToolUse hook が実行を止める。
 
 ## 4. CI の確認
 
