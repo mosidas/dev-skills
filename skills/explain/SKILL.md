@@ -72,7 +72,7 @@ description: コードを変えずに読み取りだけで調べて答える手�
 - `agents/planner.md`: planner は計画の「関係するコードの仕組み」の節を書く。節の構成は仕組みの問いの出力と同じ 5 節である。本スキルは計画を伴わない問いに答える。
 - develop 11.: 1 つのタスクを中断した箇所から続ける手順である。複数のタスクと会話をまたいで文脈を組み直すときは本スキルの再開の問いを使う。
 - develop の `references/blast-radius.md`: 変更の影響を点検する手順である。本スキルは変更を伴わない問いに答える。
-- respond: 再開の問いの状態タグは respond 3.5 に従う。経緯の確信度の推定と推測は respond 3.11 と同じ語を使う。
+- respond: 再開の問いの状態タグは respond 3.4 に従う。経緯の確信度の推定と推測は respond 3.5 と同じ語を使う。
 - write-doc: 確信度のラベル(【要確認】・推定)は `../write-doc/references/sentence.md` 4. と同じ語を使う。
 - draw-diagram: 図の列の規則は draw-diagram 1. にある。本スキルは引くだけである。
 - retro: 会話の記録の置き場の slug の求め方は retro 3. の memory の段落と同じである。
