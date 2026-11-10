@@ -51,7 +51,7 @@ def section_reference_problems(root: Path) -> list[str]:
     targets["README"] = root / "README.md"
     name_ref = re.compile(
         rf"(?<![A-Za-z0-9_/`.-])({'|'.join(map(re.escape, targets))})"
-        rf"(?: |\(`dev-skills:[\w-]+`\))(?={SECTION})"
+        rf"(?: |\(`[^`]+`\))(?={SECTION})"
     )
     skill_bases = [base for name in names for base in (skills / name, skills / name / "references")]
     headings: dict[Path, dict[str, str]] = {}
@@ -100,8 +100,7 @@ class 実リポジトリ(TempDirTestCase):
         if problems:
             self.fail("節番号の参照の問題:\n" + "\n".join(problems))
 
-    def test_見出しを消した写しでは実リポジトリの参照が節の無い参照として挙がる(self) -> None:
-        # 検出の正規表現が壊れて参照を 1 件も拾わなくなると、上のテストは 0 件で合格してしまう。
+    def test_見出しを消した写しでは各所の参照が節の無い参照として挙がる(self) -> None:
         for name in ("skills", "agents"):
             shutil.copytree(REPO_ROOT / name, self.tmp / name)
         for name in ("README.md", "AGENTS.md"):
@@ -109,7 +108,16 @@ class 実リポジトリ(TempDirTestCase):
         for path in self.tmp.rglob("*.md"):
             text = path.read_text(encoding="utf-8")
             path.write_text(re.sub(r"^#+ .*$", "", text, flags=re.M), encoding="utf-8")
-        self.assertAnyContains(section_reference_problems(self.tmp), "の節が無い")
+        missing = [p for p in section_reference_problems(self.tmp) if "の節が無い" in p]
+        for prefix in ("agents/", "README.md:", "skills/"):
+            self.assertTrue(
+                any(p.startswith(prefix) for p in missing),
+                f"{prefix} の参照を拾えていない(拾えないと上の実リポジトリのテストが素通りする)",
+            )
+        self.assertTrue(
+            any("`" in p for p in missing),
+            "ファイルの形の参照を拾えていない(拾えないと上の実リポジトリのテストが素通りする)",
+        )
 
 
 class 検査関数(TempDirTestCase):
@@ -151,6 +159,17 @@ class 検査関数(TempDirTestCase):
         self.assertEqual(self.problems("verify(`dev-skills:verify`)3. を読む。\n"), [])
         problems = self.problems("verify(`dev-skills:verify`)4. を読む。\n")
         self.assertAnyContains(problems, "の節が無い")
+
+    def test_パスを添えた形も検査する(self) -> None:
+        self.write("skills/interview/SKILL.md", "## 2. 聞き方\n")
+        self.assertEqual(self.problems("interview(`../../interview/SKILL.md`)2. に従う。\n"), [])
+        problems = self.problems("interview(`../../interview/SKILL.md`)3. に従う。\n")
+        self.assertAnyContains(problems, "skills/build/SKILL.md:1: interview 3. の節が無い")
+
+    def test_スキル名の前に英数字やスラッシュが付く語は参照として拾わない(self) -> None:
+        rel = "skills/specify/SKILL.md"
+        self.assertEqual(self.problems("rebuild 3. と skills/build 3. を見る。\n", rel=rel), [])
+        self.assertAnyContains(self.problems("build 3. を見る。\n", rel=rel), "build 3. の節が無い")
 
     def test_READMEの節も検査する(self) -> None:
         self.assertEqual(self.problems("README 6.2(スキルを書くときの規則)に従う。\n"), [])
