@@ -248,7 +248,7 @@ gh pr view <番号> --json title,body,author,createdAt,mergedAt,labels,closingIs
 
 ## 6. 確信度
 
-合成の出力の主張は次の 5 段のどれか 1 つに入れる。段が節と書き方を定める。推定と【要確認】の語は write-doc の `references/sentence.md` 4. と respond 3.5 に揃えてある。
+合成の出力の主張は次の 5 段のどれか 1 つに入れる。段が節と書き方を定める。推定と【要確認】の語は write-doc の `references/sentence.md` 4. と respond 3.5(事実と見立てを分ける)に揃えてある。
 
 | 段 | 条件 | 書き方 |
 | :-- | :-- | :-- |
