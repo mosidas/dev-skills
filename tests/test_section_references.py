@@ -17,11 +17,11 @@ from helpers import REPO_ROOT, TempDirTestCase
 # 過去の版の節番号を記録として引く事例。今の節を指さないので検査しない。
 EXCLUDED = {"skills/retro/references/example.md"}
 
-FENCE = re.compile(r"^```.*?^```[^\n]*$", re.M | re.S)
+FENCE = re.compile(r"^[ \t]*```.*?^[ \t]*```[^\n]*$", re.M | re.S)
 HEADING = re.compile(r"^#{2,6}\s+(\d+(?:\.\d+)*)\.?\s+(.+?)\s*$", re.M)
 SECTION = r"\d+\.(?:\d+\.?)*"
 ITEM = re.compile(rf"({SECTION})(?:\(([^()]*)\))?")
-FILE_REF = re.compile(rf"`((?:[\w.-]+/)*[\w.-]+\.md)` (?={SECTION})")
+FILE_REF = re.compile(rf"`((?:[\w.-]+/)*[\w.-]+\.md)` (?:の )?(?={SECTION})")
 
 
 def _text(path: Path) -> str:
@@ -31,20 +31,21 @@ def _text(path: Path) -> str:
 
 
 def _items(line: str, pos: int) -> list[tuple[str, str | None]]:
-    """`8.・9.(見出し)` のように `・` で続く (書いた節番号, 並記した見出し) の並び。"""
+    """`8.・9.(見出し)` の `・` と `1.〜7.` の `〜` で続く (書いた節番号, 並記した見出し) の並び。範囲は両端だけを数える。"""
     items = []
     while m := ITEM.match(line, pos):
         items.append((m.group(1), m.group(2)))
         pos = m.end()
-        if not (line.startswith("・", pos) and ITEM.match(line, pos + 1)):
+        if not (line.startswith(("・", "〜"), pos) and ITEM.match(line, pos + 1)):
             break
         pos += 1
     return items
 
 
 def section_reference_problems(root: Path) -> list[str]:
-    """`<スキル名> <節>`・`<スキル名> の <節>`・`` `<ファイル>.md` <節> `` の参照のうち、節が無いもの・並記した見出しが違うもの・
-    ほかのスキルの SKILL.md か README.md の節をファイルの中で最初に指すのに見出しを並記していないものを挙げる。"""
+    """`<スキル名> <節>`・`<スキル名> の <節>`・`` `<ファイル>.md` <節> ``・`` `<ファイル>.md` の <節> `` の参照のうち、
+    節が無いもの・並記した見出しが違うもの・ほかのスキルの SKILL.md か README.md の節をファイルの中で最初に指すのに
+    見出しを並記していないものを挙げる。節は `・` と `〜` で続く番号も数える。"""
     root = root.resolve()
     skills = root / "skills"
     names = sorted(p.name for p in skills.iterdir() if p.is_dir())
@@ -289,6 +290,18 @@ class 検査関数(TempDirTestCase):
         problems = self.problems("develop の `references/parallel.md` 3. に従う。\n")
         self.assertAnyContains(problems, "skills/build/SKILL.md:1: `references/parallel.md` 3. の節が無い")
 
+    def test_ファイルの形で助詞のを挟む参照も検査する(self) -> None:
+        self.assertEqual(self.problems("`references/parallel.md` の 2. に従う。\n"), [])
+        problems = self.problems("`references/parallel.md` の 9. に従う。\n")
+        self.assertAnyContains(problems, "skills/build/SKILL.md:1: `references/parallel.md` 9. の節が無い")
+
+    def test_範囲の形は末尾の節も検査する(self) -> None:
+        self.write("skills/write-doc/references/sentence.md", "## 1. 語\n## 2. 文\n## 3. 動詞\n")
+        ref = "`../write-doc/references/sentence.md`"
+        self.assertEqual(self.problems(f"{ref} 1.〜3. に従う。\n"), [])
+        problems = self.problems(f"{ref} 1.〜4. に従う。\n")
+        self.assertAnyContains(problems, "skills/build/SKILL.md:1: `../write-doc/references/sentence.md` 4. の節が無い")
+
     def test_同じスキルの中の参照は無い節でも落ちない(self) -> None:
         text = "develop 5. と `references/parallel.md` 9. に従う。\n"
         self.assertEqual(self.problems(text, rel="skills/develop/references/kinds.md"), [])
@@ -300,6 +313,13 @@ class 検査関数(TempDirTestCase):
         self.write("skills/develop/SKILL.md", "## 6. 実装と点検のループ\n" + fence)
         problems = self.problems("develop 9. に従う。\n")
         self.assertAnyContains(problems, "develop 9. の節が無い")
+
+    def test_インデントしたコードフェンスの中の参照と見出しは数えない(self) -> None:
+        listed = "- 例:\n\n  ```markdown\n  develop 7. に従う。\n  ```\n"
+        self.assertEqual(self.problems(listed + "develop 9.(閉じる)に従う。\n"), [])
+        self.assertAnyContains(self.problems(listed + "develop 7. に従う。\n"), "skills/build/SKILL.md:6: develop 7. の節が無い")
+        self.write("skills/develop/SKILL.md", "## 6. 実装と点検のループ\n   ```markdown\n## 9. 偽\n   ```\n")
+        self.assertAnyContains(self.problems("develop 9. に従う。\n"), "develop 9. の節が無い")
 
     def test_回数の数字は参照として拾わない(self) -> None:
         self.assertEqual(self.problems("build 3 回で止める。\n", rel="skills/specify/SKILL.md"), [])

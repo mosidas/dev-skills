@@ -29,7 +29,7 @@ description: HTML で配布する説明資料(図・表・切り替えの UI を
 
 ## 3. HTML 固有の工程
 
-- モックの往復: 骨組みの合意(`process.md` 3.)で節の表ができたら、ページの構成のモックを作り、本人と往復する。往復の形は design-ui の `../design-ui/references/session.md` の 3.1(案 1 つ・前回からの差分・質問 1 つ・往復の番号)、3.2(見せ方)、3.5(3 往復まで)に従う。3.1 の文言の表と brief は使わない。往復の記録は節の表の下に書き、合意した構成を節の表に書き足す。
+- モックの往復: 骨組みの合意(`process.md` 3.)で節の表ができたら、ページの構成のモックを作り、本人と往復する。往復の形は `../design-ui/references/session.md` の 3.1(1 往復で出すもの)・3.2(見せ方)・3.5(往復の上限)に従う。出すものは案 1 つ・前回からの差分・質問 1 つ・往復の番号で、往復は 3 回までである。3.1 の文言の表と brief は使わない。往復の記録は節の表の下に書き、合意した構成を節の表に書き足す。
 - モックに入れるのは、節の並び、図と表の位置、切り替えの UI(タブ・折りたたみ)の有無と位置、本文の行幅である。本文はダミーでよい。切り替えの UI は、モックでも JavaScript で動かしてよい(session.md 3.3 の「JavaScript を使わない」は適用しない)。モックの撮影は、後述の見た目の検査と同じ手順で行う。
 - 本文: 節ごとに Markdown で書き、`../write-doc/references/process.md` と `../write-doc/references/inspection.md` に従って書き、検査する。検査では、節ごとの Markdown に `../write-doc/scripts/lint.py` を実行し、`../write-doc/references/inspection.md` 4. の段落ごとの確かめ(新しく作る資料でも行う)と文書ごとの確かめを行う。HTML に直接書かない。HTML に直接書くと、lint が本文を読めない。
 - 図: `../draw-diagram/SKILL.md` の工程に従い、`.mmd` と SVG の対で作る。図の寸法は、ページの本文の幅で横スクロールを出さない値にする(`../draw-diagram/references/svg.md` 1.)。表は Markdown の表で書く。
