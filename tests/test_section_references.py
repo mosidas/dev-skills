@@ -43,12 +43,14 @@ def _items(line: str, pos: int) -> list[tuple[str, str | None]]:
 
 
 def section_reference_problems(root: Path) -> list[str]:
-    """`<スキル名> <節>`・`` `<ファイル>.md` <節> `` の参照のうち、節が無いものと並記した見出しが違うものを挙げる。"""
+    """`<スキル名> <節>`・`` `<ファイル>.md` <節> `` の参照のうち、節が無いもの・並記した見出しが違うもの・
+    ほかのスキルの SKILL.md か README.md の節をファイルの中で最初に指すのに見出しを並記していないものを挙げる。"""
     root = root.resolve()
     skills = root / "skills"
     names = sorted(p.name for p in skills.iterdir() if p.is_dir())
     targets = {name: skills / name / "SKILL.md" for name in names}
     targets["README"] = root / "README.md"
+    annotated = set(targets.values())
     name_ref = re.compile(
         rf"(?<![A-Za-z0-9_/`.-])({'|'.join(map(re.escape, targets))})"
         rf"(?: |\(`([^`]+)`\))(?={SECTION})"
@@ -78,6 +80,7 @@ def section_reference_problems(root: Path) -> list[str]:
         def resolve(ref: str) -> Path | None:
             return next(((b / ref).resolve() for b in bases if (b / ref).is_file()), None)
 
+        seen: set[tuple[Path, str]] = set()
         for number, line in enumerate(_text(path).splitlines(), 1):
             found = []
             for m in name_ref.finditer(line):
@@ -99,6 +102,9 @@ def section_reference_problems(root: Path) -> list[str]:
                         problems.append(f"{rel}:{number}: {ref} の節が無い")
                     elif given is not None and given != actual:
                         problems.append(f"{rel}:{number}: {ref}({given}) が見出し「{actual}」と違う")
+                    elif given is None and target in annotated and (target, section.rstrip(".")) not in seen:
+                        problems.append(f"{rel}:{number}: {ref} → {ref}({actual})")
+                    seen.add((target, section.rstrip(".")))
     return problems
 
 
@@ -155,22 +161,69 @@ class 検査関数(TempDirTestCase):
         problems = self.problems("develop 7. に従う。\n")
         self.assertAnyContains(problems, "skills/build/SKILL.md:1: develop 7. の節が無い")
 
-    def test_並記が無くても節があれば問題が無い(self) -> None:
-        self.assertEqual(self.problems("develop 6. に従う。\n"), [])
+    def test_並記が無くても節があれば節が無いとは挙がらない(self) -> None:
+        self.assertNoneContains(self.problems("develop 6. に従う。\n"), "の節が無い")
+        self.assertAnyContains(self.problems("develop 7. に従う。\n"), "develop 7. の節が無い")
+
+    def test_ほかのスキルのSKILLmdを最初に指すときに並記が無いと直し方を添えて落ちる(self) -> None:
+        self.assertEqual(self.problems("develop 6.(実装と点検のループ)に従う。\n"), [])
+        self.assertEqual(
+            self.problems("前置き\ndevelop 6. に従う。\n"),
+            ["skills/build/SKILL.md:2: develop 6. → develop 6.(実装と点検のループ)"],
+        )
+
+    def test_同じファイルの2回目は並記が無くても落ちない(self) -> None:
+        first = "develop 6.(実装と点検のループ)に従う。\n"
+        again = "develop 6. を再び読む。\n"
+        self.assertEqual(self.problems(first + again), [], "最初の出現に並記があれば 2 回目は要らない")
+        self.assertAnyContains(self.problems(again + first), "skills/build/SKILL.md:1: develop 6. →")
+
+    def test_別のファイルではまた最初の出現として数える(self) -> None:
+        self.write("skills/build/SKILL.md", "develop 6.(実装と点検のループ)に従う。\n")
+        self.assertAnyContains(
+            self.problems("develop 6. に従う。\n", rel="skills/build/references/loop.md"),
+            "skills/build/references/loop.md:1: develop 6. → develop 6.(実装と点検のループ)",
+        )
+
+    def test_READMEを最初に指すときも並記を求める(self) -> None:
+        self.assertAnyContains(self.problems("README 6.2 に従う。\n"), "README 6.2 → README 6.2(スキルを書くときの規則)")
+
+    def test_referencesのファイルを指す参照には並記を求めない(self) -> None:
+        self.write("skills/design-ui/SKILL.md", "## 4. スケール\n")
+        self.write("skills/design-ui/references/session.md", "### 3.1. 1 往復で出すもの\n")
+        self.assertEqual(
+            self.problems(
+                "develop の `references/parallel.md` 2. と design-ui(`../design-ui/references/session.md`)3.1 に従う。\n",
+                rel="skills/specify/SKILL.md",
+            ),
+            [],
+        )
+
+    def test_ファイルやパスの形でもほかのスキルのSKILLmdを指せば並記を求める(self) -> None:
+        self.write("skills/design-ui/SKILL.md", "## 4. スケール\n")
+        self.write("skills/interview/SKILL.md", "## 2. 聞き方\n")
+        rel = "skills/specify/SKILL.md"
+        self.assertEqual(
+            self.problems("`../design-ui/SKILL.md` 4.(スケール)と interview(`../interview/SKILL.md`)2.(聞き方)\n", rel=rel), []
+        )
+        problems = self.problems("`../design-ui/SKILL.md` 4. と interview(`../interview/SKILL.md`)2. を読む。\n", rel=rel)
+        self.assertAnyContains(problems, "`../design-ui/SKILL.md` 4. → `../design-ui/SKILL.md` 4.(スケール)")
+        self.assertAnyContains(problems, "interview 2. → interview 2.(聞き方)")
 
     def test_中黒で続く番号もそれぞれ検査する(self) -> None:
-        self.assertEqual(self.problems("develop 8.・9. に従う。\n"), [])
+        self.assertEqual(self.problems("develop 8.(押す)・9.(閉じる)に従う。\n"), [])
+        self.assertAnyContains(self.problems("develop 8.(押す)・9. に従う。\n"), "develop 9. → develop 9.(閉じる)")
         self.write("skills/develop/SKILL.md", "## 8. 押す\n")
         self.assertAnyContains(section_reference_problems(self.tmp), "develop 9. の節が無い")
 
     def test_dev_skillsの名前を添えた形も検査する(self) -> None:
-        self.assertEqual(self.problems("verify(`dev-skills:verify`)3. を読む。\n"), [])
+        self.assertEqual(self.problems("verify(`dev-skills:verify`)3.(保守する)を読む。\n"), [])
         problems = self.problems("verify(`dev-skills:verify`)4. を読む。\n")
         self.assertAnyContains(problems, "の節が無い")
 
     def test_パスを添えた形も検査する(self) -> None:
         self.write("skills/interview/SKILL.md", "## 2. 聞き方\n")
-        self.assertEqual(self.problems("interview(`../../interview/SKILL.md`)2. に従う。\n"), [])
+        self.assertEqual(self.problems("interview(`../../interview/SKILL.md`)2.(聞き方)に従う。\n"), [])
         problems = self.problems("interview(`../../interview/SKILL.md`)3. に従う。\n")
         self.assertAnyContains(problems, "skills/build/SKILL.md:1: interview 3. の節が無い")
 
