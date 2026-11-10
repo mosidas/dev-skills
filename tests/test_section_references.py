@@ -20,7 +20,7 @@ EXCLUDED = {"skills/retro/references/example.md"}
 FENCE = re.compile(r"^[ \t]*```.*?^[ \t]*```[^\n]*$", re.M | re.S)
 HEADING = re.compile(r"^#{2,6}\s+(\d+(?:\.\d+)*)\.?\s+(.+?)\s*$", re.M)
 SECTION = r"\d+\.(?:\d+\.?)*"
-ITEM = re.compile(rf"({SECTION})(?:\(([^()]*)\))?")
+ITEM = re.compile(rf"({SECTION})(?:\(((?:[^()]|\([^()]*\))*)\))?")
 FILE_REF = re.compile(rf"`((?:[\w.-]+/)*[\w.-]+\.md)` (?:の )?(?={SECTION})")
 
 
@@ -210,6 +210,14 @@ class 検査関数(TempDirTestCase):
         problems = self.problems("`../design-ui/SKILL.md` 4. と interview(`../interview/SKILL.md`)2. を読む。\n", rel=rel)
         self.assertAnyContains(problems, "`../design-ui/SKILL.md` 4. → `../design-ui/SKILL.md` 4.(スケール)")
         self.assertAnyContains(problems, "interview 2. → interview 2.(聞き方)")
+
+    def test_括弧を含む見出しの並記を読む(self) -> None:
+        self.write("skills/develop/SKILL.md", "## 1. アクセシビリティ(共通)\n")
+        self.assertEqual(self.problems("develop 1.(アクセシビリティ(共通))に従う。\n"), [])
+        self.assertEqual(
+            self.problems("develop 1.(アクセシビリティ(個別))に従う。\n"),
+            ["skills/build/SKILL.md:1: develop 1.(アクセシビリティ(個別)) が見出し「アクセシビリティ(共通)」と違う"],
+        )
 
     def test_中黒で続く番号もそれぞれ検査する(self) -> None:
         self.assertEqual(self.problems("develop 8.(押す)・9.(閉じる)に従う。\n"), [])
