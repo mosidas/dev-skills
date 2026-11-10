@@ -51,7 +51,7 @@ def section_reference_problems(root: Path) -> list[str]:
     targets["README"] = root / "README.md"
     name_ref = re.compile(
         rf"(?<![A-Za-z0-9_/`.-])({'|'.join(map(re.escape, targets))})"
-        rf"(?: |\(`[^`]+`\))(?={SECTION})"
+        rf"(?: |\(`([^`]+)`\))(?={SECTION})"
     )
     skill_bases = [base for name in names for base in (skills / name, skills / name / "references")]
     headings: dict[Path, dict[str, str]] = {}
@@ -75,12 +75,20 @@ def section_reference_problems(root: Path) -> list[str]:
         def same_owner(target: Path) -> bool:
             return target == owner or owner in target.parents
 
+        def resolve(ref: str) -> Path | None:
+            return next(((b / ref).resolve() for b in bases if (b / ref).is_file()), None)
+
         for number, line in enumerate(_text(path).splitlines(), 1):
-            found = [(m, targets[m.group(1)], m.group(1)) for m in name_ref.finditer(line)]
+            found = []
+            for m in name_ref.finditer(line):
+                name, inner = m.groups()
+                if inner is None or not inner.endswith(".md"):
+                    found.append((m, targets[name], name))
+                elif (target := resolve(inner)) is not None:
+                    found.append((m, target, name if target == targets[name] else f"`{inner}`"))
             for m in FILE_REF.finditer(line):
-                target = next((b / m.group(1) for b in bases if (b / m.group(1)).is_file()), None)
-                if target is not None:
-                    found.append((m, target.resolve(), f"`{m.group(1)}`"))
+                if (target := resolve(m.group(1))) is not None:
+                    found.append((m, target, f"`{m.group(1)}`"))
             for m, target, label in found:
                 if same_owner(target):
                     continue
@@ -165,6 +173,30 @@ class 検査関数(TempDirTestCase):
         self.assertEqual(self.problems("interview(`../../interview/SKILL.md`)2. に従う。\n"), [])
         problems = self.problems("interview(`../../interview/SKILL.md`)3. に従う。\n")
         self.assertAnyContains(problems, "skills/build/SKILL.md:1: interview 3. の節が無い")
+
+    def test_括弧に別のファイルのパスを書いた参照はそのファイルの節で照らす(self) -> None:
+        self.write("skills/design-ui/SKILL.md", "## 4. スケール\n## 5. 仕上げ\n")
+        self.write("skills/design-ui/references/session.md", "### 3.1. 1 往復で出すもの\n## 4. 確かめて終える\n")
+        rel = "skills/specify/SKILL.md"
+        path = "design-ui(`../design-ui/references/session.md`)"
+        self.assertEqual(
+            self.problems(f"{path}3.1(1 往復で出すもの)と {path}4.(確かめて終える)に従う。\n", rel=rel),
+            [],
+            "SKILL.md に無い節・別の見出しの節でも、参照先のファイルにあれば挙がらない",
+        )
+        self.assertAnyContains(
+            self.problems(f"{path}5. を見る。\n", rel=rel),
+            "skills/specify/SKILL.md:1: `../design-ui/references/session.md` 5. の節が無い",
+        )
+
+    def test_括弧に書いたパスのファイルの見出しと並記が違えば落ちる(self) -> None:
+        self.write("skills/design-ui/SKILL.md", "## 4. スケール\n")
+        self.write("skills/design-ui/references/session.md", "## 4. 確かめて終える\n")
+        rel = "skills/specify/SKILL.md"
+        path = "design-ui(`../design-ui/references/session.md`)"
+        self.assertEqual(self.problems(f"{path}4.(確かめて終える)に従う。\n", rel=rel), [])
+        problems = self.problems(f"{path}4.(スケール)に従う。\n", rel=rel)
+        self.assertAnyContains(problems, "`../design-ui/references/session.md` 4.(スケール) が見出し「確かめて終える」と違う")
 
     def test_スキル名の前に英数字やスラッシュが付く語は参照として拾わない(self) -> None:
         rel = "skills/specify/SKILL.md"
