@@ -43,7 +43,7 @@ def _items(line: str, pos: int) -> list[tuple[str, str | None]]:
 
 
 def section_reference_problems(root: Path) -> list[str]:
-    """`<スキル名> <節>`・`` `<ファイル>.md` <節> `` の参照のうち、節が無いもの・並記した見出しが違うもの・
+    """`<スキル名> <節>`・`<スキル名> の <節>`・`` `<ファイル>.md` <節> `` の参照のうち、節が無いもの・並記した見出しが違うもの・
     ほかのスキルの SKILL.md か README.md の節をファイルの中で最初に指すのに見出しを並記していないものを挙げる。"""
     root = root.resolve()
     skills = root / "skills"
@@ -53,7 +53,7 @@ def section_reference_problems(root: Path) -> list[str]:
     annotated = set(targets.values())
     name_ref = re.compile(
         rf"(?<![A-Za-z0-9_/`.-])({'|'.join(map(re.escape, targets))})"
-        rf"(?: |\(`([^`]+)`\))(?={SECTION})"
+        rf"(?: (?:の )?|\(`([^`]+)`\)(?:の )?)(?={SECTION})"
     )
     skill_bases = [base for name in names for base in (skills / name, skills / name / "references")]
     headings: dict[Path, dict[str, str]] = {}
@@ -92,7 +92,7 @@ def section_reference_problems(root: Path) -> list[str]:
             for m in FILE_REF.finditer(line):
                 if (target := resolve(m.group(1))) is not None:
                     found.append((m, target, f"`{m.group(1)}`"))
-            for m, target, label in found:
+            for m, target, label in sorted(found, key=lambda f: f[0].start()):
                 if same_owner(target):
                     continue
                 for section, given in _items(line, m.end()):
@@ -250,6 +250,30 @@ class 検査関数(TempDirTestCase):
         self.assertEqual(self.problems(f"{path}4.(確かめて終える)に従う。\n", rel=rel), [])
         problems = self.problems(f"{path}4.(スケール)に従う。\n", rel=rel)
         self.assertAnyContains(problems, "`../design-ui/references/session.md` 4.(スケール) が見出し「確かめて終える」と違う")
+
+    def test_名前と節番号を助詞のでつなぐ形も検査する(self) -> None:
+        self.assertEqual(self.problems("secure の 2.1(信頼境界と入力検証)に従う。\n"), [])
+        self.assertAnyContains(self.problems("secure の 2.1(入力検証)に従う。\n"), "見出し「信頼境界と入力検証」と違う")
+        self.assertAnyContains(self.problems("secure の 3. に従う。\n"), "skills/build/SKILL.md:1: secure 3. の節が無い")
+        self.assertAnyContains(self.problems("secure の 2.1 に従う。\n"), "secure 2.1 → secure 2.1(信頼境界と入力検証)")
+
+    def test_括弧の直後に助詞のが続く形も検査する(self) -> None:
+        self.assertEqual(self.problems("verify(`dev-skills:verify`)の 3.(保守する)を読む。\n"), [])
+        self.assertAnyContains(self.problems("verify(`dev-skills:verify`)の 4. を読む。\n"), "verify 4. の節が無い")
+
+    def test_助詞のでつなぐ形でも同じスキルの中の参照と回数は拾わない(self) -> None:
+        self.assertEqual(self.problems("build の 3. を 1 回だけ行う。\n"), [], "同じスキルの中の参照")
+        self.assertEqual(self.problems("build の 3 回で止める。\n", rel="skills/specify/SKILL.md"), [], "回数")
+        self.assertAnyContains(self.problems("build の 3. を行う。\n", rel="skills/specify/SKILL.md"), "build 3. の節が無い")
+
+    def test_1行の中の参照は出現順に最初の出現を数える(self) -> None:
+        both = ("`../develop/SKILL.md` 6.", "develop 6.(実装と点検のループ)")
+        self.assertEqual(
+            self.problems(f"{both[0]} と {both[1]} に従う。\n"),
+            ["skills/build/SKILL.md:1: `../develop/SKILL.md` 6. → `../develop/SKILL.md` 6.(実装と点検のループ)"],
+            "先に出る参照に並記が無ければ挙がる",
+        )
+        self.assertEqual(self.problems(f"{both[1]} と {both[0]} に従う。\n"), [], "先に出る参照に並記があれば後ろは挙がらない")
 
     def test_スキル名の前に英数字やスラッシュが付く語は参照として拾わない(self) -> None:
         rel = "skills/specify/SKILL.md"
