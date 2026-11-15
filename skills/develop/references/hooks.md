@@ -145,5 +145,6 @@ semgrep は CI の step で `semgrep scan --config p/default --error` を実行�
 
 - hook を直接実行し、lint とテストが動くことを確かめる。lefthook は `lefthook run pre-commit` と `lefthook run pre-push`、husky は `sh .husky/pre-commit` と `sh .husky/pre-push`。
 - 4. を入れたときは、betterleaks と osv-scanner も hook から実行され、終了コード 0 で終わることを確かめる。
+- betterleaks が秘密を止めることを試すときは、試験用の秘密をランダムな文字列で作る(例: `LC_ALL=C tr -dc 'A-Za-z0-9' </dev/urandom | head -c 36`)。`ghp_aBcDeFgHiJ…` のように規則的に並べた文字列は、betterleaks が秘密と判定せずに commit を通す。
 - 4. の CI の job を入れたときは、PR の CI でその job が成功することを確かめる。
 - hook を入れたコミットは、計画の最初のステップとは別のコミットにする(`chore: git hook を導入する`)。
