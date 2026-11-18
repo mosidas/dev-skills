@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import json
 import os
+import stat
 import subprocess
 import sys
 import unittest
@@ -18,6 +19,15 @@ import helpers
 GUARD = helpers.REPO_ROOT / "hooks" / "guard_ask_one_question.py"
 STATE_DIR_NAME = "dev-skills-ask-one-question"
 REASON = "本人の判断は 1 問ずつ聞き、判断が必要な理由を問いの前に書く"
+# 使える一時ディレクトリが無い環境を作る。macOS と Linux では TMPDIR・TEMP・TMP をどこに向けても
+# tempfile は /tmp へ戻るため、環境変数では作れない。
+WITHOUT_TEMPDIR = (
+    "import runpy, sys, tempfile\n"
+    "def unavailable():\n"
+    "    raise FileNotFoundError('No usable temporary directory found')\n"
+    "tempfile.gettempdir = unavailable\n"
+    "runpy.run_path(sys.argv[1], run_name='__main__')\n"
+)
 
 
 def question(text: str, header: str, first: str, second: str) -> dict:
@@ -56,9 +66,11 @@ class GuardAskOneQuestionTest(helpers.TempDirTestCase):
             payload["agent_id"] = agent_id
         return self.run_raw(json.dumps(payload, ensure_ascii=False))
 
-    def run_raw(self, stdin: str, env: dict[str, str] | None = None) -> subprocess.CompletedProcess:
+    def run_raw(
+        self, stdin: str, env: dict[str, str] | None = None, launcher: tuple[str, ...] = ()
+    ) -> subprocess.CompletedProcess:
         return subprocess.run(
-            [sys.executable, str(GUARD)],
+            [sys.executable, *launcher, str(GUARD)],
             input=stdin,
             capture_output=True,
             encoding="utf-8",
@@ -120,6 +132,52 @@ class GuardAskOneQuestionTest(helpers.TempDirTestCase):
         self.assertDenied(self.run_hook([SAVE, ORDER]))
         self.assertDenied(self.run_hook([SAVE, ORDER]))
 
+    def test_状態のパスのリンク先のファイルを書き換えず1回目も2回目も止める(self) -> None:
+        victim = self.write("victim.txt", "important content")
+        state_dir = self.tmp / STATE_DIR_NAME
+        state_dir.mkdir(mode=0o700)
+        (state_dir / "s1-unknown.txt").symlink_to(victim)
+        self.assertDenied(self.run_hook([SAVE, ORDER]))
+        self.assertDenied(self.run_hook([SAVE, ORDER]))
+        self.assertEqual(victim.read_text(encoding="utf-8"), "important content", "リンク先のファイルは元のまま")
+
+    def test_状態のディレクトリがリンクならリンク先に書かず1回目も2回目も止める(self) -> None:
+        elsewhere = self.tmp / "elsewhere"
+        elsewhere.mkdir()
+        (self.tmp / STATE_DIR_NAME).symlink_to(elsewhere, target_is_directory=True)
+        self.assertDenied(self.run_hook([SAVE, ORDER]))
+        self.assertDenied(self.run_hook([SAVE, ORDER]))
+        self.assertEqual(list(elsewhere.iterdir()), [], "リンク先のディレクトリに状態を書かない")
+
+    def test_記録のファイルがリンクなら一致する記録でも呼び直しを止める(self) -> None:
+        self.assertDenied(self.run_hook([SAVE, ORDER]))
+        record = self.tmp / STATE_DIR_NAME / "s1-unknown.txt"
+        planted = record.rename(self.tmp / "planted.txt")
+        record.symlink_to(planted)
+        self.assertDenied(self.run_hook([SAVE, ORDER]))
+
+    def test_状態のディレクトリがリンクなら一致する記録でも呼び直しを止める(self) -> None:
+        self.assertDenied(self.run_hook([SAVE, ORDER]))
+        state_dir = self.tmp / STATE_DIR_NAME
+        planted = state_dir.rename(self.tmp / "planted")
+        state_dir.symlink_to(planted, target_is_directory=True)
+        self.assertDenied(self.run_hook([SAVE, ORDER]))
+
+    @unittest.skipIf(os.geteuid() == 0, "root は書き込みの権限を無視して記録を消せる")
+    def test_記録を消せないときは止めた直後の同じ内容も止める(self) -> None:
+        self.assertDenied(self.run_hook([SAVE, ORDER]))
+        state_dir = self.tmp / STATE_DIR_NAME
+        state_dir.chmod(stat.S_IRUSR | stat.S_IXUSR)
+        self.addCleanup(state_dir.chmod, stat.S_IRWXU)
+        self.assertDenied(self.run_hook([SAVE, ORDER]))
+
+    def test_一時ディレクトリを取得できなくても2問を止める(self) -> None:
+        payload = json.dumps(
+            {"session_id": "s1", "tool_name": "AskUserQuestion", "tool_input": {"questions": [SAVE, ORDER]}}
+        )
+        self.assertDenied(self.run_raw(payload, launcher=("-c", WITHOUT_TEMPDIR)))
+        self.assertDenied(self.run_raw(payload, launcher=("-c", WITHOUT_TEMPDIR)))
+
     def test_session_idとagent_idが文字列でなくても止める(self) -> None:
         self.assertDenied(self.run_hook([SAVE, ORDER], session_id=123, agent_id=["x"]))
         self.assertPassed(self.run_hook([SAVE, ORDER], session_id=123, agent_id=["x"]))
@@ -151,6 +209,10 @@ class GuardAskOneQuestionTest(helpers.TempDirTestCase):
 
     def test_1問を通す(self) -> None:
         self.assertPassed(self.run_hook([SAVE]))
+
+    def test_一時ディレクトリを取得できなくても1問は通す(self) -> None:
+        payload = json.dumps({"session_id": "s1", "tool_name": "AskUserQuestion", "tool_input": {"questions": [SAVE]}})
+        self.assertPassed(self.run_raw(payload, launcher=("-c", WITHOUT_TEMPDIR)))
 
     def test_止めた直後にキーの順だけ違う同じ内容を通す(self) -> None:
         self.assertDenied(self.run_hook([SAVE, ORDER]))

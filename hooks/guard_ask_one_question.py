@@ -10,9 +10,11 @@
 
 `tool_input.questions` が 2 問以上なら止める。ただし、止めた直後に同じ内容(キーの順は問わない)で
 呼び直した 1 回だけは通す。ほかのプラグインの手順が複数の問いを 1 回で聞くと定めているときの逃げ道である。
-間に別の内容の呼び出しを挟むと、逃げ道は消える。直前に止めた内容は session と agent ごとに一時ディレクトリへ
-記録する。記録を読めないときは記録なしとみなし、書けないときもそのまま止める(逃げ道が使えなくなるだけで、
-2 問以上を通すより害が小さい)。
+間に別の内容の呼び出しを挟むと、逃げ道は消える。直前に止めた内容は session と agent ごとに一時ディレクトリの
+中の、自分が所有する実際のディレクトリへ記録し、シンボリックリンクをたどらずに読み書きする。呼び直しを通すのは
+記録を消せたときだけで、並行した呼び直しは 1 つだけが通る。記録を読めないときは記録なしとみなす。一時ディレクトリを
+取得できない、状態のディレクトリがリンクか他人の所有である、記録を書けない・消せないときも止める(逃げ道が
+使えなくなるだけで、2 問以上を通すより害が小さい)。
 
 UTF-8 の JSON として読めない入力、AskUserQuestion 以外のツール、`questions` が list でない入力は何も書かずに通す
 (fail-open)。この hook は質問の形を直させるもので漏えいを防ぐものではなく、自分の解析の失敗で止めると
@@ -23,7 +25,9 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import re
+import stat
 import sys
 import tempfile
 from pathlib import Path
@@ -64,7 +68,6 @@ def safe(value: object) -> str:
 
 
 # shortcut: 一時ディレクトリの状態ファイルは消し残りを掃除しない, 1 件 64 字で OS の一時領域の掃除に任せる。増えて困ったら session の終了で消す
-# shortcut: 共有の /tmp でディレクトリをシンボリックリンクに差し替えられる場合を防がない, 書くのは 64 字の hex だけ。害が観測されたら O_NOFOLLOW とディレクトリの所有者の確認を足す
 def state_path(session_id: object, agent_id: object) -> Path:
     return Path(tempfile.gettempdir()) / "dev-skills-ask-one-question" / f"{safe(session_id)}-{safe(agent_id)}.txt"
 
@@ -75,19 +78,30 @@ def fingerprint(questions: list) -> str:
     return hashlib.sha256(text.encode("utf-8", "surrogatepass")).hexdigest()
 
 
+def owned_dir(path: Path) -> bool:
+    """path がリンクでない実際のディレクトリで、この利用者が所有するときだけ True。"""
+    st = os.lstat(path)
+    return stat.S_ISDIR(st.st_mode) and st.st_uid == os.getuid()
+
+
 def recall(path: Path) -> str | None:
     try:
-        return path.read_text(encoding="ascii")
+        if not owned_dir(path.parent):
+            return None
+        with os.fdopen(os.open(path, os.O_RDONLY | os.O_NOFOLLOW), encoding="ascii") as f:
+            return f.read()
     except (OSError, UnicodeDecodeError):
         return None
 
 
 def remember(path: Path, digest: str) -> None:
-    try:
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(digest, encoding="ascii")
-    except OSError:
-        pass
+    """記録を書く。書けなければ例外を送出する。"""
+    path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+    if not owned_dir(path.parent):
+        raise PermissionError(f"not an own directory: {path.parent}")
+    fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC | os.O_NOFOLLOW, 0o600)
+    with os.fdopen(fd, "w", encoding="ascii") as f:
+        f.write(digest)
 
 
 def forget(path: Path) -> None:
@@ -102,15 +116,19 @@ def main() -> int:
     if read is None:
         return 0
     questions, session_id, agent_id = read
-    path = state_path(session_id, agent_id)
     if len(questions) < 2:
-        forget(path)
+        forget(state_path(session_id, agent_id))
         return 0
     digest = fingerprint(questions)
-    if recall(path) == digest:
-        forget(path)
-        return 0
-    remember(path, digest)
+    try:
+        path = state_path(session_id, agent_id)
+        if recall(path) == digest:
+            # 消せたときだけ通す。並行した呼び直しは 1 つだけが消せ、残りは FileNotFoundError で止まる
+            path.unlink()
+            return 0
+        remember(path, digest)
+    except Exception:  # noqa: BLE001  記録を使えないときは逃げ道なしで止める(gettempdir の失敗・O_NOFOLLOW の無い OS を含む)
+        pass
     json.dump(DENY, sys.stdout)
     return 0
 
