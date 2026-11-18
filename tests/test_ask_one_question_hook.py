@@ -17,7 +17,7 @@ import unittest
 import helpers
 
 GUARD = helpers.REPO_ROOT / "hooks" / "guard_ask_one_question.py"
-STATE_DIR_NAME = "dev-skills-ask-one-question"
+STATE_DIR_NAME = f"dev-skills-ask-one-question-{os.getuid()}"
 REASON = "本人の判断は 1 問ずつ聞き、判断が必要な理由を問いの前に書く"
 # 使える一時ディレクトリが無い環境を作る。macOS と Linux では TMPDIR・TEMP・TMP をどこに向けても
 # tempfile は /tmp へ戻るため、環境変数では作れない。
@@ -210,6 +210,15 @@ class GuardAskOneQuestionTest(helpers.TempDirTestCase):
     def test_1問を通す(self) -> None:
         self.assertPassed(self.run_hook([SAVE]))
 
+    def test_1問のとき状態のディレクトリがリンクでもリンク先のファイルを消さずに通す(self) -> None:
+        elsewhere = self.tmp / "elsewhere"
+        elsewhere.mkdir()
+        kept = elsewhere / "s1-unknown.txt"
+        kept.write_text("important content", encoding="utf-8")
+        (self.tmp / STATE_DIR_NAME).symlink_to(elsewhere, target_is_directory=True)
+        self.assertPassed(self.run_hook([SAVE]))
+        self.assertEqual(kept.read_text(encoding="utf-8"), "important content", "リンク先の同じ名前のファイルは残る")
+
     def test_一時ディレクトリを取得できなくても1問は通す(self) -> None:
         payload = json.dumps({"session_id": "s1", "tool_name": "AskUserQuestion", "tool_input": {"questions": [SAVE]}})
         self.assertPassed(self.run_raw(payload, launcher=("-c", WITHOUT_TEMPDIR)))
@@ -235,6 +244,7 @@ class GuardAskOneQuestionTest(helpers.TempDirTestCase):
     def test_session_idのパスの記号では状態のディレクトリの外に書かない(self) -> None:
         self.assertDenied(self.run_hook([SAVE, ORDER], session_id="../../escape"))
         state_dir = self.tmp / STATE_DIR_NAME
+        self.assertEqual(stat.S_IMODE(state_dir.stat().st_mode), 0o700, "状態のディレクトリは所有者だけが開ける")
         self.assertEqual(len(list(state_dir.iterdir())), 1, "状態のファイルは状態のディレクトリに 1 つだけある")
         outside = [p for p in self.tmp.rglob("*") if p != state_dir and state_dir not in p.parents]
         self.assertEqual(outside, [], "状態のディレクトリの外にファイルを作らない")

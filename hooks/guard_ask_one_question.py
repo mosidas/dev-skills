@@ -11,10 +11,10 @@
 `tool_input.questions` が 2 問以上なら止める。ただし、止めた直後に同じ内容(キーの順は問わない)で
 呼び直した 1 回だけは通す。ほかのプラグインの手順が複数の問いを 1 回で聞くと定めているときの逃げ道である。
 間に別の内容の呼び出しを挟むと、逃げ道は消える。直前に止めた内容は session と agent ごとに一時ディレクトリの
-中の、自分が所有する実際のディレクトリへ記録し、シンボリックリンクをたどらずに読み書きする。呼び直しを通すのは
-記録を消せたときだけで、並行した呼び直しは 1 つだけが通る。記録を読めないときは記録なしとみなす。一時ディレクトリを
-取得できない、状態のディレクトリがリンクか他人の所有である、記録を書けない・消せないときも止める(逃げ道が
-使えなくなるだけで、2 問以上を通すより害が小さい)。
+中の、利用者ごとの名前で自分が所有する実際のディレクトリへ記録し、シンボリックリンクをたどらずに読み書きし、消す。
+呼び直しを通すのは記録を取って消せたときだけで、1 つの記録で通る呼び直しは 1 回だけである。記録を読めないときは
+記録なしとみなす。一時ディレクトリを取得できない、状態のディレクトリがリンクか他人の所有である、記録を書けない・
+消せないときも止める(逃げ道が使えなくなるだけで、2 問以上を通すより害が小さい)。
 
 UTF-8 の JSON として読めない入力、AskUserQuestion 以外のツール、`questions` が list でない入力は何も書かずに通す
 (fail-open)。この hook は質問の形を直させるもので漏えいを防ぐものではなく、自分の解析の失敗で止めると
@@ -69,7 +69,8 @@ def safe(value: object) -> str:
 
 # shortcut: 一時ディレクトリの状態ファイルは消し残りを掃除しない, 1 件 64 字で OS の一時領域の掃除に任せる。増えて困ったら session の終了で消す
 def state_path(session_id: object, agent_id: object) -> Path:
-    return Path(tempfile.gettempdir()) / "dev-skills-ask-one-question" / f"{safe(session_id)}-{safe(agent_id)}.txt"
+    state_dir = Path(tempfile.gettempdir()) / f"dev-skills-ask-one-question-{os.getuid()}"
+    return state_dir / f"{safe(session_id)}-{safe(agent_id)}.txt"
 
 
 def fingerprint(questions: list) -> str:
@@ -106,7 +107,8 @@ def remember(path: Path, digest: str) -> None:
 
 def forget(path: Path) -> None:
     try:
-        path.unlink(missing_ok=True)
+        if owned_dir(path.parent):
+            path.unlink(missing_ok=True)
     except OSError:
         pass
 
@@ -123,11 +125,14 @@ def main() -> int:
     try:
         path = state_path(session_id, agent_id)
         if recall(path) == digest:
-            # 消せたときだけ通す。並行した呼び直しは 1 つだけが消せ、残りは FileNotFoundError で止まる
-            path.unlink()
+            # rename で記録を取れた 1 つだけを通す。macOS の APFS では同じパスへの並行した unlink が
+            # 両方とも成功を返すことがあるが、rename は 1 つだけが成功し、残りは FileNotFoundError で止まる
+            claimed = path.with_name(f"{path.name}.{os.getpid()}")
+            os.rename(path, claimed)
+            claimed.unlink()
             return 0
         remember(path, digest)
-    except Exception:  # noqa: BLE001  記録を使えないときは逃げ道なしで止める(gettempdir の失敗・O_NOFOLLOW の無い OS を含む)
+    except Exception:  # noqa: BLE001  記録を使えないときは逃げ道なしで止める(gettempdir の失敗・getuid か O_NOFOLLOW の無い OS を含む)
         pass
     json.dump(DENY, sys.stdout)
     return 0
