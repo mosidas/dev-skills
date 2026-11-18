@@ -110,7 +110,7 @@ def main() -> int:
         forget(path)
         return 0
     remember(path, digest)
-    json.dump(DENY, sys.stdout, ensure_ascii=False)
+    json.dump(DENY, sys.stdout)
     return 0
 
 

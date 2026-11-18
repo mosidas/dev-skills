@@ -2,7 +2,6 @@
 
 hook は `sys.exit` を呼び、状態を一時ディレクトリに書くため、すべて `TMPDIR` を一時ディレクトリに
 向けたサブプロセスで確かめる。止める入力と通す入力を対で書く。
-元の指摘で 3 論点を 1 回で聞いた問いの文面は retro の記録に無いため、実例は本人の判断 3 論点の形で作った。
 Python 3 標準ライブラリのみを使用する。
 """
 
@@ -57,13 +56,13 @@ class GuardAskOneQuestionTest(helpers.TempDirTestCase):
             payload["agent_id"] = agent_id
         return self.run_raw(json.dumps(payload, ensure_ascii=False))
 
-    def run_raw(self, stdin: str) -> subprocess.CompletedProcess:
+    def run_raw(self, stdin: str, env: dict[str, str] | None = None) -> subprocess.CompletedProcess:
         return subprocess.run(
             [sys.executable, str(GUARD)],
             input=stdin,
             capture_output=True,
             text=True,
-            env={**os.environ, "TMPDIR": str(self.tmp)},
+            env={**os.environ, "TMPDIR": str(self.tmp), **(env or {})},
         )
 
     def assertDenied(self, proc: subprocess.CompletedProcess) -> None:
@@ -132,6 +131,13 @@ class GuardAskOneQuestionTest(helpers.TempDirTestCase):
         )
         self.assertDenied(self.run_raw(payload))
         self.assertPassed(self.run_raw(payload))
+
+    def test_標準出力が日本語を表せない符号化でも止める(self) -> None:
+        payload = json.dumps(
+            {"session_id": "s1", "tool_name": "AskUserQuestion", "tool_input": {"questions": [SAVE, ORDER]}}
+        )
+        self.assertDenied(self.run_raw(payload, env={"PYTHONIOENCODING": "ascii"}))
+        self.assertPassed(self.run_raw(payload, env={"PYTHONIOENCODING": "ascii"}))
 
     # 通す
 
