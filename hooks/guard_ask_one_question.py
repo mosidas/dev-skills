@@ -2,7 +2,8 @@
 """本人への質問を 2 問以上まとめた AskUserQuestion をフォームを出す前に止める PreToolUse hook。
 
 入出力の契約:
-  標準入力  PreToolUse の JSON(`session_id`・`agent_id`・`tool_name`・`tool_input.questions` を読む)
+  標準入力  UTF-8 の PreToolUse の JSON(`session_id`・`agent_id`・`tool_name`・`tool_input.questions` を読む)。
+            環境の符号化(PYTHONIOENCODING・ロケール)に依らず UTF-8 のバイト列として読む
   exit 0    常に
   標準出力  止めるときだけ `permissionDecision: deny` の JSON を 1 つ書く。通すときは何も書かない
   標準エラー 書かない
@@ -13,7 +14,7 @@
 記録する。記録を読めないときは記録なしとみなし、書けないときもそのまま止める(逃げ道が使えなくなるだけで、
 2 問以上を通すより害が小さい)。
 
-JSON として読めない入力、AskUserQuestion 以外のツール、`questions` が list でない入力は何も書かずに通す
+UTF-8 の JSON として読めない入力、AskUserQuestion 以外のツール、`questions` が list でない入力は何も書かずに通す
 (fail-open)。この hook は質問の形を直させるもので漏えいを防ぐものではなく、自分の解析の失敗で止めると
 すべてのプラグインの質問が止まるためである。
 """
@@ -26,7 +27,7 @@ import re
 import sys
 import tempfile
 from pathlib import Path
-from typing import TextIO
+from typing import BinaryIO
 
 REASON = (
     "本人の判断は 1 問ずつ聞き、判断が必要な理由を問いの前に書く。"
@@ -41,10 +42,10 @@ DENY = {
 }
 
 
-def read_questions(stdin: TextIO) -> tuple[list, object, object] | None:
-    """(questions, session_id, agent_id) を返す。対象外か読めなければ None。"""
+def read_questions(stdin: BinaryIO) -> tuple[list, object, object] | None:
+    """UTF-8 のバイト列の JSON から (questions, session_id, agent_id) を返す。対象外か読めなければ None。"""
     try:
-        payload = json.load(stdin)
+        payload = json.loads(stdin.read().decode("utf-8"))
     except (json.JSONDecodeError, UnicodeDecodeError):
         return None
     if not isinstance(payload, dict) or payload.get("tool_name") != "AskUserQuestion":
@@ -97,7 +98,7 @@ def forget(path: Path) -> None:
 
 
 def main() -> int:
-    read = read_questions(sys.stdin)
+    read = read_questions(sys.stdin.buffer)
     if read is None:
         return 0
     questions, session_id, agent_id = read

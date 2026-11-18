@@ -61,7 +61,7 @@ class GuardAskOneQuestionTest(helpers.TempDirTestCase):
             [sys.executable, str(GUARD)],
             input=stdin,
             capture_output=True,
-            text=True,
+            encoding="utf-8",
             env={**os.environ, "TMPDIR": str(self.tmp), **(env or {})},
         )
 
@@ -135,6 +135,14 @@ class GuardAskOneQuestionTest(helpers.TempDirTestCase):
     def test_標準出力が日本語を表せない符号化でも止める(self) -> None:
         payload = json.dumps(
             {"session_id": "s1", "tool_name": "AskUserQuestion", "tool_input": {"questions": [SAVE, ORDER]}}
+        )
+        self.assertDenied(self.run_raw(payload, env={"PYTHONIOENCODING": "ascii"}))
+        self.assertPassed(self.run_raw(payload, env={"PYTHONIOENCODING": "ascii"}))
+
+    def test_標準入力の符号化が日本語を表せなくてもUTF8の日本語の2問を止める(self) -> None:
+        payload = json.dumps(
+            {"session_id": "s1", "tool_name": "AskUserQuestion", "tool_input": {"questions": [SAVE, ORDER]}},
+            ensure_ascii=False,
         )
         self.assertDenied(self.run_raw(payload, env={"PYTHONIOENCODING": "ascii"}))
         self.assertPassed(self.run_raw(payload, env={"PYTHONIOENCODING": "ascii"}))
