@@ -1,6 +1,6 @@
 # ネイティブアプリの規範
 
-iOS・Android・デスクトップのネイティブアプリと、Flutter・React Native・Compose Multiplatform などのクロスプラットフォームで、Web と異なる規則をまとめる。共通の規範(コントラスト・色だけで示さない・状態の網羅・モーションの抑制)は `checklist.md` に従い、本ファイルはネイティブ固有の規則だけを扱う。本ファイルの規則はモバイルアプリを中心とする。デスクトップのネイティブアプリは、OS の規約(macOS は Apple HIG、Windows は Fluent Design)に従い、hover とキーボード操作は `checklist.md` の Web 固有の節を準用する。
+iOS・Android・デスクトップのネイティブアプリと、Flutter・React Native・Compose Multiplatform などのクロスプラットフォームで、Web と異なる規則をまとめる。共通の規範(コントラスト・色だけで示さない・状態の網羅・モーションの抑制・フォームの入力と検証)は `checklist.md` に従い、本ファイルはネイティブ固有の規則だけを扱う。本ファイルの規則はモバイルアプリを中心とする。デスクトップのネイティブアプリは、OS の規約に従い、hover とキーボード操作は `checklist.md` の Web 固有の節を準用する。macOS では Apple HIG、Windows では Fluent Design がその規約に当たる。
 
 ## 1. OS の部品と規約を優先する
 
@@ -24,7 +24,7 @@ iOS・Android・デスクトップのネイティブアプリと、Flutter・Rea
 | タップ領域 | 44×44pt 以上 | 48×48dp 以上、間隔 8dp |
 | 文字サイズ | 既定 17pt、最小 11pt、Dynamic Type に追従 | `sp` 単位、システムの font_scale に追従 |
 | 戻る操作 | 左端スワイプと標準の Back ボタン | システムの predictive back を乗っ取らない |
-| 最上位ナビゲーション | タブバー(2〜5 項目) | ナビゲーションバー(compact、3〜5 項目)、レール(3〜7 項目)、expanded 以上でドロワー |
+| 最上位ナビゲーション | タブバー(2〜5 項目) | compact の幅のナビゲーションバー(3〜5 項目)、レール(3〜7 項目)、expanded 以上でドロワー |
 | シート | 下スワイプで閉じる。Cancel は先頭、Done は末尾 | `ModalBottomSheet` は外側タップで閉じる |
 | 確認・通知 | アラートは最小限にし、意図的な行為の選択はアクションシートに任せる | `Dialog` は割り込みを必要とする場面だけに使い、軽い通知は Snackbar にする |
 

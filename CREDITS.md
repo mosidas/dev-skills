@@ -18,8 +18,8 @@
 | [ayghri/i-have-adhd](https://github.com/ayghri/i-have-adhd) | MIT | Copyright (c) 2026 Ayoub Ghriss | 版の記載なし | respond |
 | [cathrynlavery/diagram-design](https://github.com/cathrynlavery/diagram-design) | MIT | Copyright (c) 2025 Cathryn Lavery | v2.6.115(f2f4d49) | draw-diagram |
 | [anthropics/skills frontend-design](https://github.com/anthropics/skills/tree/main/skills/frontend-design) | Apache-2.0 | — | 版の記載なし | design-ui |
-| [pbakaus/impeccable](https://github.com/pbakaus/impeccable) | Apache-2.0 | — | 4.7.1(コミット 9368675) | design-ui |
-| [nextlevelbuilder/ui-ux-pro-max-skill](https://github.com/nextlevelbuilder/ui-ux-pro-max-skill) | MIT | — | 版の記載なし | design-ui |
+| [pbakaus/impeccable](https://github.com/pbakaus/impeccable) | Apache-2.0 | — | 4.7.1(コミット 9368675)・skill-v4.10.0(コミット b49177d32) | design-ui |
+| [nextlevelbuilder/ui-ux-pro-max-skill](https://github.com/nextlevelbuilder/ui-ux-pro-max-skill) | MIT | — | コミット 6ec2bb5 | design-ui |
 | [vercel-labs/web-interface-guidelines](https://github.com/vercel-labs/web-interface-guidelines) | MIT | — | 版の記載なし | design-ui |
 | `vercel-labs/agent-skills` の `skills/web-design-guidelines` | 未確認 | — | 版の記載なし | design-ui(web-interface-guidelines の経由先) |
 | [s0xDk/refactoring-ui-skill](https://github.com/s0xDk/refactoring-ui-skill) | MIT | — | 版の記載なし | design-ui |
