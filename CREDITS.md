@@ -6,8 +6,8 @@
 
 | 出典 | ライセンス | 著作権者 | 版とコミット | 反映先 |
 | :-- | :-- | :-- | :-- | :-- |
-| [cursor/plugins](https://github.com/cursor/plugins) の pstack | MIT | Copyright (c) 2026 Lauren Tan | コミット 997ffc7(2026-10-12 時点。specify)・0.15.36(コミット 1ba91fc、2026-10-28) | specify・interview・develop・build・ponytail・recover・retro・respond・agents・write-doc・draw-diagram・design-ui・explain・verify・README |
-| [mattpocock/skills](https://github.com/mattpocock/skills) | MIT | Copyright (c) 2026 Matt Pocock | コミット 49dd158(2026-10-12 時点) | specify・interview |
+| [cursor/plugins](https://github.com/cursor/plugins) の pstack | MIT | Copyright (c) 2026 Lauren Tan | コミット 997ffc7(2026-10-12 時点。specify)・0.15.36(コミット 1ba91fc、2026-10-28。explain と ponytail の references/design.md はこの版)・0.15.46(コミット 0b46ec3、2026-11-19) | specify・interview・develop・build・ponytail・recover・retro・respond・agents・write-doc・draw-diagram・design-ui・explain・verify・README |
+| [mattpocock/skills](https://github.com/mattpocock/skills) | MIT | Copyright (c) 2026 Matt Pocock | コミット 49dd158(2026-10-12 時点)・コミット abeeaf9(v1.3.2 の後、2026-11-19) | specify・interview・develop |
 | [DietrichGebert/ponytail](https://github.com/DietrichGebert/ponytail) | MIT | Copyright (c) 2026 DietrichGebert | v5.1.0 | ponytail |
 | [coji/natural-japanese](https://github.com/coji/natural-japanese) | MIT | — | v1.5.0(9a78a42)・v1.6.0(03bc944)・v1.6.2(a88b8e9) | write-doc・write-slide・write-message |
 | [nanaism/yomiyasu](https://github.com/nanaism/yomiyasu) | MIT | — | v1.1.1(373356e)・v2.0.1(84e1f5b)・v2.3.0(15244a1) | write-doc・write-message |
@@ -16,7 +16,7 @@
 | [carnot-tech/consulting-pptx-skill](https://github.com/carnot-tech/consulting-pptx-skill) | MIT | — | コミット bc9a587・b8f7dc4 | write-doc・write-slide・draw-diagram |
 | [iKora128/stop-ai-slop-jp](https://github.com/iKora128/stop-ai-slop-jp) | MIT | — | コミット e09d327 | write-message |
 | [ayghri/i-have-adhd](https://github.com/ayghri/i-have-adhd) | MIT | Copyright (c) 2026 Ayoub Ghriss | 版の記載なし | respond |
-| [cathrynlavery/diagram-design](https://github.com/cathrynlavery/diagram-design) | MIT | Copyright (c) 2025 Cathryn Lavery | v2.6.115(f2f4d49) | draw-diagram |
+| [cathrynlavery/diagram-design](https://github.com/cathrynlavery/diagram-design) | MIT | Copyright (c) 2025 Cathryn Lavery | v2.6.115(f2f4d49)・v2.6.170(d7b0176) | draw-diagram |
 | [anthropics/skills frontend-design](https://github.com/anthropics/skills/tree/main/skills/frontend-design) | Apache-2.0 | — | 版の記載なし | design-ui |
 | [pbakaus/impeccable](https://github.com/pbakaus/impeccable) | Apache-2.0 | — | 4.7.1(コミット 9368675)・skill-v4.10.0(コミット b49177d32) | design-ui |
 | [nextlevelbuilder/ui-ux-pro-max-skill](https://github.com/nextlevelbuilder/ui-ux-pro-max-skill) | MIT | — | コミット 6ec2bb5 | design-ui |
