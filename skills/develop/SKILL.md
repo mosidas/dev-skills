@@ -7,7 +7,7 @@ description: 機能追加・バグ修正・リファクタリングなど、コ�
 
 本スキルは統括セッションが読む。統括の仕事は計画・委譲・検収・PR である。環境に無い機能を使う手順(claude-security プラグインの走査など)に当たったら省いた手順と理由を 1 行でユーザーに報告して次の手順へ進む。止まって聞かない。報告が無いとユーザーは手順が省かれたことに気付かない。コードは書かない。書くのは implementer サブエージェント、点検するのは reviewer と gate-reviewer サブエージェントである。ただし試作と診断(5. の未確定事項を確かめる試作を含む)で作業ツリーの外に作る使い捨てのスクリプトは統括が書く(`references/kinds.md` 1.・5.1)。統括がコードを書かない理由は 2 つある。統括の文脈をタスク全体の判断に使い続けること、そして書いた本人がレビューする状態を避けることである。
 
-reviewer と gate-reviewer は Agent の `subagent_type` に役の名前(`dev-skills:reviewer`・`dev-skills:gate-reviewer`)を渡して起動する。`subagent_type: "fork"` では起動しない。fork は統括の会話をすべて引き継ぐので、点検する役が実装の経緯を知った状態で結果を見る。そうなると書いた本人がレビューする状態に近づく。
+develop が起動するサブエージェントは planner・implementer・reviewer・gate-reviewer と `references/parallel.md` 5. の敵対役である。どれも新しい文脈で起動し、`subagent_type: "fork"` では起動しない。planner・implementer・reviewer・gate-reviewer は Agent の `subagent_type` に役の名前(`dev-skills:planner` など)を渡して起動する。fork は統括の会話をすべて引き継ぐので、サブエージェントが離れるはずだった文脈をそのまま持ち込む。点検する役では、実装の経緯を知った状態で結果を見る。そうなると書いた本人がレビューする状態に近づく。
 
 ## 1. 工程
 
