@@ -172,6 +172,32 @@ class CheckPrdTest(helpers.TempDirTestCase):
         text = VALID.replace("| R2 | R1 |", "| R2 | R1 |\n|  | R1 |")
         self.assertProblem(text, 50, "表の ID が空")
 
+    def test_未決事項に決め方が無いと問いの行で指摘する(self) -> None:
+        text = VALID.replace("## 7. 未決事項\n\nなし\n", "## 7. 未決事項\n\n- 問い(R1)\n")
+        self.assertProblem(text, 53, "決め方")
+
+    def test_決め方が事実か本人の判断の未決事項を受け付ける(self) -> None:
+        text = VALID.replace(
+            "## 7. 未決事項\n\nなし\n",
+            "## 7. 未決事項\n\n- 問い1(R1)\n  - 決め方: 事実\n- 問い2(R2)\n  - 決め方: 本人の判断\n",
+        )
+        _path, proc = self.run_check(text)
+        self.assertEqual(proc.returncode, 0, proc.stdout)
+        self.assertEqual(proc.stdout, "")
+
+    def test_決め方は問いごとに判定する(self) -> None:
+        text = VALID.replace(
+            "## 7. 未決事項\n\nなし\n",
+            "## 7. 未決事項\n\n- 問い1(R1)\n  - 決め方: 事実\n- 問い2(R2)\n",
+        )
+        self.assertProblem(text, 55, "決め方")
+        _path, proc = self.run_check(text)
+        self.assertNotIn(":53: ", proc.stdout)
+
+    def test_決め方の値が2値でないと指摘する(self) -> None:
+        text = VALID.replace("## 7. 未決事項\n\nなし\n", "## 7. 未決事項\n\n- 問い(R1)\n  - 決め方: 試作\n")
+        self.assertProblem(text, 53, "決め方")
+
     def test_雛形そのものはコメントと未記入で不合格になる(self) -> None:
         proc = helpers.run_script(SCRIPT, TEMPLATE)
         self.assertEqual(proc.returncode, 1)
