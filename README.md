@@ -1,6 +1,6 @@
 # dev-skills
 
-Claude Code のプラグインである。開発作業で使うスキルとサブエージェントを提供し、セッション開始時に respond を注入し、日本語 Markdown を書き込むたびに検査し、コミットと PR 本文のセッション URL を拒否する hooks も提供する。
+Claude Code のプラグインである。開発作業で使うスキルとサブエージェントを提供し、セッション開始時に respond を注入し、日本語 Markdown を書き込むたびに検査し、コミットと PR 本文のセッション URL を拒否し、本人への質問をまとめたフォームを出す前に止める hooks も提供する。
 
 ## 1. 提供するもの
 
@@ -27,10 +27,11 @@ Claude Code のプラグインである。開発作業で使うスキルとサ�
 | `design-ui` | スキル | 画面・コンポーネント・ページを設計・実装する規範と、実装の前に UI モックを本人と往復して作る工程 |
 | `hooks/inject_respond.py` | hook(SessionStart) | セッション開始時に `skills/respond/SKILL.md` の本文を注入する |
 | `hooks/guard_session_url.py` | hook(PreToolUse) | コミットと PR 本文に入るセッション URL を実行前に止める |
+| `hooks/guard_ask_one_question.py` | hook(PreToolUse) | 本人への質問を 2 問以上まとめた AskUserQuestion を、フォームを出す前に止める |
 | `hooks/inspect_write.py` | hook(PostToolUse) | 日本語 Markdown の書き込み直後に `lint.py` を実行し、検出があれば書き直しを促す警告を、見出しが 10 を超える文書では推敲の分担の通知を返す(通知は同じファイルに対して状態ファイルが削除されるまで初回だけ出す。Stop は重大カテゴリの検出が残っていない完了のときに状態ファイルを削除するので、通常は 1 回の応答につき初回だけになる。検出が残ったままブロックの上限に達すると、重大カテゴリの検出がすべて解消された完了(状態ファイルの削除)まで再び出ない) |
 | `hooks/inspect_stop.py` | hook(Stop) | セッション完了時に再検査し、重大カテゴリの検出が残るあいだ完了を差し戻す |
 
-スキルは Claude Code が用途を判断して自動で読み込む。`/dev-skills:<スキル名>` で明示的に呼んでもよい。サブエージェントは `dev-skills:planner` のように plugin 名つきで起動する。respond は SessionStart hook が常時適用する。hooks に呼び出しの操作はない。プラグインを有効にしたセッションで、セッション開始、`git commit`・`gh pr create`・`gh pr edit` の実行前、日本語 Markdown の書き込み、セッション完了のたびに自動で発火する。
+スキルは Claude Code が用途を判断して自動で読み込む。`/dev-skills:<スキル名>` で明示的に呼んでもよい。サブエージェントは `dev-skills:planner` のように plugin 名つきで起動する。respond は SessionStart hook が常時適用する。hooks に呼び出しの操作はない。プラグインを有効にしたセッションで、セッション開始、`git commit`・`gh pr create`・`gh pr edit` の実行前、AskUserQuestion の実行前、日本語 Markdown の書き込み、セッション完了のたびに自動で発火する。
 
 依頼は次のように書く。統括は依頼を要件の 4 行にまとめて確認する。4 行の形式は `skills/develop/references/requirements.md` にある。
 
@@ -87,12 +88,15 @@ hooks はセッション開始時に読み込まれるため、有効化した�
 | :-- | :-- | :-- |
 | SessionStart(すべての source) | セッション開始時 | `skills/respond/SKILL.md` の本文を frontmatter を除いて注入する |
 | PreToolUse(Bash) | `git commit`・`gh pr create`・`gh pr edit` の実行前 | セッション URL か `Claude-Session:` の行があれば exit 2 で止め、理由を 1 行で返す |
+| PreToolUse(AskUserQuestion) | AskUserQuestion の実行前 | `questions` が 2 問以上なら deny し、1 問ずつ聞くよう理由を返す |
 | PostToolUse(Write / Edit / MultiEdit / NotebookEdit) | 日本語 Markdown の書き込み直後 | `lint.py` を `--json` で実行し、検出があるか、`lint.py` が分担の通知を出したとき(見出しが 10 を超える文書)に警告を返す。通知は同じファイルに対して状態ファイルが削除されるまで初回だけ出す。Stop は重大カテゴリの検出が残っていない完了のときに状態ファイルを削除するので、通常は 1 回の応答につき初回だけになる。検出が残ったままブロックの上限に達すると、重大カテゴリの検出がすべて解消された完了(状態ファイルの削除)まで再び出ない。書き込みは取り消さない |
 | Stop | セッション完了時 | そのセッションで検査したファイルを再検査し、重大カテゴリの検出が残るあいだ完了をブロックする |
 
-PreToolUse の対象は、`git commit`(`git -C <path> commit` を含む)・`gh pr create`・`gh pr edit` を含む Bash のコマンドである。`claude.ai/code/session_` の URL と `Claude-Session:` の行(大文字と小文字を区別しない)を、コマンド文字列全体と、`-F`・`--file`・`--body-file` で渡した本文ファイルから探す。相対パスは `cwd` から解決し、`-` は読まない。`Co-Authored-By` と `Generated with` の行は止めない。再利用するメッセージ(`--amend --no-edit`・`-C <commit>`)と、中身がコマンド文字列に現れない `--body "$(cat body.md)"`・`-m "$(cat msg.txt)"` は検査しない。
+PreToolUse(Bash)の対象は、`git commit`(`git -C <path> commit` を含む)・`gh pr create`・`gh pr edit` を含む Bash のコマンドである。`claude.ai/code/session_` の URL と `Claude-Session:` の行(大文字と小文字を区別しない)を、コマンド文字列全体と、`-F`・`--file`・`--body-file` で渡した本文ファイルから探す。相対パスは `cwd` から解決し、`-` は読まない。`Co-Authored-By` と `Generated with` の行は止めない。再利用するメッセージ(`--amend --no-edit`・`-C <commit>`)と、中身がコマンド文字列に現れない `--body "$(cat body.md)"`・`-m "$(cat msg.txt)"` は検査しない。
 
-対象と判定したあとは、本文が読めないときや検査の失敗でも止める(fail-closed)。同じコマンドで作ったファイルや `cd` のあとの相対パスも止まるため、先に作って絶対パスで渡す。
+PreToolUse(Bash)は、対象と判定したコマンドを、本文が読めないときや検査に失敗したときも止める(fail-closed)。同じコマンドで作ったファイルや `cd` のあとの相対パスも止まるため、先に作って絶対パスで渡す。
+
+PreToolUse(AskUserQuestion)は、止めた直後に同じ内容で呼び直した 1 回だけを通す。ほかのプラグインの手順が複数の問いを 1 回で聞くと定めている場合のためである。止めた内容を一時ディレクトリに記録できないときや、記録を消せないときは、呼び直しも止める。入力を読めないときは止めずに通す。
 
 PostToolUse と Stop は日本語文書の検査を行う。発火するのは、拡張子が `.md` / `.markdown` で、日本語文字が 30 文字以上あり、除外パターンに一致しないファイルへの書き込みに限る。警告には、検出の一覧、検出箇所を含む文をカテゴリ別の指針に従って直す指示(指針が残すとする文は残す)、語ごとの言い換え例、カテゴリ別の指針と、見出しが 10 を超える文書では分担の通知が入る。通知は同じファイルに対して状態ファイルが削除されるまで初回だけ出す。Stop は重大カテゴリの検出が残っていない完了のときに状態ファイルを削除するので、通常は 1 回の応答につき初回だけになる。検出が残ったままブロックの上限に達すると、重大カテゴリの検出がすべて解消された完了(状態ファイルの削除)まで再び出ない。
 
