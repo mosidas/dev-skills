@@ -6,10 +6,10 @@
 
 ## 1. 入力
 
-- backlog: TASK-077・TASK-081 の Implementation Notes(reviewer・gate-reviewer の要修正と提案、「ユーザーの指摘」の記述)
+- backlog: TASK-077・TASK-081 の Implementation Notes のうち reviewer・gate-reviewer の要修正と提案の記述と「ユーザーの指摘」の記述
 - PR: https://github.com/mosidas/mosidas.dev/pull/28 ・ https://github.com/mosidas/mosidas.dev/pull/29
-- memory: site-user-facing-text-polite.md(2026-10-14 作成。タスクの期間中の feedback のため、新しい指摘として扱う)
-- memory: no-session-url-in-pr.md(2026-10-13 作成。タスクより前の feedback のため、照合する規則として扱う)
+- memory: site-user-facing-text-polite.md。作成日は 2026-10-14 である。タスクの期間中の feedback なので新しい指摘として扱う。
+- memory: no-session-url-in-pr.md。作成日は 2026-10-13 である。タスクより前の feedback なので照合する規則として扱う。
 - セッション: 2026-10-14 の本人の指摘 4 件。3 回に分けて入った
 - 判定に使った版: dev-skills 1.18.0
 

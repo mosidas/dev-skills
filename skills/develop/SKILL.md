@@ -60,7 +60,7 @@ backlog task edit <id> --append-notes $'判断: <選んだこと・したこと>
 
 ## 4. ブランチを切る
 
-- `main` を最新にし、`<type>/<TASK-id>-<slug>` の名前でブランチを切る(`type` は `feat`・`fix`・`refactor`・`chore`。タスクが無いときは `<type>/<slug>`)。
+- `main` を最新にしてから `<type>/<TASK-id>-<slug>` の名前でブランチを切る。`type` は `feat`・`fix`・`refactor`・`chore` のどれかにする。タスクが無いときは `<type>/<slug>` の名前にする。
 - git hook が無ければ入れる(`references/hooks.md`)。pre-commit で lint、pre-push でテストを実行する。hook は implementer の「テストが通った」という報告を機械的に裏づける。
 - 品質がプロダクトのとき、シークレット検知と依存監査を hook と CI に入れ、CI に SAST を入れる(`references/hooks.md` 4.)。
 - 手順の詳細は `references/git-flow.md` に従う。
@@ -99,7 +99,7 @@ backlog task edit <id> --append-notes $'判断: <選んだこと・したこと>
 - 全ステップが承認されたら、push の前に gate-reviewer サブエージェント(`dev-skills:gate-reviewer`)を起動する。渡すのは、対象リポジトリのパス、レビューする範囲(`main..HEAD`)、要件の 3 行(目的・完了条件・対象外)、計画の全体、PR 本文案である。
 - 品質がプロダクトのとき、gate-reviewer を起動する前に統括が claude-security プラグイン(`claude-security@claude-plugins-official`)の Scan changes を効果 `high` で実行する(`/claude-security scan my branch at high`)。報告は対象リポジトリの `CLAUDE-SECURITY-<timestamp>/` に書き出される。プラグインが導入されていないときは組み込みの `/security-review` で代える。指摘があれば implementer に渡して直させ、直したあとで gate-reviewer を起動する。
 - gate-reviewer の前に敵対役(`references/parallel.md` 5.)を任意で起動できる。統括が再実行して確かめた敵対役の所見は gate-reviewer に渡す。Codex CLI がある環境で gate-reviewer と `codex review --base main` を並走させる(同 6.)。
-- gate-reviewer はブランチ全体でしか分からないこと(完了条件の充足、ステップ間の整合、残骸、PR 本文との一致)を見て、「マージ可」か「差し戻し」を返す。ステップごとの reviewer が見た内容は蒸し返さない。品質がプロダクトのとき、計画に含まれる secure・observe・recover 由来の変更(ヘルスチェック・メトリクス・拒否のテスト・タイムアウト・エラーページなど)は要件内として扱う。
+- gate-reviewer はブランチ全体でしか分からないことを見る。見るのは完了条件の充足・ステップ間の整合・残骸・PR 本文との一致である。そのうえで「マージ可」か「差し戻し」を返す。ステップごとの reviewer が見た内容は蒸し返さない。品質がプロダクトのとき、計画に含まれる secure・observe・recover 由来の変更(ヘルスチェック・メトリクス・拒否のテスト・タイムアウト・エラーページなど)は要件内として扱う。
 - 差し戻しなら、修正点を implementer に渡して直させ、再びゲートを通す。2 回直しても通らないときは、統括がユーザーに状況を報告して判断を仰ぐ。ゲートを push の前に通すのは、CI を回す前に直すほうが安いからである。
 
 ## 8. PR を出す
@@ -140,7 +140,7 @@ backlog task edit <id> -s Done --final-summary "<結果>"
 中断・セッションの終了・別のエージェントからの引き継ぎの後で途中のタスクを続けるときは次の手順で再開点を判断する。記録を読まずにやり直すと済んだステップを二重に行う。
 
 1. タスクの Implementation Notes を読んで再開メモ・承認済みのステップ・未決の事項を拾う。Backlog.md が無いリポジトリでは PR 本文を読む。
-2. タスクのブランチ(`git branch --list '*<TASK-id>*'` で探す。`main` へ直接コミットするリポジトリでは `main`)へ切り替える。ブランチと PR の実物を確かめる。`git log --oneline main..HEAD`・`git status`・`git stash list`・`gh pr view --json number,state,statusCheckRollup` を実行する。PR が無ければ `no pull requests found` が出る。PR を出す前として扱う。
+2. `git branch --list '*<TASK-id>*'` でタスクのブランチを探す。見つけたブランチへ切り替える。`main` へ直接コミットするリポジトリでは `main` へ切り替える。ブランチと PR の実物を確かめる。`git log --oneline main..HEAD`・`git status`・`git stash list`・`gh pr view --json number,state,statusCheckRollup` を実行する。PR が無ければ `no pull requests found` が出る。PR を出す前として扱う。
 3. 再開点を判断する。Notes で承認済みとされていて SHA が現在のブランチの履歴にある(`git merge-base --is-ancestor <SHA> HEAD` の終了コードが 0)ステップを済んだステップとする。済んだステップは繰り返さない。計画も作り直さない。Notes にあっても SHA が履歴に無いステップは済んだと数えない。
 4. 未コミットの変更が作業ツリーか stash にあれば作業ツリーに戻す。そのステップは 6. の手順 1 から行う。implementer には再開メモと未コミットの変更の所在も渡す。
 5. 再開点・引き継いだもの・やり直したものを 1 行でユーザーに報告してから再開点の工程へ進む。
