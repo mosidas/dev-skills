@@ -194,6 +194,22 @@ class CheckPrdTest(helpers.TempDirTestCase):
         _path, proc = self.run_check(text)
         self.assertNotIn(":53: ", proc.stdout)
 
+    def test_決め方をバッククォートで囲んだ値を受け付ける(self) -> None:
+        text = VALID.replace(
+            "## 7. 未決事項\n\nなし\n",
+            "## 7. 未決事項\n\n- 問い1(R1)\n  - 決め方: `事実`\n- 問い2(R2)\n  - 決め方: `本人の判断`\n",
+        )
+        _path, proc = self.run_check(text)
+        self.assertEqual(proc.returncode, 0, proc.stdout)
+        self.assertEqual(proc.stdout, "")
+
+    def test_1件の問いに決め方の2値の両方があると指摘する(self) -> None:
+        text = VALID.replace(
+            "## 7. 未決事項\n\nなし\n",
+            "## 7. 未決事項\n\n- 問い(R1)\n  - 決め方: 事実\n  - 決め方: 本人の判断\n",
+        )
+        self.assertProblem(text, 53, "両方")
+
     def test_決め方の値が2値でないと指摘する(self) -> None:
         text = VALID.replace("## 7. 未決事項\n\nなし\n", "## 7. 未決事項\n\n- 問い(R1)\n  - 決め方: 試作\n")
         self.assertProblem(text, 53, "決め方")

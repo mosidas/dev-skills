@@ -8,7 +8,8 @@
 ファイルを読めないときは標準エラーに書いて exit 2 で終わる。
 検査するのは節の並び・要求ごとの 4 行と受け入れ条件・依存と順序の表・
 未決事項の決め方・コメントと未記入の残りである。
-節の見出しは雛形から読む。コードブロックとインラインコードの中は検査しない。
+節の見出しは雛形から読む。コードブロックの中は検査しない。
+インラインコードの中はコメントと未記入として扱わない。
 標準ライブラリのみで動く。
 """
 
@@ -26,7 +27,7 @@ REQ_HEADING = re.compile(r"^### (R\d+)\.")
 PLACEHOLDER = re.compile(r"<(?=\S)[^<>\n]+(?<=\S)>")
 # 自動リンク(<https://...>)と HTML タグ(<br>・</summary>)は未記入として扱わない。
 NOT_PLACEHOLDER = re.compile(r"<(?:https?://|mailto:)[^<>]*>|</?[A-Za-z][A-Za-z0-9]*(?:\s[^<>]*)?/?>")
-DECISION = re.compile(r"^\s+- 決め方: *(事実|本人の判断)\s*$")
+DECISION = re.compile(r"^\s+- 決め方: *(`?)(事実|本人の判断)\1\s*$")
 FENCE = re.compile(r"^ {0,3}(`{3,}|~{3,})")
 INLINE_CODE = re.compile(r"(`+)[^`]*?\1")
 
@@ -152,8 +153,11 @@ def check(text: str, template: str) -> list[tuple[int, str]]:
         elif questions and line[:1].isspace():
             questions[-1][1].append(line)
     for n, sub in questions:
-        if not any(DECISION.match(s) for s in sub):
+        values = {m.group(2) for s in sub if (m := DECISION.match(s))}
+        if not values:
             problems.append((n, "未決事項に「決め方: 事実」か「決め方: 本人の判断」の箇条が無い → 問いの直下に字下げした「- 決め方: 事実」か「- 決め方: 本人の判断」の箇条を書く"))
+        elif len(values) > 1:
+            problems.append((n, "未決事項の決め方に事実と本人の判断の両方がある → 問いごとにどちらか 1 つの箇条だけを残す"))
 
     # 雛形のコメントと未記入
     in_comment = False
