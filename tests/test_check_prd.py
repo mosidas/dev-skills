@@ -208,11 +208,25 @@ class CheckPrdTest(helpers.TempDirTestCase):
             "## 7. 未決事項\n\nなし\n",
             "## 7. 未決事項\n\n- 問い(R1)\n  - 決め方: 事実\n  - 決め方: 本人の判断\n",
         )
-        self.assertProblem(text, 53, "両方")
+        self.assertProblem(text, 53, "2 件以上")
+
+    def test_同じ有効値を2回書くと指摘する(self) -> None:
+        text = VALID.replace(
+            "## 7. 未決事項\n\nなし\n",
+            "## 7. 未決事項\n\n- 問い(R1)\n  - 決め方: 事実\n  - 決め方: `事実`\n",
+        )
+        self.assertProblem(text, 53, "2 件以上")
 
     def test_決め方の値が2値でないと指摘する(self) -> None:
         text = VALID.replace("## 7. 未決事項\n\nなし\n", "## 7. 未決事項\n\n- 問い(R1)\n  - 決め方: 試作\n")
-        self.assertProblem(text, 53, "決め方")
+        self.assertProblem(text, 53, "決め方の値")
+
+    def test_有効値と無効値の併記で指摘する(self) -> None:
+        text = VALID.replace(
+            "## 7. 未決事項\n\nなし\n",
+            "## 7. 未決事項\n\n- 問い(R1)\n  - 決め方: 事実\n  - 決め方: 試作\n",
+        )
+        self.assertProblem(text, 53, "決め方の値")
 
     def test_雛形そのものはコメントと未記入で不合格になる(self) -> None:
         proc = helpers.run_script(SCRIPT, TEMPLATE)
