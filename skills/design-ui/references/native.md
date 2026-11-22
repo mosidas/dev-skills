@@ -1,6 +1,6 @@
 # ネイティブアプリの規範
 
-iOS・Android・デスクトップのネイティブアプリと、Flutter・React Native・Compose Multiplatform などのクロスプラットフォームで、Web と異なる規則をまとめる。共通の規範(コントラスト・色だけで示さない・状態の網羅・モーションの抑制)は `checklist.md` に従い、本ファイルはネイティブ固有の規則だけを扱う。本ファイルの規則はモバイルアプリを中心とする。デスクトップのネイティブアプリは、macOS では Apple HIG、Windows では Fluent Design の規約に従い、hover とキーボード操作は `checklist.md` の Web 固有の節を準用する。
+iOS・Android・デスクトップのネイティブアプリと、Flutter・React Native・Compose Multiplatform などのクロスプラットフォームで、Web と異なる規則をまとめる。共通の規範(コントラスト・色だけで示さない・状態の網羅・モーションの抑制)は `checklist.md` に従い、本ファイルはネイティブ固有の規則だけを扱う。本ファイルの規則はモバイルアプリを中心とする。デスクトップのネイティブアプリは、OS の規約に従い、hover とキーボード操作は `checklist.md` の Web 固有の節を準用する。macOS では Apple HIG、Windows では Fluent Design がその規約に当たる。
 
 ## 1. OS の部品と規約を優先する
 
