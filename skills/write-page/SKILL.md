@@ -24,7 +24,7 @@ description: HTML で配布する説明資料(図・表・切り替えの UI を
 | `../write-doc/references/process.md` | 工程の一覧、着手時の brief、骨組みの合意、疑問の一覧、肉付けの規則、推敲役に渡す物、指摘を受けた後 | 書き始める前と、工程を進めるとき |
 | `../write-doc/references/format/html.md` | 折りたたみのラベル、HTML の資料の規則(表の列の並び、一覧の全件表示、操作と表示先の近接、折りたたみの有無、表の面、行幅、図の幅、タブと節の対応、中間ファイルの参照) | 構成を決めるときと、HTML を生成するとき |
 | `../write-doc/references/sentence.md` | 語の選び方、文の組み立て、動詞と語彙、事実・意見・確信度、翻訳調、表記、記号、出典 | 本文を書くとき |
-| `../write-doc/references/paragraph.md` | 段落、論証、構成、接地と省略、見出し、表と図 | 節の役割を決めるときと、本文を組むとき |
+| `../write-doc/references/paragraph.md` | 段落、論証、構成、接地と省略、見直し、見出し、表と図 | 節の役割を確定するときと、本文を組むとき |
 | `../write-doc/references/inspection.md` | 検査スクリプト、検出への対応(文書ごとの確認)、別のエージェントによる推敲 | 書いた後に点検するとき |
 
 ## 3. HTML 固有の工程
