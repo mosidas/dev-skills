@@ -301,12 +301,16 @@ class PhrasePatternDetectionTest(unittest.TestCase):
         self.assertEqual(findings[0].severity, "warn")
         self.assertEqual(findings[0].detail, "NG/OK カタログの語ヒット: 「根因」")
 
+    def test_exclude_の語がカギ括弧の中だけなら外さない(self) -> None:
+        self.assertEqual(len(self._detect("障害の根因を「植物」と比べる。")), 1)
+
     def test_条件を外れる文では検出しない(self) -> None:
         for line in (
             "根因を特定する。",
             "障害と植物の根因を比べる。",
             "障害の真根因を特定する。",
             "障害の「根因」を特定する。",
+            "「障害」の根因を特定する。",
             "根因を特定する。障害は別に記録する。",
         ):
             with self.subTest(line=line):
@@ -323,6 +327,10 @@ class PhrasePatternDetectionTest(unittest.TestCase):
         self.assertEqual(len(findings), 1)
         self.assertEqual(findings[0].excerpt, "注」記録の前に障害の根本因を `特定` する。")
         self.assertEqual(findings[0].detail.split("「")[1].split("」")[0], "根因")
+
+    def test_2_文目に当たった語の_excerpt_は_2_文目の位置から切り出す(self) -> None:
+        findings = self._detect("前置きの文を長めに書いておく。次の文で障害の根因を見る。")
+        self.assertEqual([f.excerpt for f in findings], ["おく。次の文で障害の根因を見る。"])
 
     def test_info_の語は補足を添える(self) -> None:
         with unittest.mock.patch.object(lint, "FORBIDDEN_PHRASES_WEAK_SIGNAL", {"根因"}), unittest.mock.patch.object(

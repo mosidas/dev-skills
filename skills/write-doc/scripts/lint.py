@@ -700,25 +700,28 @@ def _phrase_finding(no: int, line: str, raw_line: str, idx: int, length: int, de
     )
 
 
-def _pattern_positions(line: str, phrase: PhrasePattern) -> list[tuple[int, int]]:
-    """pattern の語が当たった (行の中の位置, 長さ) を文ごとに 1 件まで返す。
-    「」『』の中は同じ長さの空白に伏せて見ない(位置は原文の行と揃う)。"""
-    out = []
+def _phrase_sentences(line: str) -> list[tuple[int, str]]:
+    """行を (行の中の位置, 前後の空白を除いた文) に分ける。「」『』の中は同じ長さの空白に
+    伏せて見ない(位置は原文の行と揃う)。"""
     unquoted = _QUOTED_RE.sub(lambda m: " " * len(m.group()), line)
-    for s in _PHRASE_SENTENCE_RE.finditer(unquoted):
-        sentence = s.group().strip()
-        offset = s.start() + len(s.group()) - len(s.group().lstrip())
-        m = phrase.pattern.search(sentence)
-        if m is None:
-            continue
-        if phrase.context is not None and not phrase.context.search(sentence):
-            continue
-        if phrase.exclude is not None and phrase.exclude.search(sentence):
-            continue
-        if phrase.exclude_before is not None and phrase.exclude_before.search(sentence[: m.start()]):
-            continue
-        out.append((offset + m.start(), len(m.group())))
-    return out
+    return [
+        (s.start() + len(s.group()) - len(s.group().lstrip()), s.group().strip())
+        for s in _PHRASE_SENTENCE_RE.finditer(unquoted)
+    ]
+
+
+def _pattern_match(sentence: str, phrase: PhrasePattern) -> re.Match | None:
+    """pattern の語が 1 文の中で条件を満たして当たれば、最初の一致を返す。"""
+    m = phrase.pattern.search(sentence)
+    if m is None:
+        return None
+    if phrase.context is not None and not phrase.context.search(sentence):
+        return None
+    if phrase.exclude is not None and phrase.exclude.search(sentence):
+        return None
+    if phrase.exclude_before is not None and phrase.exclude_before.search(sentence[: m.start()]):
+        return None
+    return m
 
 
 def detect_forbidden_phrases(
@@ -733,9 +736,14 @@ def detect_forbidden_phrases(
         for phrase, dict_form in FORBIDDEN_PHRASE_VARIANTS:
             for idx in _phrase_positions(line, phrase):
                 findings.append(_phrase_finding(no, line, raw_line, idx, len(phrase), phrase, dict_form))
+        sentences = _phrase_sentences(line)
         for pattern in FORBIDDEN_PHRASE_PATTERNS:
-            for idx, length in _pattern_positions(line, pattern):
-                findings.append(_phrase_finding(no, line, raw_line, idx, length, pattern.ng, pattern.ng))
+            for offset, sentence in sentences:
+                m = _pattern_match(sentence, pattern)
+                if m is not None:
+                    findings.append(
+                        _phrase_finding(no, line, raw_line, offset + m.start(), len(m.group()), pattern.ng, pattern.ng)
+                    )
     return findings
 
 
