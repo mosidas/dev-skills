@@ -339,7 +339,7 @@ def main() -> int:
         "--genre",
         choices=sorted(GENRE_PROFILES),
         default=None,
-        help="ジャンル別に校正した閾値プロファイルを適用する(essay/tech/business)。未指定時は共通閾値",
+        help="ジャンル別に校正したしきい値のプロファイルを適用する(essay/tech/business)。未指定時は共通のしきい値",
     )
     parser.add_argument("--model", default=DEFAULT_MODEL, help=f"埋め込みモデル名(既定: {DEFAULT_MODEL})")
     args = parser.parse_args()

@@ -816,7 +816,7 @@ def detect_self_scope_note(
                     severity="warn",
                     detail=(
                         f"文書自身を指す語と、省いたこと、または記録した範囲を限ることを述べる過去形の述語の組: 「{m.group()}」。"
-                        "読者に向けた中身でなければ文を削る。決められなければ残す(paragraph.md 3.)"
+                        "読み手に向けた中身でなければ文を削る。判断できなければ残す(paragraph.md 3.)"
                     ),
                 )
             )
@@ -2338,8 +2338,8 @@ def main() -> int:
         choices=sorted(GENRE_PROFILES),
         default=None,
         help=(
-            "文書のジャンルに応じてコーパス校正済みの閾値プロファイルを適用する"
-            "（essay/tech/business）。未指定時は共通の保守的閾値を使う"
+            "文書のジャンルに応じてコーパスで校正したしきい値のプロファイルを適用する"
+            "（essay/tech/business）。未指定時は共通の保守的なしきい値を使う"
         ),
     )
     parser.add_argument(
