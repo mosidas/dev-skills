@@ -1841,7 +1841,7 @@ def detect_inanimate_subject_morph(tokenized: list[TokenizedSentence]) -> list[F
 BOLD_SPAN_RE = re.compile(r"\*\*[^*\n]+\*\*")
 # 行末の空白は呼び出し側で除く
 BOLD_ONLY_LINE_RE = re.compile(r"^ {0,3}\*\*[^*\n]+\*\*$")
-# 行頭(箇条の頭を含む)の「**ラベル**:」は項目を探す目印なので数えない
+# 行頭(箇条の先頭を含む)の「**ラベル**:」は項目を探す目印なので数えない
 BOLD_LABEL_RE = re.compile(r"^\s*(?:[-*+]|\d+[.)])?\s*\*\*[^*\n]+\*\*\s*[:：]", re.M)
 BOLD_DENSITY_PER_1000_THRESHOLD = 3.0
 BULLET_LINE_RATIO_THRESHOLD = 0.35
