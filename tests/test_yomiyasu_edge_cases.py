@@ -55,12 +55,14 @@ class YomiyasuEdgeCasesTest(unittest.TestCase):
             p["ng"] for p in lint.PHRASE_CATALOG["phrases"] if "yomiyasu" in p.get("note", "")
         }
         self.assertTrue(yomiyasu_ngs)
-        # pattern の語は detail に表示名(ng)をそのまま出す
-        dict_forms = {**dict(lint.FORBIDDEN_PHRASE_VARIANTS), **{p.ng: p.ng for p in lint.FORBIDDEN_PHRASE_PATTERNS}}
+        detail_to_dict_form = {
+            **dict(lint.FORBIDDEN_PHRASE_VARIANTS),
+            **{p.ng: p.ng for p in lint.FORBIDDEN_PHRASE_PATTERNS},
+        }
         for path in self.files:
             with self.subTest(file=path.name):
                 hits = [
-                    (f.line, dict_forms[re.search(r"「(.+?)」", f.detail).group(1)])
+                    (f.line, detail_to_dict_form[re.search(r"「(.+?)」", f.detail).group(1)])
                     for f in lint.detect_forbidden_phrases(_lex_lines(path))
                 ]
                 expected = [(3, "壊れ")] if path.name in LITERAL_KOWARERU else []
