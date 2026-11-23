@@ -13,7 +13,7 @@
 | [nanaism/yomiyasu](https://github.com/nanaism/yomiyasu) | MIT | — | v1.1.1(373356e)・v2.0.1(84e1f5b)・v2.3.0(15244a1)・v3.2.3(c49d5f1) | write-doc・write-message |
 | [mizchi/explainer](https://github.com/mizchi/explainer) | MIT | — | 版の記載なし | write-doc |
 | [heygen-com/hyperframes](https://github.com/heygen-com/hyperframes) | Apache-2.0 | — | 版の記載なし | write-doc(explainer を経由) |
-| [carnot-tech/consulting-pptx-skill](https://github.com/carnot-tech/consulting-pptx-skill) | MIT | — | コミット bc9a587・b8f7dc4 | write-doc・write-slide・draw-diagram |
+| [carnot-tech/consulting-pptx-skill](https://github.com/carnot-tech/consulting-pptx-skill) | MIT | — | コミット bc9a587・b8f7dc4・1d62cd1 | write-doc・write-slide・draw-diagram |
 | [iKora128/stop-ai-slop-jp](https://github.com/iKora128/stop-ai-slop-jp) | MIT | — | コミット e09d327 | write-message |
 | [ayghri/i-have-adhd](https://github.com/ayghri/i-have-adhd) | MIT | Copyright (c) 2026 Ayoub Ghriss | 版の記載なし | respond |
 | [cathrynlavery/diagram-design](https://github.com/cathrynlavery/diagram-design) | MIT | Copyright (c) 2025 Cathryn Lavery | v2.6.115(f2f4d49)・v2.6.170(d7b0176) | draw-diagram |
