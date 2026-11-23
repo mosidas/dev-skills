@@ -742,7 +742,7 @@
       "type": "imprecise",
       "severity": "info",
       "ok": [
-        "何と何を、どう接続・仲介するかを書く"
+        "何と何をどう接続・仲介するかを書く"
       ],
       "note": "2026-10-18 追加(yomiyasu v2.0.1 references/lists/fact-gaps.txt の figure)"
     },

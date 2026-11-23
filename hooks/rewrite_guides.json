@@ -50,7 +50,7 @@
   },
   "english_syntax_inanimate_subject": {
     "instruction": "無生物主語 + 他動詞(This fact suggests の直訳)。主語を人や状況に戻すか、述語を状態描写に変える(sentence.md 5.)。",
-    "example": { "before": "この事実は、従来の前提が誤っていたことを示している。", "after": "この事実から、従来の前提が誤っていたと分かる。" }
+    "example": { "before": "この事実は、従来の前提が誤っていたことを示している。", "after": "この事実から従来の前提が誤っていたと分かる。" }
   },
   "inanimate_subject_morph": {
     "instruction": "無生物主語 + 他動詞(形態素検出)。主語を人や状況に戻すか、述語を状態描写に変える(sentence.md 5.)。",
