@@ -2338,8 +2338,8 @@ def main() -> int:
         choices=sorted(GENRE_PROFILES),
         default=None,
         help=(
-            "文書のジャンルに応じてコーパスで校正したしきい値のプロファイルを適用する"
-            "（essay/tech/business）。未指定時は共通の保守的なしきい値を使う"
+            "文書のジャンルに応じてコーパス校正済みの閾値プロファイルを適用する"
+            "（essay/tech/business）。未指定時は共通の保守的閾値を使う"
         ),
     )
     parser.add_argument(
