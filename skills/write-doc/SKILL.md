@@ -17,11 +17,11 @@ description: 日本語の開発ドキュメント・技術文書(README、仕様
 | 形式 | `references/format/markdown.md` | Markdown の見出しの階層、記法(GFM・frontmatter・アラート・作り手のための参照の書き場所) | Markdown の文書を書く・直すとき |
 | 形式 | `references/format/html.md` | HTML で配布する文書の折りたたみのラベル、表の列の並び、一覧の全件表示、操作と表示先の近接、折りたたみの有無、表の面、行幅、図の幅、タブと節の対応、中間ファイルの参照 | HTML の文書を書く・直すとき。HTML で配布する説明資料は write-page から読む |
 | 形式 | `references/format/slide.md` | スライドの型(プレゼン型・説明資料型)、メッセージライン、タイトル、ページの作り方、文体と強調 | スライドを作る・直すとき。write-slide から読む |
-| 種類 | 一覧の `references/types/README.md` を含む `references/types/` | 文書の種類ごとの読み手・節の並び・足す規則・外してよい規則。手順書・仕様書と規約・議事録・調査レポート・技術記事・企画書と PRD・README。README の雛形は `references/templates/readme.md` | brief で種類を確定したとき |
+| 種類 | 一覧の `references/types/README.md` を含む `references/types/` | 文書の種類ごとの読み手、節の並び、足す規則、外してよい規則。手順書、仕様書と規約、議事録、調査レポート、技術記事、企画書と PRD、README。README の雛形は `references/templates/readme.md` | brief で種類を確定したとき |
 
 新しく文書を書くときは、次の順に進める。本文から書き始めると、同じ欠陥がすべての節に複製される。依頼者は節の数だけ同じ指摘を繰り返す。
 
 1. brief を既定値で埋めて依頼者に見せる(`references/process.md` 2.)。
 2. 骨組みを依頼者と合意し、疑問の一覧を同じ往復で出す(`references/process.md` 3.・4.)。同じ型の節を 5 つ以上書く文書では、代表の 1 節を先に仕上げて依頼者に見せ、確認を取ってから残りの節を書く。
-3. 本文を書いて検査する(`references/process.md` 5.、`references/inspection.md`)。
+3. 本文を書いて検査する(`references/process.md` 5. と `references/inspection.md`)。
 4. 他者向けの文書は、依頼者に見せる前に、別のエージェントによる推敲を通す(`references/inspection.md` 5.)。
