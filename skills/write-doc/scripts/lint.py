@@ -1167,6 +1167,46 @@ def detect_translationese_morph(tokenized: list[TokenizedSentence]) -> list[Find
     return findings
 
 
+# ふだん漢語で言う語を、和語の動詞の名詞化で書いたもの(「事実の確かめ」「知らせが来る」)。
+# 辞書にある語なので禁止語の表では拾えない。sudachi はこれらを最初から名詞として切るので、語の表で持つ。
+# 動詞の連用形(「〜を確かめ、」)は品詞が動詞になり、「〜方」「〜直し」のような複合語は別の語になるので当たらない。
+# 出典: natural-japanese 81eb228 の skills/natural-japanese/scripts/lint.py(MIT)。
+WAGO_NOMINALIZATION = {
+    "確かめ": "確認",
+    "知らせ": "通知",
+    "測り": "測定",
+    "調べ": "調査",
+}
+# 「に」は「調べに行く」のような連用形+目的の形と区別がつかないので入れない
+_WAGO_FOLLOWERS = {"の", "を", "は", "が", "も", "へ", "と", "で", "や", "か"}
+
+
+def detect_wago_nominalization(tokenized: list[TokenizedSentence]) -> list[Finding]:
+    """和語の動詞を名詞にした語(表 WAGO_NOMINALIZATION)が、名詞として助詞の前か文末に置かれているものを拾う。"""
+    findings = []
+    for ts in tokenized:
+        ms = ts.morphemes
+        for i, m in enumerate(ms):
+            surf = m.surface()
+            if surf not in WAGO_NOMINALIZATION or m.part_of_speech()[0] != "名詞":
+                continue
+            nxt = ms[i + 1] if i + 1 < len(ms) else None
+            if nxt is not None and not (nxt.part_of_speech()[0] == "助詞" and nxt.surface() in _WAGO_FOLLOWERS):
+                continue
+            span_start = ms[max(0, i - 3)].begin()
+            span_end = nxt.end() if nxt is not None else m.end()
+            findings.append(
+                Finding(
+                    line=ts.line,
+                    category="wago_nominalization",
+                    excerpt=ts.raw_text[span_start:span_end],
+                    severity="warn",
+                    detail=f"「{surf}」は、ふだん「{WAGO_NOMINALIZATION[surf]}」と書く",
+                )
+            )
+    return findings
+
+
 # 拗音を作る小書き文字（ャュョァィゥェォヮ）。「キャ」のように直前の文字と
 # 合わせて1モーラを構成するため、単純な文字数カウントだと過大カウントになる。
 # 促音（ッ）・長音（ー）は独立した1モーラとして数えるため、ここには含めない。
@@ -2036,6 +2076,7 @@ def run_lint(
     findings += nominal_and_conj_findings
     findings += detect_translationese_morph(tokenized)
     findings += detect_inanimate_subject_morph(tokenized)
+    findings += detect_wago_nominalization(tokenized)
     # nested_attributive はコーパス校正で削除済み（上のコメント参照）。
 
     rhythm_findings, rhythm_stats = detect_rhythm_statistics(tokenized)
@@ -2159,7 +2200,7 @@ def print_human_report(
 
 
 def split_units(raw_text: str) -> list[dict]:
-    """段落ごとの確かめの単位(見出し・箇条書きの 1 項目・表の 1 行・地の文の段落)に分ける。
+    """段落ごとの確認の単位(見出し・箇条書きの 1 項目・表の 1 行・地の文の段落)に分ける。
 
     判定は keep_structure_text のマスク後の行で行い、フロントマター・コードブロック・
     HTML コメント・日本語を含まない行を外す。表示には原文の行を使う。
@@ -2191,13 +2232,13 @@ def split_units(raw_text: str) -> list[dict]:
 
 
 def print_paragraph_sheet(raw_text: str) -> None:
-    """段落ごとの確かめ(references/inspection.md 4.)の一覧を出す。判断はしない。
+    """段落ごとの確認(references/inspection.md 4.)の一覧を出す。判断はしない。
 
-    文書を通して読むだけだと、モデルは段落ごとの確かめを飛ばす。別のコマンドにすると
+    文書を通して読むだけだと、モデルは段落ごとの確認を飛ばす。別のコマンドにすると
     実行を省かれるので、毎回実行される lint の出力に含める(natural-japanese 1038d53)。
     """
     units = split_units(raw_text)
-    print(f"=== 段落ごとの確かめ(全 {len(units)} 段落。既存の文書を直すときは必須。references/inspection.md 4.) ===")
+    print(f"=== 段落ごとの確認(全 {len(units)} 段落。既存の文書を直すときは必須。references/inspection.md 4.) ===")
     print("1段落ずつ、動詞と名詞をすべて見て、references/sentence.md 3.「読み手が何のことか取れない言い回し」の型に当たるものを")
     print("「番号: 言い回し → 指しているもの(元の文書やコードにある事実・名前)」の形で書き出す。")
     print("当たらない段落は「番号: なし」と書く。最後の段落まで書き出してから直す。途中で省かない。")
