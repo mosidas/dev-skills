@@ -7,10 +7,10 @@
 | 出典 | ライセンス | 著作権者 | 版とコミット | 反映先 |
 | :-- | :-- | :-- | :-- | :-- |
 | [cursor/plugins](https://github.com/cursor/plugins) の pstack | MIT | Copyright (c) 2026 Lauren Tan | コミット 997ffc7(2026-10-12 時点。specify)・0.15.36(コミット 1ba91fc、2026-10-28。explain と ponytail の references/design.md はこの版)・0.15.46(コミット 0b46ec3、2026-11-19) | specify・interview・develop・build・ponytail・recover・retro・respond・agents・write-doc・draw-diagram・design-ui・explain・verify・README |
-| [mattpocock/skills](https://github.com/mattpocock/skills) | MIT | Copyright (c) 2026 Matt Pocock | コミット 49dd158(2026-10-12 時点)・コミット abeeaf9(v1.3.2 の後、2026-11-19) | specify・interview・develop |
+| [mattpocock/skills](https://github.com/mattpocock/skills) | MIT | Copyright (c) 2026 Matt Pocock | コミット 49dd158(2026-10-12 時点)・コミット abeeaf9(v1.3.2 の後、2026-11-19) | specify・interview・develop・write-doc |
 | [DietrichGebert/ponytail](https://github.com/DietrichGebert/ponytail) | MIT | Copyright (c) 2026 DietrichGebert | v5.1.0 | ponytail |
-| [coji/natural-japanese](https://github.com/coji/natural-japanese) | MIT | — | v1.5.0(9a78a42)・v1.6.0(03bc944)・v1.6.2(a88b8e9) | write-doc・write-slide・write-message |
-| [nanaism/yomiyasu](https://github.com/nanaism/yomiyasu) | MIT | — | v1.1.1(373356e)・v2.0.1(84e1f5b)・v2.3.0(15244a1) | write-doc・write-message |
+| [coji/natural-japanese](https://github.com/coji/natural-japanese) | MIT | — | v1.5.0(9a78a42)・v1.6.0(03bc944)・v1.6.2(a88b8e9)・v2.0.0 の後(840bd40) | write-doc・write-slide・write-message |
+| [nanaism/yomiyasu](https://github.com/nanaism/yomiyasu) | MIT | — | v1.1.1(373356e)・v2.0.1(84e1f5b)・v2.3.0(15244a1)・v3.2.3(c49d5f1) | write-doc・write-message |
 | [mizchi/explainer](https://github.com/mizchi/explainer) | MIT | — | 版の記載なし | write-doc |
 | [heygen-com/hyperframes](https://github.com/heygen-com/hyperframes) | Apache-2.0 | — | 版の記載なし | write-doc(explainer を経由) |
 | [carnot-tech/consulting-pptx-skill](https://github.com/carnot-tech/consulting-pptx-skill) | MIT | — | コミット bc9a587・b8f7dc4 | write-doc・write-slide・draw-diagram |
