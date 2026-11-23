@@ -144,7 +144,7 @@ class PhraseCatalogTest(unittest.TestCase):
         self.assertEqual(lint.detect_forbidden_phrases([(1, "値を入力する。")]), [])
 
     def test_yomiyasu_由来の語を検出する(self) -> None:
-        """yomiyasu 由来の 41 語は、ng か forms を含む例文でカタログの severity として 1 件だけ検出される。
+        """yomiyasu 由来の文字列の語 41 語は、ng か forms を含む例文でカタログの severity として 1 件だけ検出される。
 
         36 語は info、システム開発の文書で字義どおりに使わない 5 語は warn とする。
         """
@@ -193,7 +193,7 @@ class PhraseCatalogTest(unittest.TestCase):
             "プロセスが沈黙する。",
             "例外を呼び出し元へ逃がす。",
         ]
-        yomiyasu = [p for p in self.phrases if "yomiyasu" in p.get("note", "")]
+        yomiyasu = [p for p in self.string_phrases if "yomiyasu" in p.get("note", "")]
         self.assertEqual(len(yomiyasu), len(info_sentences) + len(warn_sentences))
         variants = {v for p in yomiyasu for v in [p["ng"], *p.get("forms", [])]}
         cases = [(s, "info") for s in info_sentences] + [(s, "warn") for s in warn_sentences]
@@ -284,7 +284,7 @@ class PhrasePatternDetectionTest(unittest.TestCase):
 
     def _detect(self, line: str, raw_line: str | None = None) -> list:
         pattern = lint.PhrasePattern(
-            ng="根因",
+            ng="仮の根因",
             pattern=re.compile("根因|根本因"),
             context=re.compile("障害|原因"),
             exclude=re.compile("植物"),
@@ -299,7 +299,7 @@ class PhrasePatternDetectionTest(unittest.TestCase):
         self.assertEqual(len(findings), 1)
         self.assertEqual(findings[0].category, "forbidden_phrase")
         self.assertEqual(findings[0].severity, "warn")
-        self.assertEqual(findings[0].detail, "NG/OK カタログの語ヒット: 「根因」")
+        self.assertEqual(findings[0].detail, "NG/OK カタログの語ヒット: 「仮の根因」")
 
     def test_exclude_の語がカギ括弧の中だけなら外さない(self) -> None:
         self.assertEqual(len(self._detect("障害の根因を「植物」と比べる。")), 1)
@@ -326,19 +326,193 @@ class PhrasePatternDetectionTest(unittest.TestCase):
         findings = self._detect(masked, raw)
         self.assertEqual(len(findings), 1)
         self.assertEqual(findings[0].excerpt, "注」記録の前に障害の根本因を `特定` する。")
-        self.assertEqual(findings[0].detail.split("「")[1].split("」")[0], "根因")
+        self.assertEqual(findings[0].detail.split("「")[1].split("」")[0], "仮の根因")
 
     def test_2_文目に当たった語の_excerpt_は_2_文目の位置から切り出す(self) -> None:
         findings = self._detect("前置きの文を長めに書いておく。次の文で障害の根因を見る。")
         self.assertEqual([f.excerpt for f in findings], ["おく。次の文で障害の根因を見る。"])
 
     def test_info_の語は補足を添える(self) -> None:
-        with unittest.mock.patch.object(lint, "FORBIDDEN_PHRASES_WEAK_SIGNAL", {"根因"}), unittest.mock.patch.object(
-            lint, "PHRASE_NOTES", {"根因": "仮の補足"}
+        with unittest.mock.patch.object(lint, "FORBIDDEN_PHRASES_WEAK_SIGNAL", {"仮の根因"}), unittest.mock.patch.object(
+            lint, "PHRASE_NOTES", {"仮の根因": "仮の補足"}
         ):
             findings = self._detect("障害の根因を特定する。")
         self.assertEqual([f.severity for f in findings], ["info"])
-        self.assertEqual(findings[0].detail, "NG/OK カタログの語ヒット: 「根因」（仮の補足）")
+        self.assertEqual(findings[0].detail, "NG/OK カタログの語ヒット: 「仮の根因」（仮の補足）")
+
+
+# yomiyasu 由来の pattern の語の例文。上流 yomiyasu c49d5f1 の tests/ の同じ規則の例文を含む。
+YOMIYASU_PATTERN_DETECTS = [
+    ("背景実行", "ジョブを背景で実行する。"),
+    ("背景実行", "テストは背景実行にして、終わったらログを確かめます。"),
+    ("背景実行", "ビルドを背景で走らせて、そのあいだに設定を見直します。"),
+    ("背景実行", "背景ジョブの数を、夜だけ減らします。"),
+    ("背景実行", "背景タスクが終わるまで、画面を閉じないでください。"),
+    ("基準線", "性能の基準線を取る。"),
+    ("基準線", "前回の計測を基準線にして、処理時間の増減を比べます。"),
+    ("基準線", "前回のベンチマークを基準線にします。"),
+    ("時間窓", "直近 5 分の時間窓で集計する。"),
+    ("時間窓", "直近10分の時間窓で、エラーの件数を数えます。"),
+    ("根因", "障害の根因を調べる。"),
+    ("根因", "障害の根因は、設定ファイルを読む順番でした。"),
+    ("生成器", "乱数の生成器を差し替える。"),
+    ("生成器", "設定の生成器を直したので、出力の YAML も作り直します。"),
+    ("見張り", "CI の見張りが失敗を知らせる。"),
+    ("見張り", "CI の見張りが、失敗したジョブを Slack に知らせます。"),
+    ("見張り", "見張りのプロセスは、5分ごとに起きます。"),
+    ("台本", "移行の台本を実行する。"),
+    ("台本", "移行の台本を実行する前に、手元の環境で一度流します。"),
+    ("台本", "台本を実行すると、古い表が消えます。"),
+    ("版", "今回の版では不具合を直した。"),
+    ("版", "直した版を、明日の朝に配ります。"),
+    ("版", "同じ版のスクリプトを同じフォルダに置いてください。"),
+    ("版", "版ごとに、変更点を一覧にまとめています。"),
+    ("版", "版の文字列は、package.json から読みます。"),
+    ("版", "次の版（3.1）で、古い設定を外します。"),
+    ("版", "Python の版によって、結果が変わります。"),
+    ("頭", "一覧の頭を見る。"),
+    ("頭", "頭の3行を読む。"),
+    ("頭", "出力の頭の2行だけを見ます。"),
+    ("頭", "PR の頭から ZIP を作って確かめます。"),
+    ("頭", "ログの頭に、日付を付けます。"),
+    ("印", "lint の印を見る。"),
+    ("印", "lint は、この文に印をつけます。"),
+    ("印", "検証に通らなかった行には印をつけて、ログに残します。"),
+    ("印", "diff の印が消えた文を見直します。"),
+    ("題", "PR の題を短くする。"),
+    ("題", "PR の題には、変更した画面の名前を書いてください。"),
+    ("題", "コミットの題は、50字以内にしてください。"),
+    ("見立てです", "原因は設定の誤りという見立てです。"),
+    ("見立てです", "今回の結果は、市場が回復に向かうという見立てです。"),
+    ("見立てです", "今回の数字は、売上が持ち直すとの見立てだ。"),
+    ("潜む", "設定に潜むリスクを洗い出す。"),
+    ("潜む", "この設計は、運用時にリスクが潜む構造です。"),
+    ("潜む", "この手順には、更新のたびに問題が潜んでいます。"),
+    ("潜む", "Facebookに潜む各種のリスクをまとめた。"),
+    ("が招く", "油断が招く失敗がある。"),
+    ("が招く", "放置すると、深刻な事態が招く危機に直面します。"),
+    ("が招く", "社会が招く結果を考えます。"),
+    ("欠かせない存在", "今や開発に欠かせない存在だ。"),
+    ("欠かせない存在", "クラウドは欠かせない存在となっています。"),
+    ("という挙動を排除", "二重送信という挙動を防止する。"),
+    ("という挙動を排除", "過去の記憶の改ざんという挙動を排除する。"),
+    ("多岐にわたる", "対象は多岐にわたる。"),
+    ("多岐にわたる", "確かめる項目は多岐に渡り、一日では終わりません。"),
+    ("多岐にわたる", "相談の内容は多岐にわたっていました。"),
+    ("多岐にわたる", "- 取り組むべき課題は多岐にわたります。"),
+    ("が求められている", "迅速な対応が求められている。"),
+    ("が求められている", "窓口には、早い返事が求められており、人を増やします。"),
+    ("が求められている", "新しい窓口には、短い待ち時間が求められていた。"),
+    ("レベルの", "リポジトリレベルの設定を置く。"),
+    ("レベルの", "リポジトリレベルのコンテキストファイルを用意します。"),
+    ("レベルの", "組織レベルの方針を決めます。"),
+    ("前提が崩れる", "前提が崩れる。"),
+    ("前提が崩れる", "移行で基盤も崩れた。"),
+    ("前提が崩れる", "新しい料金表では、この前提が崩れています。"),
+    ("前提が崩れる", "古い基盤が崩れつつあります。"),
+]
+YOMIYASU_PATTERN_KEEPS = [
+    "背景と目的を書く。",
+    "写真の背景で、子どもたちが遊んでいます。",
+    "背景で回る観覧車がきれいでした。",
+    "背景処理の画像を、ファイルに保存します。",
+    "地図の基準線を引く。",
+    "前回の計測を基準線にします。",
+    "グラフの基準線を、データに合わせて引き直しました。",
+    "打ち上げの時間窓が開く。",
+    "この10分の時間窓を使います。",
+    "発症から4.5時間という時間窓があります。",
+    "障害の真根因を調べる。",
+    "コード生成器を使う。",
+    "オゾン生成器を部屋に置きました。",
+    "見張りに立つ。",
+    "門の見張りが知らせます。",
+    "警備会社の見張りが、防犯カメラの画面を確かめます。",
+    "舞台の台本を読む。",
+    "撮影は台本に沿って、カメラを回します。",
+    "台本を実行委員会へ渡します。",
+    "第 2 版で直した。",
+    "書籍の版を重ねた。",
+    "日本語吹き替え版を、来月から配信します。",
+    "同じ版の写真集を、二冊持っている。",
+    "Mac 版と Windows 版の違いを書きます。",
+    "頭が痛い。",
+    "曲の頭から、もう一度弾いてください。",
+    "列の頭に並んでいた人が、最初に入場した。",
+    "目印を付ける。",
+    "地図の印を見る。",
+    "右上の×印をクリックすると閉じます。",
+    "書類の右下に印を押してから、出力した控えを渡す。",
+    "PR の題名を決める。",
+    "作文の題を考える。",
+    "自己PRの題は、学生時代に力を入れたことにしました。",
+    "専門家は回復するという見立てだ。",
+    "田中さんの見立てです。",
+    "犯行は計画的だったというのが検察の見立てだ。",
+    "医師の見立てでは、軽い風邪です。",
+    "草むらに潜む動物を調べる。",
+    "物陰に潜む危険な動物に気をつけてください。",
+    "社長が招く客を出迎える。",
+    "誤解を招く表現を避ける。",
+    "県が招く講師による研修会を開きます。",
+    "開発に欠かせない存在だ。",
+    "今や誰もがスマホを持っています。",
+    "二重送信を防止する。",
+    "外れた値を渡すと、エラーという挙動になります。",
+    "分岐が多岐になる。",
+    "課題は多岐です。",
+    "対応が求められる。",
+    "対応を求められている。",
+    "担当者は、上司から早い返事を求められています。",
+    "OS レベルの処理を書く。",
+    "プロジェクトレベルの高さを測る。",
+    "組織レベルの高い会社です。",
+    "地盤が崩れる。",
+    "午後から天気が崩れます。",
+    "前提の理解がずれていると、全体の設計が崩れやすくなります。",
+    "「今回の版では」と書く。",
+    "「油断が招く失敗」と書く。",
+    "『前提が崩れる』と書く。",
+]
+
+
+class YomiyasuPatternPhraseTest(unittest.TestCase):
+    """yomiyasu 由来の pattern の語は、上流と同じ条件で 1 文に 1 件だけ検出され、字義どおりの用法と「」の中は検出しない。"""
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        phrases = json.loads(CATALOG_PATH.read_text(encoding="utf-8"))["phrases"]
+        cls.pattern_ngs = {p["ng"] for p in phrases if "pattern" in p}
+        cls.yomiyasu_pattern = [p for p in phrases if "pattern" in p and "yomiyasu" in p.get("note", "")]
+
+    def _pattern_hits(self, sentence: str) -> list[tuple[str, str]]:
+        return [
+            (f.detail.split("「")[1].split("」")[0], f.severity)
+            for f in lint.detect_forbidden_phrases([(1, sentence)])
+            if f.detail.split("「")[1].split("」")[0] in self.pattern_ngs
+        ]
+
+    def test_例文で語ごとに_1_件を_info_で検出する(self) -> None:
+        for ng, sentence in YOMIYASU_PATTERN_DETECTS:
+            with self.subTest(sentence=sentence):
+                self.assertEqual(self._pattern_hits(sentence), [(ng, "info")])
+
+    def test_字義どおりの用法とカギ括弧の中は検出しない(self) -> None:
+        for sentence in YOMIYASU_PATTERN_KEEPS:
+            with self.subTest(sentence=sentence):
+                self.assertEqual(self._pattern_hits(sentence), [])
+
+    def test_yomiyasu_由来の_pattern_の語はどれも検出の例文を持つ(self) -> None:
+        self.assertEqual(
+            {p["ng"] for p in self.yomiyasu_pattern}, {ng for ng, _ in YOMIYASU_PATTERN_DETECTS}
+        )
+        self.assertEqual(len(self.yomiyasu_pattern), 20)
+
+    def test_言い換え例が文字列の語に当たらない(self) -> None:
+        for p in self.yomiyasu_pattern:
+            for ok in p["ok"]:
+                with self.subTest(ng=p["ng"], ok=ok):
+                    self.assertEqual(lint.detect_forbidden_phrases([(1, ok)]), [])
 
 
 class FillerPhraseTest(unittest.TestCase):

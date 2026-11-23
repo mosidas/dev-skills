@@ -22,8 +22,10 @@ import helpers
 HOOKS = helpers.REPO_ROOT / "hooks"
 
 sys.path.insert(0, str(HOOKS))
+sys.path.insert(0, str(helpers.REPO_ROOT / "skills" / "write-doc" / "scripts"))
 
 import inspect_lib as lib  # noqa: E402
+import lint  # noqa: E402
 
 INSPECT_WRITE = HOOKS / "inspect_write.py"
 INSPECT_STOP = HOOKS / "inspect_stop.py"
@@ -311,6 +313,18 @@ class PhraseOkayTest(LibTestCase):
     def test_検出行に_OK_例を添える(self) -> None:
         line = lib._finding_line(self.FINDING, {"重要なのは": ["a", "b"]})
         self.assertIn("→ OK: a / b", line)
+
+    def test_pattern_の語の検出に実物のカタログの_OK_例を添える(self) -> None:
+        with mock.patch.dict(os.environ, {lib.PLUGIN_ROOT_ENV: str(helpers.REPO_ROOT)}):
+            okays = lib.load_phrase_okays()
+        for sentence, okay in (
+            ("今回の版では不具合を直した。", "→ OK: バージョン("),
+            ("一覧の頭を見る。", "→ OK: 先頭・冒頭"),
+            ("油断が招く失敗がある。", "→ OK: どの事象が生じて誰が困るかを書く"),
+        ):
+            with self.subTest(sentence=sentence):
+                (finding,) = lint.detect_forbidden_phrases([(1, sentence)])
+                self.assertIn(okay, lib._finding_line(finding.to_dict(), okays))
 
     def test_語を特定できない検出には添えない(self) -> None:
         finding = dict(self.FINDING, detail="集計検出")

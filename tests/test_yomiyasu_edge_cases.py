@@ -55,7 +55,8 @@ class YomiyasuEdgeCasesTest(unittest.TestCase):
             p["ng"] for p in lint.PHRASE_CATALOG["phrases"] if "yomiyasu" in p.get("note", "")
         }
         self.assertTrue(yomiyasu_ngs)
-        dict_forms = dict(lint.FORBIDDEN_PHRASE_VARIANTS)
+        # pattern の語は detail に表示名(ng)をそのまま出す
+        dict_forms = {**dict(lint.FORBIDDEN_PHRASE_VARIANTS), **{p.ng: p.ng for p in lint.FORBIDDEN_PHRASE_PATTERNS}}
         for path in self.files:
             with self.subTest(file=path.name):
                 hits = [
