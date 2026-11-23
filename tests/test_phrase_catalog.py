@@ -8,8 +8,12 @@ Python 3 標準ライブラリのみを使用する(lint.py の import は sudac
 from __future__ import annotations
 
 import json
+import re
 import sys
+import tempfile
 import unittest
+import unittest.mock
+from pathlib import Path
 
 import helpers
 
@@ -26,6 +30,8 @@ class PhraseCatalogTest(unittest.TestCase):
     def setUpClass(cls) -> None:
         cls.catalog = json.loads(CATALOG_PATH.read_text(encoding="utf-8"))
         cls.phrases = cls.catalog["phrases"]
+        cls.string_phrases = [p for p in cls.phrases if "pattern" not in p]
+        cls.pattern_phrases = [p for p in cls.phrases if "pattern" in p]
 
     def test_全エントリが_NG_OK_対と型と_severity_を持つ(self) -> None:
         types = self.catalog["types"]
@@ -45,15 +51,15 @@ class PhraseCatalogTest(unittest.TestCase):
         self.assertEqual(len(ngs), len(set(ngs)))
 
     def test_語が他の語を包含しない(self) -> None:
-        """部分文字列の包含は同一行での二重検出を生むため禁止する。"""
-        ngs = [p["ng"] for p in self.phrases]
+        """部分文字列の包含は同一行での二重検出を生むため禁止する。pattern の語の ng は表示名で照合しない。"""
+        ngs = [p["ng"] for p in self.string_phrases]
         overlaps = [(a, b) for a in ngs for b in ngs if a != b and a in b]
         self.assertEqual(overlaps, [])
 
     def test_活用形が文字列で他の照合文字列を包含しない(self) -> None:
         """forms(活用形)も ng と同列に照合されるため、包含の禁止を全照合文字列に広げる。"""
         variants = []
-        for p in self.phrases:
+        for p in self.string_phrases:
             forms = p.get("forms", [])
             self.assertIsInstance(forms, list, p["ng"])
             for form in forms:
@@ -62,6 +68,20 @@ class PhraseCatalogTest(unittest.TestCase):
             variants.extend([p["ng"], *forms])
         overlaps = [(a, b) for a in variants for b in variants if a != b and a in b]
         self.assertEqual(overlaps, [])
+
+    def test_pattern_の語は_forms_を持たず正規表現が読める(self) -> None:
+        for p in self.pattern_phrases:
+            with self.subTest(ng=p["ng"]):
+                self.assertNotIn("forms", p)
+                self.assertIsInstance(p["pattern"], str)
+                re.compile(p["pattern"])
+                for key in ("context", "exclude", "exclude_before"):
+                    if key in p:
+                        self.assertIsInstance(p[key], str, key)
+                        re.compile(p[key])
+        string_variants = {v for v, _ in lint.FORBIDDEN_PHRASE_VARIANTS}
+        for p in self.pattern_phrases:
+            self.assertNotIn(p["ng"], string_variants, "pattern の語は文字列で照合しない")
 
     def test_削除済みの語が検出語に残っていない(self) -> None:
         ngs = {p["ng"] for p in self.phrases}
@@ -215,6 +235,102 @@ class PhraseCatalogTest(unittest.TestCase):
     def test_severity_が_info_か_warn_に限られる(self) -> None:
         for entry in self.phrases:
             self.assertIn(entry["severity"], ("info", "warn"), entry["ng"])
+
+
+def _write_catalog(directory: str, phrases: list[dict]) -> Path:
+    path = Path(directory) / "catalog.json"
+    path.write_text(json.dumps({"phrases": phrases}, ensure_ascii=False), encoding="utf-8")
+    return path
+
+
+_STRING_ENTRY = {"ng": "落とし込む", "type": "imprecise", "severity": "info", "ok": ["反映する"]}
+_PATTERN_ENTRY = {
+    "ng": "根因",
+    "pattern": "根因",
+    "context": "障害",
+    "type": "pseudo_concrete",
+    "severity": "info",
+    "ok": ["原因"],
+}
+
+
+class PhraseCatalogLoadTest(unittest.TestCase):
+    def test_pattern_の語を読み込んで正規表現にする(self) -> None:
+        with tempfile.TemporaryDirectory() as d:
+            _, patterns = lint._load_phrase_catalog(_write_catalog(d, [_STRING_ENTRY, _PATTERN_ENTRY]))
+        self.assertEqual([p.ng for p in patterns], ["根因"])
+        self.assertTrue(patterns[0].pattern.search("障害の根因"))
+        self.assertTrue(patterns[0].context.search("障害の根因"))
+        self.assertIsNone(patterns[0].exclude)
+        self.assertIsNone(patterns[0].exclude_before)
+
+    def test_pattern_と_forms_の併記は読み込みで落ちる(self) -> None:
+        with tempfile.TemporaryDirectory() as d:
+            path = _write_catalog(d, [{**_PATTERN_ENTRY, "forms": ["根因で"]}])
+            with self.assertRaises(ValueError):
+                lint._load_phrase_catalog(path)
+
+    def test_読めない正規表現は読み込みで落ちる(self) -> None:
+        for key in ("pattern", "context", "exclude", "exclude_before"):
+            for value in ("(", 1):
+                with self.subTest(key=key, value=value), tempfile.TemporaryDirectory() as d:
+                    path = _write_catalog(d, [{**_PATTERN_ENTRY, key: value}])
+                    with self.assertRaises(ValueError):
+                        lint._load_phrase_catalog(path)
+
+
+class PhrasePatternDetectionTest(unittest.TestCase):
+    """pattern の語を文ごとに照合する。カタログの語に当たらない例文で、仮の語だけを差し替えて確かめる。"""
+
+    def _detect(self, line: str, raw_line: str | None = None) -> list:
+        pattern = lint.PhrasePattern(
+            ng="根因",
+            pattern=re.compile("根因|根本因"),
+            context=re.compile("障害|原因"),
+            exclude=re.compile("植物"),
+            exclude_before=re.compile("[一-龥]$"),
+        )
+        raw = None if raw_line is None else {1: raw_line}
+        with unittest.mock.patch.object(lint, "FORBIDDEN_PHRASE_PATTERNS", [pattern]):
+            return lint.detect_forbidden_phrases([(1, line)], raw)
+
+    def test_条件を満たす文で検出する(self) -> None:
+        findings = self._detect("障害の根因を特定する。")
+        self.assertEqual(len(findings), 1)
+        self.assertEqual(findings[0].category, "forbidden_phrase")
+        self.assertEqual(findings[0].severity, "warn")
+        self.assertEqual(findings[0].detail, "NG/OK カタログの語ヒット: 「根因」")
+
+    def test_条件を外れる文では検出しない(self) -> None:
+        for line in (
+            "根因を特定する。",
+            "障害と植物の根因を比べる。",
+            "障害の真根因を特定する。",
+            "障害の「根因」を特定する。",
+            "根因を特定する。障害は別に記録する。",
+        ):
+            with self.subTest(line=line):
+                self.assertEqual(self._detect(line), [])
+
+    def test_1_文に_1_件で_1_行の_2_文は_2_件(self) -> None:
+        self.assertEqual(len(self._detect("障害の根因と根因を特定する。")), 1)
+        self.assertEqual(len(self._detect("障害の根因を特定する。原因の根因も特定する。")), 2)
+
+    def test_excerpt_は原文の行から前後_10_字を切り出し_detail_の語は表示名(self) -> None:
+        raw = "「注」記録の前に障害の根本因を `特定` する。次に手順を記録する。"
+        masked = "「注」記録の前に障害の根本因を      する。次に手順を記録する。"
+        findings = self._detect(masked, raw)
+        self.assertEqual(len(findings), 1)
+        self.assertEqual(findings[0].excerpt, "注」記録の前に障害の根本因を `特定` する。")
+        self.assertEqual(findings[0].detail.split("「")[1].split("」")[0], "根因")
+
+    def test_info_の語は補足を添える(self) -> None:
+        with unittest.mock.patch.object(lint, "FORBIDDEN_PHRASES_WEAK_SIGNAL", {"根因"}), unittest.mock.patch.object(
+            lint, "PHRASE_NOTES", {"根因": "仮の補足"}
+        ):
+            findings = self._detect("障害の根因を特定する。")
+        self.assertEqual([f.severity for f in findings], ["info"])
+        self.assertEqual(findings[0].detail, "NG/OK カタログの語ヒット: 「根因」（仮の補足）")
 
 
 class FillerPhraseTest(unittest.TestCase):

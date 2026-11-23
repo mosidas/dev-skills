@@ -77,20 +77,49 @@ from textcore import (
 # ほぼ無い比喩語(壊れる・静かに・黙って・沈黙・逃がす。2026-10-11)を warn と
 # する。2026-07 のコーパス校正(corpus/reports/archive/deep-analysis.md §4a)で
 # 削除した「最後に」「まさに」はカタログの removed に記録してある。
+#
+# pattern を持つ語は、上流の lint が前後の語・同じ文の語で字義どおりの用法を外す条件を
+# 正規表現に写したものである。文ごとに照合し、「」『』の中は見ない。
 # ---------------------------------------------------------------------------
 PHRASE_CATALOG_PATH = Path(__file__).resolve().parent / "forbidden_phrases.json"
 
 
-def _load_phrase_catalog(path: Path = PHRASE_CATALOG_PATH) -> dict:
-    """NG/OK カタログを読む。配布物の一部であり、欠落・破損は例外で早期に落とす。"""
+@dataclasses.dataclass(frozen=True)
+class PhrasePattern:
+    """カタログの pattern の語。ng は表示名で、照合には pattern 以下の正規表現を使う。"""
+
+    ng: str
+    pattern: re.Pattern
+    context: re.Pattern | None
+    exclude: re.Pattern | None
+    exclude_before: re.Pattern | None
+
+
+def _compile_phrase_pattern(path: Path, entry: dict) -> PhrasePattern:
+    if "forms" in entry:
+        raise ValueError(f"{path} の「{entry['ng']}」は pattern と forms を併記している")
+    try:
+        compiled = {
+            key: re.compile(entry[key]) if key in entry else None
+            for key in ("pattern", "context", "exclude", "exclude_before")
+        }
+    except (re.error, TypeError) as e:
+        raise ValueError(f"{path} の「{entry['ng']}」の正規表現が読めない: {e}") from e
+    return PhrasePattern(ng=entry["ng"], **compiled)
+
+
+def _load_phrase_catalog(path: Path = PHRASE_CATALOG_PATH) -> tuple[dict, list[PhrasePattern]]:
+    """NG/OK カタログを読み、カタログと pattern の語を返す。配布物の一部であり、
+    欠落・破損は例外で早期に落とす。"""
     catalog = json.loads(path.read_text(encoding="utf-8"))
     phrases = catalog.get("phrases")
     if not isinstance(phrases, list) or not phrases:
         raise ValueError(f"{path} の phrases が空または不正")
-    return catalog
+    patterns = [_compile_phrase_pattern(path, p) for p in phrases if "pattern" in p]
+    return catalog, patterns
 
 
-PHRASE_CATALOG: dict = _load_phrase_catalog()
+PHRASE_CATALOG, FORBIDDEN_PHRASE_PATTERNS = _load_phrase_catalog()
 FORBIDDEN_PHRASES: list[str] = [p["ng"] for p in PHRASE_CATALOG["phrases"]]
 # severity=info の語(正当な用法があり、文脈判断を要する語)。
 FORBIDDEN_PHRASES_WEAK_SIGNAL: set[str] = {
@@ -105,6 +134,7 @@ PHRASE_NOTES: dict[str, str] = {
 FORBIDDEN_PHRASE_VARIANTS: list[tuple[str, str]] = [
     (variant, p["ng"])
     for p in PHRASE_CATALOG["phrases"]
+    if "pattern" not in p
     for variant in [p["ng"], *p.get("forms", [])]
 ]
 
@@ -647,6 +677,50 @@ def _phrase_positions(line: str, phrase: str) -> list[int]:
     return out
 
 
+# 上流 yomiyasu の lint の文の区切り。pattern の語は 1 文に 1 件まで出す。
+_PHRASE_SENTENCE_RE = re.compile(r"[^。．！？!?|｜]+[。．！？!?]*")
+
+
+def _phrase_finding(no: int, line: str, raw_line: str, idx: int, length: int, detail_phrase: str, dict_form: str) -> Finding:
+    start = max(0, idx - 10)
+    end = idx + length + 10
+    excerpt = raw_line[start:end] if len(raw_line) >= end else line[start:end]
+    is_weak_signal = dict_form in FORBIDDEN_PHRASES_WEAK_SIGNAL
+    detail = f"NG/OK カタログの語ヒット: 「{detail_phrase}」"
+    if detail_phrase != dict_form:
+        detail += f"（辞書形「{dict_form}」の活用形）"
+    if is_weak_signal and dict_form in PHRASE_NOTES:
+        detail += f"（{PHRASE_NOTES[dict_form]}）"
+    return Finding(
+        line=no,
+        category="forbidden_phrase",
+        excerpt=excerpt.strip(),
+        severity="info" if is_weak_signal else "warn",
+        detail=detail,
+    )
+
+
+def _pattern_positions(line: str, phrase: PhrasePattern) -> list[tuple[int, int]]:
+    """pattern の語が当たった (行の中の位置, 長さ) を文ごとに 1 件まで返す。
+    「」『』の中は同じ長さの空白に伏せて見ない(位置は原文の行と揃う)。"""
+    out = []
+    unquoted = _QUOTED_RE.sub(lambda m: " " * len(m.group()), line)
+    for s in _PHRASE_SENTENCE_RE.finditer(unquoted):
+        sentence = s.group().strip()
+        offset = s.start() + len(s.group()) - len(s.group().lstrip())
+        m = phrase.pattern.search(sentence)
+        if m is None:
+            continue
+        if phrase.context is not None and not phrase.context.search(sentence):
+            continue
+        if phrase.exclude is not None and phrase.exclude.search(sentence):
+            continue
+        if phrase.exclude_before is not None and phrase.exclude_before.search(sentence[: m.start()]):
+            continue
+        out.append((offset + m.start(), len(m.group())))
+    return out
+
+
 def detect_forbidden_phrases(
     lines: list[tuple[int, str]], raw_lines_by_no: dict[int, str] | None = None
 ) -> list[Finding]:
@@ -658,25 +732,10 @@ def detect_forbidden_phrases(
         raw_line = _raw_or_masked(raw_lines_by_no, no, line)
         for phrase, dict_form in FORBIDDEN_PHRASE_VARIANTS:
             for idx in _phrase_positions(line, phrase):
-                start = max(0, idx - 10)
-                end = idx + len(phrase) + 10
-                excerpt = raw_line[start:end] if len(raw_line) >= end else line[start:end]
-                is_weak_signal = dict_form in FORBIDDEN_PHRASES_WEAK_SIGNAL
-                severity = "info" if is_weak_signal else "warn"
-                detail = f"NG/OK カタログの語ヒット: 「{phrase}」"
-                if phrase != dict_form:
-                    detail += f"（辞書形「{dict_form}」の活用形）"
-                if is_weak_signal and dict_form in PHRASE_NOTES:
-                    detail += f"（{PHRASE_NOTES[dict_form]}）"
-                findings.append(
-                    Finding(
-                        line=no,
-                        category="forbidden_phrase",
-                        excerpt=excerpt.strip(),
-                        severity=severity,
-                        detail=detail,
-                    )
-                )
+                findings.append(_phrase_finding(no, line, raw_line, idx, len(phrase), phrase, dict_form))
+        for pattern in FORBIDDEN_PHRASE_PATTERNS:
+            for idx, length in _pattern_positions(line, pattern):
+                findings.append(_phrase_finding(no, line, raw_line, idx, length, pattern.ng, pattern.ng))
     return findings
 
 
