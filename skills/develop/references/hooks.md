@@ -50,7 +50,7 @@ npm test
 
 ## 4. シークレット検知・依存監査・SAST
 
-要件の品質がプロダクトのとき、hook にシークレット検知と依存監査を追加する。pre-commit で betterleaks、pre-push で osv-scanner を実行する。エコシステム標準の監査(`npm audit`・`cargo audit`・`pip-audit` など)が既に入っていればそれを使い、osv-scanner を重ねて入れない。依存が 1 つも無いリポジトリ(マニフェストやロックファイルが無い、または依存の記載が 0 件)では osv-scanner を入れない。監査の対象が無いと終了コード 128 で失敗し、push が止まる。オフラインでも API に届かず、終了コード 129 で止まる。
+要件の品質がプロダクトのとき、hook にシークレット検知と依存監査を追加する。pre-commit で betterleaks、pre-push で osv-scanner を実行する。エコシステム標準の監査(`npm audit`・`cargo audit`・`pip-audit` など)が既に入っていればそれを使い、osv-scanner を重ねて入れない。依存が 1 つも無いリポジトリでは osv-scanner を入れない。依存が 1 つも無いリポジトリとはマニフェストやロックファイルが無いか依存の記載が 0 件のリポジトリである。監査の対象が無いと終了コード 128 で失敗し、push が止まる。オフラインでも API に届かず、終了コード 129 で止まる。
 
 ```sh
 brew install betterleaks osv-scanner   # macOS。ほかは https://github.com/betterleaks/betterleaks と https://google.github.io/osv-scanner/installation/
@@ -119,7 +119,7 @@ jobs:
 
 betterleaks のバイナリの版は dependabot の更新の対象外である。版は手で更新する。更新するときは、リリースの tar.gz の SHA-256 を `sha256sum` で求めて `SHA256` に書く。
 
-品質がプロダクトのとき、CI に SAST を入れる。public リポジトリでは CodeQL(GitHub の code scanning。public は無料)を使い、private リポジトリでは semgrep を使う。CodeQL の job の例を次に示す。`languages:` にはリポジトリの言語を書く。
+品質がプロダクトのとき、CI に SAST を入れる。public リポジトリでは CodeQL を使う。CodeQL は GitHub の code scanning である。public リポジトリなら無料で使える。private リポジトリでは semgrep を使う。CodeQL の job の例を次に示す。`languages:` にはリポジトリの言語を書く。
 
 ```yaml
 jobs:

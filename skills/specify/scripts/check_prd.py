@@ -6,7 +6,10 @@
 問題が無ければ何も出力せずに exit 0 で終わる。問題があれば 1 件を 1 行で
 `<file>:<line>: <問題> → <直し方>` の形で標準出力に書き、exit 1 で終わる。
 ファイルを読めないときは標準エラーに書いて exit 2 で終わる。
-節の見出しは雛形から読む。コードブロックとインラインコードの中は検査しない。
+検査するのは節の並び・要求ごとの 4 行と受け入れ条件・依存と順序の表・
+未決事項の決め方・コメントと未記入の残りである。
+節の見出しは雛形から読む。コードブロックの中は検査しない。
+インラインコードの中はコメントと未記入として扱わない。
 標準ライブラリのみで動く。
 """
 
@@ -24,6 +27,8 @@ REQ_HEADING = re.compile(r"^### (R\d+)\.")
 PLACEHOLDER = re.compile(r"<(?=\S)[^<>\n]+(?<=\S)>")
 # 自動リンク(<https://...>)と HTML タグ(<br>・</summary>)は未記入として扱わない。
 NOT_PLACEHOLDER = re.compile(r"<(?:https?://|mailto:)[^<>]*>|</?[A-Za-z][A-Za-z0-9]*(?:\s[^<>]*)?/?>")
+DECISION_ITEM = re.compile(r"^\s+- 決め方:(.*)$")
+DECISION_VALUE = re.compile(r"(`?)(事実|本人の判断)\1")
 FENCE = re.compile(r"^ {0,3}(`{3,}|~{3,})")
 INLINE_CODE = re.compile(r"(`+)[^`]*?\1")
 
@@ -140,6 +145,23 @@ def check(text: str, template: str) -> list[tuple[int, str]]:
         for rid in req_ids:
             if rid not in row_index:
                 problems.append((table_line, f"{rid} が依存と順序の表に無い → 表に {rid} の行を加える"))
+
+    # 未決事項の決め方
+    questions: list[tuple[int, list[str]]] = []
+    for n, line in body("7."):
+        if line.startswith("- "):
+            questions.append((n, []))
+        elif questions and line[:1].isspace():
+            questions[-1][1].append(line)
+    for n, sub in questions:
+        items = [m.group(1).strip() for s in sub if (m := DECISION_ITEM.match(s))]
+        valid = [v for v in items if DECISION_VALUE.fullmatch(v)]
+        if not items:
+            problems.append((n, "未決事項に「決め方: 事実」か「決め方: 本人の判断」の箇条が無い → 問いの直下に字下げした「- 決め方: 事実」か「- 決め方: 本人の判断」の箇条を書く"))
+        if len(valid) < len(items):
+            problems.append((n, "未決事項の決め方の値が事実でも本人の判断でもない → 値を「事実」か「本人の判断」に直す"))
+        if len(valid) > 1:
+            problems.append((n, "未決事項の決め方の箇条が 2 件以上ある → 問いごとに「決め方: 事実」か「決め方: 本人の判断」の箇条を 1 つだけ残す"))
 
     # 雛形のコメントと未記入
     in_comment = False
