@@ -36,7 +36,7 @@ description: HTML で配布する説明資料(図・表・切り替えの UI を
 - HTML の生成: 本文の Markdown と図の SVG から HTML を組み立てるスクリプトを書く。スクリプトは、本文を変えたときに再実行できる形にし、HTML を手で直さない。
   - 見た目は design-ui 2.(モードの選択)の閲読モードに従う。トークンは design-ui 4.(スケール)から選び、`../design-ui/references/anti-ai.md` と照合する。トークンには、本文の背景と別に、表と折りたたみの面の色を 1 つ含める(`format/html.md` 2. の表の面)。
   - CSS はインラインで書き、外部の資源(CDN・Web フォント)を読み込まない。配布先でネットワークが無くても読めるようにする。
-  - SVG は HTML にインラインで埋め込む。複数の図を埋め込むときは、`../draw-diagram/references/svg.md` 8. の接頭辞の規則に従う。id と class に図ごとの接頭辞を付け、要素型セレクタと `:root` を使わない。`svg.md` 8. の雛形の HTML は使わず、本スキルの生成スクリプトで代える。
+  - SVG は HTML にインラインで埋め込む。複数の図を埋め込むときは、`../draw-diagram/references/svg.md` 8. の接頭辞の規則に従う。このときは id と class に図ごとの接頭辞を付け、要素型セレクタと `:root` を使わない。`svg.md` 8. の雛形の HTML は使わず、本スキルの生成スクリプトで代える。
   - JavaScript は、切り替えの UI(タブ・折りたたみ)に限って使う。本文の表示に JavaScript を要求しない。JavaScript が動かない環境でも、すべての本文と図が縦に並んで読める形にする。
 - 図の検査: `../draw-diagram/scripts/render.py` で `.mmd` と SVG の対応を照合する。
 - スクリプトの検査: 生成スクリプトを `node --check <script>`(Node.js)か `python3 -m py_compile <script>`(Python)で構文検査する。生成した HTML の `<script>` の中身も、ファイルに抜き出して `node --check` にかける。生成スクリプトが通っても、埋め込んだ JavaScript の構文誤りは検出されない。
@@ -51,6 +51,6 @@ description: HTML で配布する説明資料(図・表・切り替えの UI を
 | `../draw-diagram/` | SKILL.md と references の全部(図の判断・工程・`.mmd`・SVG・`render.py`)。`references/svg.md` 8. は接頭辞の規則を参照する | `references/svg.md` 8. の雛形の HTML |
 | `../design-ui/` | 閲読モード(SKILL.md 2.)、スケール(4.)、階層と強調(5.)、構造は情報(6.)、`references/anti-ai.md`、`references/checklist.md` の共通と Web の節、`references/session.md` 3.1・3.2・3.4・3.5 | 操作・説得・体験のモード、`references/text.md`、`references/native.md`、`references/brief.md`、`references/session.md` 3.3 |
 
-- design-ui の `references/text.md` は利用者向けの敬体の文言である。資料の本文は write-doc の常体である。
+- design-ui の `references/text.md` は利用者向けの敬体の文言を定める。資料の本文は write-doc の常体である。
 - 資料の中に画面のモックを載せるときも、モックの作り方は design-ui に従う。
 - 往復での指摘は、retro の「本人の指摘」に含めない(`../design-ui/references/session.md` 6.)。実装の後に受けた見た目の指摘は含める。
