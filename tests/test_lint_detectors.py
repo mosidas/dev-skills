@@ -249,15 +249,23 @@ class BoldDensityTest(unittest.TestCase):
 
 
 class _Morpheme:
-    def __init__(self, surface: str, pos: tuple[str, ...]) -> None:
+    def __init__(self, surface: str, pos: tuple[str, ...], begin: int = 0, end: int = 0) -> None:
         self._surface = surface
         self._pos = pos
+        self._begin = begin
+        self._end = end
 
     def surface(self) -> str:
         return self._surface
 
     def part_of_speech(self) -> tuple[str, ...]:
         return self._pos
+
+    def begin(self) -> int:
+        return self._begin
+
+    def end(self) -> int:
+        return self._end
 
 
 class LeadRepetitionTest(unittest.TestCase):
@@ -282,6 +290,56 @@ class LeadRepetitionTest(unittest.TestCase):
 
     def test_数詞で始まる文は数えない(self) -> None:
         self.assertEqual(self.leads(_Morpheme("三", ("名詞", "数詞"))), [])
+
+
+class WagoNominalizationTest(unittest.TestCase):
+    def findings(self, *words: tuple[str, str]) -> list[lint.Finding]:
+        morphemes = []
+        pos = 0
+        for surface, first_pos in words:
+            morphemes.append(_Morpheme(surface, (first_pos, "*"), pos, pos + len(surface)))
+            pos += len(surface)
+        text = "".join(surface for surface, _ in words)
+        tokenized = [lint.TokenizedSentence(line=3, text=text, morphemes=morphemes, raw_text=text)]
+        return lint.detect_wago_nominalization(tokenized)
+
+    def test_名詞の和語が助詞の前にあれば検出する(self) -> None:
+        cases = [
+            (
+                [("表", "名詞"), ("の", "助詞"), ("段落", "名詞"), ("単位", "名詞"), ("の", "助詞"), ("確かめ", "名詞"), ("を", "助詞")],
+                "段落単位の確かめを",
+                "確認",
+            ),
+            ([("事実", "名詞"), ("の", "助詞"), ("確かめ", "名詞"), ("が", "助詞"), ("要る", "動詞")], "事実の確かめが", "確認"),
+            ([("知らせ", "名詞"), ("が", "助詞"), ("来る", "動詞")], "知らせが", "通知"),
+            ([("最後", "名詞"), ("に", "助詞"), ("確かめ", "名詞")], "最後に確かめ", "確認"),
+            ([("長さ", "名詞"), ("の", "助詞"), ("測り", "名詞"), ("の", "助詞"), ("結果", "名詞")], "長さの測りの", "測定"),
+            ([("原因", "名詞"), ("の", "助詞"), ("調べ", "名詞"), ("と", "助詞"), ("対策", "名詞")], "原因の調べと", "調査"),
+        ]
+        for words, excerpt, kango in cases:
+            with self.subTest(excerpt=excerpt):
+                found = self.findings(*words)
+                self.assertEqual(len(found), 1)
+                self.assertEqual(found[0].category, "wago_nominalization")
+                self.assertEqual(found[0].severity, "warn")
+                self.assertEqual(found[0].line, 3)
+                self.assertEqual(found[0].excerpt, excerpt)
+                self.assertIn(kango, found[0].detail)
+
+    def test_動詞_にの前_複合語_表に無い語は検出しない(self) -> None:
+        cases = [
+            [("値", "名詞"), ("を", "助詞"), ("確かめ", "動詞"), ("、", "補助記号"), ("直す", "動詞")],
+            [("調べ", "名詞"), ("に", "助詞"), ("行く", "動詞")],
+            [("確かめ", "名詞"), ("方", "接尾辞"), ("を", "助詞"), ("書く", "動詞")],
+            [("下調べ", "名詞"), ("を", "助詞"), ("する", "動詞")],
+        ]
+        for words in cases:
+            with self.subTest(text="".join(surface for surface, _ in words)):
+                self.assertEqual(self.findings(*words), [])
+
+    def test_重大カテゴリに入れない(self) -> None:
+        config = json.loads((helpers.REPO_ROOT / "hooks" / "inspection.config.json").read_text(encoding="utf-8"))
+        self.assertNotIn("wago_nominalization", {rule["category"] for rule in config["blocking"]})
 
 
 class IdentifierTest(unittest.TestCase):

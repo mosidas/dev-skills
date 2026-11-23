@@ -93,10 +93,10 @@ jobs:
         with:
           fetch-depth: 0               # betterleaks は履歴全体を走査する
           persist-credentials: false
-      # 公式の Action が無いため、リリースのバイナリを版と SHA-256 で固定する
+      # 公式の Action が無いため、リリースのバイナリをバージョンと SHA-256 で固定する
       - name: betterleaks
         env:
-          VERSION: 1.9.0               # 版を上げるときは VERSION と SHA256 を更新する
+          VERSION: 1.9.0               # バージョンを上げるときは VERSION と SHA256 を更新する
           SHA256: f8b185a39ffcece2a1ca82bf3a4e7435cd81963ffd16b7a9128daf75f35f6de7
         run: |
           curl -sSfLO "https://github.com/betterleaks/betterleaks/releases/download/v${VERSION}/betterleaks_${VERSION}_linux_x64.tar.gz"
@@ -117,7 +117,7 @@ jobs:
 
 例の `osv-scanner-reusable.yml` は push と schedule のトリガーで使う。`pull_request` のトリガーでは `osv-scanner-reusable-pr.yml` を使い、PR の差分で増えた脆弱性だけを報告させる。
 
-betterleaks のバイナリの版は dependabot の更新の対象外である。版は手で更新する。更新するときは、リリースの tar.gz の SHA-256 を `sha256sum` で求めて `SHA256` に書く。
+betterleaks のバイナリのバージョンは dependabot の更新の対象外である。バージョンは手で更新する。更新するときは、リリースの tar.gz の SHA-256 を `sha256sum` で求めて `SHA256` に書く。
 
 品質がプロダクトのとき、CI に SAST を入れる。public リポジトリでは CodeQL を使う。CodeQL は GitHub の code scanning である。public リポジトリなら無料で使える。private リポジトリでは semgrep を使う。CodeQL の job の例を次に示す。`languages:` にはリポジトリの言語を書く。
 
