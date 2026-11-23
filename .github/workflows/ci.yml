@@ -41,10 +41,10 @@ jobs:
         with:
           fetch-depth: 0               # betterleaks は履歴全体を走査する
           persist-credentials: false
-      # 公式の Action が無いため、リリースのバイナリを版と SHA-256 で固定する
+      # 公式の Action が無いため、リリースのバイナリをバージョンと SHA-256 で固定する
       - name: betterleaks
         env:
-          VERSION: 1.9.0               # 版を上げるときは VERSION と SHA256 を更新する
+          VERSION: 1.9.0               # バージョンを上げるときは VERSION と SHA256 を更新する
           SHA256: f8b185a39ffcece2a1ca82bf3a4e7435cd81963ffd16b7a9128daf75f35f6de7
         run: |
           curl -sSfLO "https://github.com/betterleaks/betterleaks/releases/download/v${VERSION}/betterleaks_${VERSION}_linux_x64.tar.gz"

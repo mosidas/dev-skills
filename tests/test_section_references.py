@@ -14,7 +14,7 @@ from pathlib import Path
 from helpers import REPO_ROOT, TempDirTestCase
 
 
-# 過去の版の節番号を記録として引く事例。今の節を指さないので検査しない。
+# 過去のバージョンの節番号を記録として引く事例。今の節を指さないので検査しない。
 EXCLUDED = {"skills/retro/references/example.md"}
 
 FENCE = re.compile(r"^[ \t]*```.*?^[ \t]*```[^\n]*$", re.M | re.S)
@@ -334,7 +334,7 @@ class 検査関数(TempDirTestCase):
         problems = self.problems("build 3. に従う。\n", rel="skills/specify/SKILL.md")
         self.assertAnyContains(problems, "build 3. の節が無い")
 
-    def test_過去の版を引く事例のファイルは検査しない(self) -> None:
+    def test_過去のバージョンを引く事例のファイルは検査しない(self) -> None:
         text = "develop 7. を直した。\n"
         self.assertEqual(self.problems(text, rel="skills/retro/references/example.md"), [])
         self.assertAnyContains(self.problems(text, rel="skills/retro/references/other.md"), "の節が無い")
