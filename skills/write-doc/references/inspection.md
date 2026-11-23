@@ -127,7 +127,7 @@ uv run <スキルのディレクトリ>/scripts/semantic.py <file.md> [--json] [
 | 観点 | 渡す規範の節 |
 | :-- | :-- |
 | 語種(和語・漢語・外来語) | `sentence.md` 3. |
-| 並列表記 | `sentence.md` 7. |
+| 並列表記 | `sentence.md` 7.・`paragraph.md` 1. |
 | 主語・述語・目的語 | `sentence.md` 2. |
 | 擬人化と無生物主語 | `sentence.md` 3.・5. |
 | 表記と用語 | `sentence.md` 1.・6. |
