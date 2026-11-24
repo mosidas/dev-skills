@@ -114,6 +114,14 @@ class GuardNextLineTest(unittest.TestCase):
             "次: 案 A/B: どちらで進めるか返す。",
             "次: 案 A/B, どちらで進めるか返す。",
             "次: 案 A/B.で進めるか返す。",
+            "次: 案 A1 と案 B1 のどちらにするか返す。",
+            "次: A1 案と B1 案のどちらにするか返す。",
+            "次: 案A12 で進めてよいか返す。",
+            "次: 案 A1/B1 のどちらで進めるか返す。",
+            "次: 案A1/案B1 のどちらで進めるか返す。",
+            "次: 案 1.2 で進めてよいか返す。",
+            "次: ``案 A` で進めるか返す。",
+            "次: 案Aの内容をnotes.mdに書いてよいか返す。",
         ):
             with self.subTest(line=line):
                 self.assertBlocked("結果を書いた。\n" + line)
@@ -133,6 +141,11 @@ class GuardNextLineTest(unittest.TestCase):
     def test_理由に当たった部分を書く(self) -> None:
         out = self.assertBlocked("次: 第 2 案で進めてよいか返す。")
         self.assertIn("「第 2 案」", out["reason"])
+
+    def test_理由に書く当たった部分は40字で切る(self) -> None:
+        out = self.assertBlocked("次: 案" + " " * 500_000 + "A を返す。")
+        self.assertIn("「案" + " " * 39 + "…」", out["reason"])
+        self.assertLess(len(out["reason"]), 300)
 
     # 通す
 
@@ -193,6 +206,14 @@ class GuardNextLineTest(unittest.TestCase):
             "次: 法案 3 号の条文を読む。",
             "次: 原案 1.2 版を読む。",
             "次: 案 2027 年版を読む。",
+            "次: 案 PR を確かめる。",
+            "次: 案 API の仕様を読む。",
+            "次: ``案 A`` の文字列を検索する。",
+            "次: `` 案 `A` `` の文字列を検索する。",
+            "次: 案A.md を開く。",
+            "次: 案A.md:12 を見る。",
+            "次: 案A.mdを開く。",
+            "次: (案A.md)を開く。",
         ):
             with self.subTest(line=line):
                 self.assertPassed("結果を書いた。\n" + line)
@@ -273,6 +294,9 @@ class GuardNextLineTest(unittest.TestCase):
             "次: " + "a" * 1_000_000 + " を返す。",
             "次: " + "【" * 400_000,
             "次: " + "『x" * 300_000,
+            "次: " + "".join("`" * n + "a" for n in range(1, 1500)),
+            "次: " + "a." * 500_000,
+            "次: " + "a.1" * 340_000,
         )
         for message in (fenced * 450 + "次: キャッシュの層を追加するかを返す。", paragraph + long_line, *unbroken):
             with self.subTest(last=message[-20:]):

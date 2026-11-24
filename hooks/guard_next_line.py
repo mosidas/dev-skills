@@ -35,16 +35,28 @@ REASON = (
     "前の応答の本文は繰り返さず、選択肢ごとに中身(何をするか)を書いた「次:」の行を 1 行だけ返す。"
 )
 
+# 理由に書く当たった部分の長さの上限。「案」と記号の間の空白は長さに上限が無いため
+LABEL_MAX = 40
+
 FENCE = re.compile(r"[ \t]*(`{3,}|~{3,})")
 NEXT = re.compile(r"\s*次\s*[:：]")
-INLINE_CODE = re.compile(r"`[^`\n]*`")
+BACKTICKS = re.compile(r"`+")
 # 始まりを英数字の並びの先頭に限る(並びの途中の各位置から末尾まで読み直さない)
 URL = re.compile(r"(?<![A-Za-z0-9+.-])[A-Za-z][A-Za-z0-9+.-]*://\S+")
 # 空白か開き括弧の後に始まり、斜線を含む語(docs/a.md・./x/y・~/z)。始まりの前に置ける括弧を語に含めない
 # (「【【…」の各位置から末尾まで読み直さない)
 PATH = re.compile(r"(?<![^\s(（「『【])(?:~|\.{1,2})?/?[^\s/()（）「」『』【】、。]+(?:/[^\s/()（）「」『』【】、。]+)+/?")
+# 空白か開き括弧の後に始まり、英字で始まる拡張子で終わる斜線の無いファイル名(案A.md・x.json)。
+# 拡張子を英字で始まるものに限り、番号(4.1)を消さない。語幹にひらがなを含めず、前に続く文(案Aの内容をnotes.md)を消さない
+FILENAME = re.compile(r"(?<![^\s(（「『【])[^\s/()（）「」『』【】、。ぁ-ん]*?\.[A-Za-z][A-Za-z0-9]*(?![A-Za-z0-9])")
+# 記号の英字(A・b・A1・B12)。英字 2 字以上の語(PR・API)は記号にしない
+LETTER = r"[A-Za-zＡ-Ｚａ-ｚ][0-9０-９]*"
+NUMBER = r"[0-9０-９]+(?:\.[0-9]+)*"
 # 斜線でつないだ記号の案(A/B・案A/案B・1.1/1.2)。斜線を含む語のうちこれ以外をパスとして消す
-SLASHED_SYMBOLS = re.compile(r"(?:案\s*)?(?:[A-Za-zＡ-Ｚａ-ｚ]|[0-9０-９]+(?:\.[0-9]+)*)(?:/案?(?:[A-Za-zＡ-Ｚａ-ｚ]|[0-9０-９]+(?:\.[0-9]+)*))+(?![A-Za-z0-9_/-]|\.[A-Za-z0-9])")
+SLASHED_SYMBOLS = re.compile(
+    r"(?:案\s*)?(?:" + LETTER + "|" + NUMBER + r")(?:/案?(?:" + LETTER + "|" + NUMBER + r"))+"
+    r"(?![A-Za-z0-9_/-]|\.[A-Za-z0-9])"
+)
 
 # 数の後に助数詞が続くなら記号でなく数である(「案 3 件」「改善案 12 件」)。数字の途中で切って記号にしない
 NOT_COUNT = (
@@ -52,15 +64,15 @@ NOT_COUNT = (
     r"(?!\s*(?:件|つ|個|行|点|案|本|回|か所|箇所|段|人|日|分|秒|ステップ|手順|枚|節|章|項|週|時間|号|版|年|%|％))"
 )
 SYMBOL = (
-    r"(?:[A-Za-zＡ-Ｚａ-ｚ](?![A-Za-z0-9])"
-    r"|[0-9０-９]+(?:\.[0-9]+)*" + NOT_COUNT +
+    r"(?:" + LETTER + r"(?![A-Za-z0-9])"
+    r"|" + NUMBER + NOT_COUNT +
     r"|[(（][A-Za-z0-9ａ-ｚＡ-Ｚ０-９][)）]"
     r"|[①-⑳])"
 )
 PAREN_LABEL = r"[(（][A-Za-z0-9ａ-ｚＡ-Ｚ０-９][)）]"
 LABELED_OPTION = re.compile(
-    r"案\s*" + SYMBOL                                        # 案 A・案 1・案 4.1・案 (a)・案②
-    + r"|(?<![A-Za-z0-9])[A-Za-zＡ-Ｚ]\s*案(?![件内])"         # A 案・B 案の変形(B 案件・A 案内は除く)
+    r"案\s*" + SYMBOL                                        # 案 A・案 A1・案 1・案 4.1・案 (a)・案②
+    + r"|(?<![A-Za-z0-9])" + LETTER + r"\s*案(?![件内])"      # A 案・A1 案・B 案の変形(B 案件・A 案内は除く)
     + r"|第\s*[0-9０-９一二三四五六七八九十]+\s*案"            # 第 2 案
     # 採用する案の番号・3 案から採用する番号。番号の直前をひらがなに限り、PR 番号・節番号の複合語は除く
     + r"|案(?:の|から|のうち|の中から)[^。]{0,20}?(?<=[ぁ-ん])(?:番号|記号)"
@@ -98,6 +110,32 @@ def blank(text: str, pattern: re.Pattern[str]) -> str:
     return pattern.sub(lambda m: " " * len(m.group(0)), text)
 
 
+def blank_code_spans(line: str) -> str:
+    """CommonMark のコードスパン(同じ本数のバッククォートの対)を同じ長さの空白にする。対の無いバッククォートは残す。
+
+    開きのバッククォートの並びごとに、同じ本数の次の並びを後ろから 1 回の走査で求めておき、行の長さに比例する時間で済ませる。
+    """
+    runs = list(BACKTICKS.finditer(line))
+    closer: list[int | None] = [None] * len(runs)
+    later: dict[int, int] = {}
+    for i in range(len(runs) - 1, -1, -1):
+        width = len(runs[i].group(0))
+        closer[i] = later.get(width)
+        later[width] = i
+    parts: list[str] = []
+    pos = i = 0
+    while i < len(runs):
+        j = closer[i]
+        if j is None:
+            i += 1
+            continue
+        start, end = runs[i].start(), runs[j].end()
+        parts += [line[pos:start], " " * (end - start)]
+        pos, i = end, j + 1
+    parts.append(line[pos:])
+    return "".join(parts)
+
+
 def labeled_option(message: str) -> str | None:
     """最後の「次:」の行にある記号で名付けた案を返す。無ければ None。"""
     line = last_line(message)
@@ -105,8 +143,9 @@ def labeled_option(message: str) -> str | None:
         return None
     prose = PATH.sub(
         lambda m: m.group(0) if SLASHED_SYMBOLS.match(m.group(0)) else " " * len(m.group(0)),
-        blank(blank(line, INLINE_CODE), URL),
+        blank(blank_code_spans(line), URL),
     )
+    prose = blank(prose, FILENAME)
     m = LABELED_OPTION.search(prose)
     return line[m.start():m.end()] if m else None
 
@@ -120,7 +159,8 @@ def main() -> int:
         return 0
     label = labeled_option(message)
     if label is not None:
-        json.dump({"decision": "block", "reason": REASON.format(label=label)}, sys.stdout)
+        shown = label if len(label) <= LABEL_MAX else label[:LABEL_MAX] + "…"
+        json.dump({"decision": "block", "reason": REASON.format(label=shown)}, sys.stdout)
     return 0
 
 
