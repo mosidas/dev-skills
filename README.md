@@ -1,6 +1,6 @@
 # dev-skills
 
-Claude Code のプラグインである。開発作業で使うスキルとサブエージェントを提供し、セッション開始時に respond を、会話の要約の後に In Progress のタスクの Notes を読み直す指示を注入し、日本語 Markdown を書き込むたびに検査し、コミットと PR 本文のセッション URL を拒否し、本人への質問をまとめたフォームを出す前に止める hooks も提供する。gate-reviewer の判定を記録し、`gh pr merge` の前にゲートの記録と照合する hook もある。応答の最後の「次:」の行が記号で名付けた案を選ばせるときに完了を止める hook もある。
+Claude Code のプラグインである。開発作業で使うスキルとサブエージェントを提供し、セッション開始時に respond を、会話の要約の後に In Progress のタスクの Notes を読み直す指示を注入し、日本語 Markdown を書き込むたびに検査し、コミットと PR 本文のセッション URL を拒否し、本人への質問をまとめたフォームを出す前に止める hooks も提供する。gate-reviewer の判定を記録し、`gh pr merge` の前にゲートの記録と照合する hook もある。planner を起動していないセッションの 2 ステップ以上の implementer の起動を止める hook もある。応答の最後の「次:」の行が記号で名付けた案を選ばせるときに完了を止める hook もある。
 
 ## 1. 提供するもの
 
@@ -33,6 +33,7 @@ Claude Code のプラグインである。開発作業で使うスキルとサ�
 | `hooks/inspect_stop.py` | hook(Stop) | セッション完了時に再検査し、重大カテゴリの検出が残るあいだ完了を差し戻す |
 | `hooks/guard_next_line.py` | hook(Stop) | 応答の最後の「次:」の行が記号で名付けた案を選ばせていれば完了を止め、選択肢ごとに中身を書いた「次:」の行への書き直しを求める |
 | `hooks/merge_gate.py` | hook(PreToolUse・PostToolUse・SubagentStop) | gate-reviewer の判定を記録し、`gh pr merge` の前に PR の head と本文を記録と照合する |
+| `hooks/planner_gate.py` | hook(PreToolUse・SubagentStart) | planner の起動をセッションごとに記録し、planner を起動していないセッションの 2 ステップ以上の計画の implementer の起動を止める |
 
 スキルは Claude Code が用途を判断して自動で読み込む。`/dev-skills:<スキル名>` で明示的に呼んでもよい。サブエージェントは `dev-skills:planner` のように plugin 名つきで起動する。respond は SessionStart hook が常時適用する。hooks に呼び出しの操作はない。プラグインを有効にしたセッションでは、次のときに自動で発火する。
 
@@ -40,6 +41,8 @@ Claude Code のプラグインである。開発作業で使うスキルとサ�
 - 会話の要約の後
 - `git commit`・`gh pr create`・`gh pr edit`・`gh pr merge` の実行前
 - AskUserQuestion の実行前
+- planner の起動
+- implementer の起動の前
 - gate-reviewer の報告の受け取り
 - 日本語 Markdown の書き込み
 - セッション完了
@@ -102,10 +105,12 @@ hooks はセッション開始時に読み込まれるため、有効化した�
 | PreToolUse(Bash) | `git commit`・`gh pr create`・`gh pr edit` の実行前 | セッション URL か `Claude-Session:` の行があれば exit 2 で止め、理由を 1 行で返す |
 | PreToolUse(Bash) | `gh pr merge` の実行前 | PR の head と本文を gate-reviewer の判定の記録と照合する。記録どおりなら何も返さずに通し、ゲートの後に本文を変えたかコミットを追加したなら deny し、記録が無いか照合できなければ本人の確認(ask)を求める |
 | PreToolUse(AskUserQuestion) | AskUserQuestion の実行前 | `questions` が 2 問以上なら deny し、1 問ずつ聞くよう理由を返す |
+| PreToolUse(Agent) | implementer(`dev-skills:implementer`)の起動の前 | そのセッションで planner を起動しておらず、プロンプトの計画のステップ数が 2 以上なら deny し、planner の起動・`planner の計画:` の行・1 ステップの変更なら `ステップ 1/1` の行を求める理由を返す |
 | PostToolUse(SubagentHandback) | gate-reviewer が SubagentHandback で報告を返した直後 | 報告の「## 判定」を読み、「マージ可」なら記録を書き、「差し戻し」なら同じ SHA の記録を削除する |
 | PostToolUse(Write / Edit / MultiEdit / NotebookEdit) | 日本語 Markdown の書き込み直後 | `lint.py` を `--json` で実行し、検出があるか、`lint.py` が分担の通知を出したとき(見出しが 10 を超える文書)に警告を返す。通知は同じファイルに対して状態ファイルが削除されるまで初回だけ出す。Stop は重大カテゴリの検出が残っていない完了のときに状態ファイルを削除するので、通常は 1 回の応答につき初回だけになる。検出が残ったままブロックの上限に達すると、重大カテゴリの検出がすべて解消された完了(状態ファイルの削除)まで再び出ない。書き込みは取り消さない |
 | Stop | セッション完了時 | そのセッションで検査したファイルを再検査し、重大カテゴリの検出が残るあいだ完了をブロックする |
 | Stop | 応答の完了時 | 最後の「次:」の行が記号で名付けた案を選ばせていれば、1 ターンに 1 回だけ完了をブロックし、中身を書いた「次:」の行への書き直しを求める |
+| SubagentStart(planner) | planner(`dev-skills:planner`)の起動時 | そのセッションに planner を起動した印を残す |
 | SubagentStop(gate-reviewer) | gate-reviewer の終了時 | PostToolUse(SubagentHandback)と同じく判定を記録する。同じ判定を 2 回読んでも記録は 1 つである |
 
 `inject_reread_notes.py`(SessionStart(compact))は、会話の要約の後の作業を develop 11.(再開する)の手順に戻す。hook は `backlog task list --status "In Progress" --json` を入力の `cwd` で走らせ、`cwd` が使えなければ `CLAUDE_PROJECT_DIR` で走らせる。環境に `BACKLOG_CWD` があれば、backlog CLI は `cwd` でなくその値のプロジェクトを読む。プロジェクトを上のディレクトリへたどって探すのは CLI に任せる。一覧は更新の新しい順に 20 件まで並べ、残りは件数だけを書く。標準入力の JSON は、環境の符号化(`PYTHONIOENCODING`・ロケール)に依らず UTF-8 として読み、出力は ASCII の JSON で書く。hook は指示を注入するだけで、Notes を読んだかを確かめない。
@@ -152,6 +157,27 @@ PreToolUse(AskUserQuestion)は、止めた直後に同じ内容で呼び直し�
 - `--auto` を有効にした後の変更
 - URL・`-R`・`GH_REPO`・`GH_HOST` の無いマージで gh が cwd の git remote から決める host
 - 偽造(記録のファイルを直接書く・追跡 ref を書き換える・hook を避けて組んだコマンド)
+
+`planner_gate.py` は、develop 5.(計画する)で planner を省けるのは 1 ステップで済む変更だけという決まりを、implementer の起動の前に確かめる。SubagentStart(planner)は、そのセッションに planner を起動した印を `${CLAUDE_PLUGIN_DATA}/planner-gate/` に `session_id` の SHA-256 を名前にして残す。会話の要約と `--resume` の後も `session_id` は変わらないので、印は残る。PreToolUse(Agent)は、`subagent_type` が `dev-skills:implementer` の起動を次の順に判定し、最初に当たったもので決める。
+
+1. そのセッションに planner の印がある: 通す。
+2. プロンプトから計画のステップ数を読めない: 通す。
+3. ステップ数が 1: 通す。
+4. プロンプトの行頭に `planner の計画: <計画の所在>` と書いた行がある: 通す。箇条の印(`-`・`*`・`+` と空白)の後に書いた行も同じに扱う。
+5. それ以外(ステップ数が 2 以上): deny し、planner を起動するか、planner が立てた計画で進めているなら `planner の計画:` の行を、1 ステップで済む変更なら `ステップ 1/1` の行を書くよう理由を返す。
+
+ステップ数はプロンプトの `ステップ <n>/<m>` の組のうち 1 ≦ n ≦ m を満たすものから読む。m が 1 の組があれば 1 ステップ、無ければ m の最大値である。1 ステップの変更のプロンプトは別の組を引用しうるため、m が 1 の組を先に見る。統括はこの形の行を develop 6.(実装と点検のループ)の手順 2 で書く。build の反復や新しい会話で、前のセッションの planner が立てた計画を続けるときは `planner の計画:` の行で通す。ステップ数を読めないときに通すのは、行を書き忘れた 1 ステップの変更を止めないためである。
+
+記録と判定の結果は同じディレクトリの `events.jsonl` に 1 行ずつ追記する。`reason` は判定の名前(`planner_ran`・`step_unreadable`・`single_step`・`inherited_plan`・`multi_step_without_planner`)か、記録の失敗(`store_write_failed`・`session_missing`)か、hook 自身の不具合(`internal_error`。例外の型名を `error_type` に載せる)である。プロンプトの本文と計画の所在は書かない。置き場はリンクでない自分所有のディレクトリに限り、印はリンクをたどらずに作る。`CLAUDE_PLUGIN_DATA` が無いか置き場を使えないときは、照合せずに通し、`error.type=store_unavailable` の 1 行を標準エラーに書く。入力を読めないとき、`session_id` が空でない文字列でないとき(判定せずに `session_missing` を残す)、hook 自身の不具合のときも通す。止めると planner を起動し直しても記録できず、同じ拒否を繰り返すためである。
+
+次は判定の範囲の外である。
+
+- 偽の宣言(複数ステップの計画に書いた `ステップ 1/1`・planner が立てていない計画を指す `planner の計画:` の行)
+- 起動した後に失敗した planner(起動したセッションとして数える)
+- ステップ数を書かない複数ステップの計画
+- 同じセッションの別のタスクで起動した planner
+- 別のタスクの `ステップ 1/1` を引用しただけの複数ステップの計画のプロンプト(m が 1 の組を先に見るため 1 ステップとして通る)
+- `ステップ 1/1` を書き忘れた 1 ステップの変更のうち、別のタスクの `ステップ n/m`(m が 2 以上)を引用したプロンプト(止まる。理由の文にある `ステップ 1/1` の通し方で通せる)
 
 `guard_next_line.py`(Stop)は、respond 3.2(最後の行に次の行動を 1 つ書く)の「次:」の行を検査する。検査するのは、コードフェンスの外にある最後の空でない行が「次:」で始まるときだけである。止めるのは「案 A」「B 案」「第 2 案」「(a) か (b)」のように記号で名付けた案を選ばせる形である。記号は前の本文を読んだ読み手にしか意味が通らないため、選択肢ごとに中身を書いた「次:」の行を返し直させる。インラインコード・URL・パス・ファイル名の中の記号と、「案 3 件」のように数の後に助数詞が続く語は止めない。
 
