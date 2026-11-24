@@ -17,6 +17,7 @@ lint.py で再検査し、重大カテゴリの宣言(`inspection.config.json` �
   exit 0    ブロックなし(何も出力しない)。ブロックの上限で許可したときは標準エラーに UTF-8 で 1 行書く
   exit 0 + JSON 出力  ブロック。`{"decision": "block", "reason": <理由>}` を ASCII の JSON
             (非 ASCII の文字は \\uXXXX)で返す。環境の符号化に依らず書ける
+  標準エラー  状態を保存できないとき、error.type 付きの 1 行を UTF-8 で書く
 
 uv・lint.py が欠けている場合や lint が失敗した場合、そのファイルの検査を諦めて許可側に
 倒す(hook 自身の不具合や環境差で完了を止めない)。

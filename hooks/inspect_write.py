@@ -20,6 +20,7 @@ lint.py(`skills/write-doc/scripts/lint.py`)を `--json` で実行し、検出が
   exit 0 + JSON 出力  検出または分担の通知あり。`{"decision": "block", "reason": <警告文>}` が
             エージェントへ自動フィードバックされる(ツールの実行は取り消されない)。
             出力は ASCII の JSON(非 ASCII の文字は \\uXXXX)であり、環境の符号化に依らず書ける
+  標準エラー  状態を保存できないとき、error.type 付きの 1 行を UTF-8 で書く(警告の出力は続ける)
 
 uv・lint.py・設定が欠けている場合や lint が失敗した場合は検査を諦めて何もしない
 (hook 自身の不具合や環境差で書き込みを止めない)。

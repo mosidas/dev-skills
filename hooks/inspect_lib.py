@@ -12,12 +12,14 @@ hook 自身は Python 3 標準ライブラリのみで動作する。lint.py の
 
 from __future__ import annotations
 
+import errno
 import fnmatch
 import hashlib
 import json
 import os
 import re
 import shlex
+import stat
 import subprocess
 import sys
 import tempfile
@@ -42,6 +44,8 @@ GENRES = {"essay", "tech", "business"}
 LINT_CMD_ENV = "WRITING_INSPECTION_LINT_CMD"
 OVERRIDE_REL = ".claude/write-doc-inspection.json"
 STATE_DIR_NAME = "claude-write-doc-inspection"
+# 状態ファイルの読みの上限。1 件 200 バイトのパスで約 5,000 件分あり、1 セッションで書く文書の数を十分に超える。
+STATE_LIMIT = 1024 * 1024
 
 _JAPANESE_RE = re.compile(r"[぀-ヿ㐀-鿿]")
 
@@ -412,18 +416,44 @@ def format_stop_reason(
 
 
 def state_path(project: Path | None, session_id: str) -> Path:
-    """セッションごとの状態ファイル。プロジェクトとセッション ID の組で分ける。"""
+    """セッションごとの状態ファイル。プロジェクトとセッション ID の組で分ける。
+
+    置き場所は一時ディレクトリの中の利用者ごとのディレクトリ(`claude-write-doc-inspection-<uid>`)で、
+    ディレクトリは 0o700、ファイルは 0o600 で作る。状態はシンボリックリンクをたどらずに読み書きする
+    (共有の一時ディレクトリで、他人が置いたリンクの先を読んだり上書きしたりしない)。
+    ディレクトリがリンクか他人の所有なら状態を使わない。読みは空の状態とみなし、書きは標準エラーへ
+    1 行の警告を出して諦める。このとき書き込み時の警告は返すが、完了時の再検査は行わない。
+    """
     digest = hashlib.sha1(str(project or "").encode("utf-8")).hexdigest()[:12]
     safe_session = re.sub(r"[^A-Za-z0-9_-]", "_", session_id or "unknown")
-    return Path(tempfile.gettempdir()) / STATE_DIR_NAME / f"{digest}-{safe_session}.json"
+    state_dir = Path(tempfile.gettempdir()) / f"{STATE_DIR_NAME}-{os.getuid()}"
+    return state_dir / f"{digest}-{safe_session}.json"
 
 
 def _str_list(value: object) -> list[str]:
     return [v for v in value if isinstance(v, str)] if isinstance(value, list) else []
 
 
+def _owned_dir(path: Path) -> bool:
+    """path がリンクでない実際のディレクトリで、この利用者が所有するときだけ True。"""
+    st = os.lstat(path)
+    return stat.S_ISDIR(st.st_mode) and st.st_uid == os.getuid()
+
+
 def load_state(path: Path) -> dict:
-    state = _load_json(path)
+    """状態を読む。無い・リンク・読めない・壊れているときは空の状態を返す。"""
+    state: object = {}
+    try:
+        if _owned_dir(path.parent):
+            fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
+            with os.fdopen(fd, "rb") as f:
+                data = f.read(STATE_LIMIT + 1)
+            if len(data) <= STATE_LIMIT:
+                state = json.loads(data.decode("utf-8"))
+    except (OSError, ValueError):
+        pass
+    if not isinstance(state, dict):
+        state = {}
     return {
         "files": _str_list(state.get("files")),
         "notified": _str_list(state.get("notified")),
@@ -432,31 +462,53 @@ def load_state(path: Path) -> dict:
 
 
 def save_state(path: Path, state: dict) -> None:
+    """状態を ASCII の JSON で書く。書けなければ標準エラーへ error.type 付きの 1 行を出して諦める。"""
+    tmp = path.with_name(f".{path.name}.{os.getpid()}.{os.urandom(4).hex()}.tmp")
     try:
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(
-            json.dumps(state, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
-        )
-    except OSError:
-        pass
+        path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+        if not _owned_dir(path.parent):
+            _warn_state_unsaved("state_dir_not_owned")
+            return
+        data = (json.dumps(state, indent=2) + "\n").encode("ascii")
+        fd = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600)
+        with os.fdopen(fd, "wb") as f:
+            f.write(data)
+        os.replace(tmp, path)
+    except OSError as e:
+        try:
+            tmp.unlink(missing_ok=True)
+        except OSError:
+            pass
+        _warn_state_unsaved(errno.errorcode.get(e.errno, type(e).__name__))
+
+
+def _warn_state_unsaved(error_type: str) -> None:
+    warn(f"write-doc 検査: 状態を保存できないため、完了時の再検査を行わない(error.type={error_type})")
 
 
 def record_inspected(path: Path, project: Path | None, session_id: str, notify: bool) -> bool:
     """検査したファイルを記録する。notify なら分担の通知を出したことも同じ更新で記録する。
 
     この起動で通知を出すか(notify で、このファイルへ未通知だったか)を返す。
+    状態を使えないとき(os.getuid・os.O_NOFOLLOW の無い Windows・状態のディレクトリが所有でない・
+    保存の OSError)は、標準エラーへ error.type 付きの 1 行を出し、notify をそのまま返す。
+    通知は書き込みのたびに出る。
     """
-    state_file = state_path(project, session_id)
-    state = load_state(state_file)
-    abs_path = str(path.resolve())
-    added = abs_path not in state["files"]
-    if added:
-        state["files"].append(abs_path)
-    first_notice = notify and abs_path not in state["notified"]
-    if first_notice:
-        state["notified"].append(abs_path)
-    if added or first_notice:
-        save_state(state_file, state)
+    try:
+        state_file = state_path(project, session_id)
+        state = load_state(state_file)
+        abs_path = str(path.resolve())
+        added = abs_path not in state["files"]
+        if added:
+            state["files"].append(abs_path)
+        first_notice = notify and abs_path not in state["notified"]
+        if first_notice:
+            state["notified"].append(abs_path)
+        if added or first_notice:
+            save_state(state_file, state)
+    except AttributeError as e:
+        _warn_state_unsaved(type(e).__name__)
+        return notify
     return first_notice
 
 

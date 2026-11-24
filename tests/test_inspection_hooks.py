@@ -9,8 +9,11 @@
 
 from __future__ import annotations
 
+import errno
+import io
 import json
 import os
+import re
 import subprocess
 import sys
 import unittest
@@ -347,6 +350,48 @@ class StateTest(LibTestCase):
             lib.state_path(self.tmp / "a", "s1"), lib.state_path(self.tmp / "b", "s1")
         )
 
+    def test_他人の所有の状態のディレクトリには書かない(self) -> None:
+        path = self.write("doc.md", JAPANESE_TEXT)
+        other_uid = os.getuid() + 1
+        with mock.patch.object(lib.tempfile, "gettempdir", return_value=str(self.tmp)):
+            with mock.patch.object(lib.os, "getuid", return_value=other_uid):
+                state_dir = lib.state_path(self.tmp, "s1").parent
+                state_dir.mkdir(mode=0o700)
+                stderr = io.TextIOWrapper(io.BytesIO(), encoding="utf-8")
+                with mock.patch.object(lib.sys, "stderr", stderr):
+                    lib.record_inspected(path, self.tmp, "s1", notify=False)
+                    self.assertTrue(lib.record_inspected(path, self.tmp, "s1", notify=True))
+                    self.assertTrue(lib.record_inspected(path, self.tmp, "s1", notify=True), "通知は書き込みのたびに出る")
+                self.assertEqual(list(state_dir.iterdir()), [])
+                state_file = lib.state_path(self.tmp, "s1")
+                state_file.write_text(json.dumps({"files": [str(path.resolve())]}), encoding="utf-8")
+                self.assertEqual(lib.load_state(state_file)["files"], [], "他人の所有のディレクトリの状態を読まない")
+        self.assertIn("error.type=state_dir_not_owned", stderr.buffer.getvalue().decode("utf-8"))
+
+    def test_os_getuid_の無い環境では状態を使わず警告する(self) -> None:
+        path = self.write("doc.md", JAPANESE_TEXT)
+        stderr = io.TextIOWrapper(io.BytesIO(), encoding="utf-8")
+        with mock.patch.object(lib.tempfile, "gettempdir", return_value=str(self.tmp)):
+            with mock.patch.object(lib.os, "getuid", side_effect=AttributeError), mock.patch.object(lib.sys, "stderr", stderr):
+                self.assertTrue(lib.record_inspected(path, self.tmp, "s1", notify=True))
+                self.assertTrue(lib.record_inspected(path, self.tmp, "s1", notify=True), "通知は書き込みのたびに出る")
+        self.assertIn("error.type=AttributeError", stderr.buffer.getvalue().decode("utf-8"))
+
+    def test_状態を保存できなければ_errno_名の警告を出し一時ファイルを残さない(self) -> None:
+        path = self.write("doc.md", JAPANESE_TEXT)
+        stderr = io.TextIOWrapper(io.BytesIO(), encoding="utf-8")
+        with mock.patch.object(lib.tempfile, "gettempdir", return_value=str(self.tmp)):
+            state_file = lib.state_path(self.tmp, "s1")
+            state_file.mkdir(mode=0o700, parents=True)
+            with mock.patch.object(lib.sys, "stderr", stderr):
+                lib.record_inspected(path, self.tmp, "s1", notify=False)
+        lines = stderr.buffer.getvalue().decode("utf-8").splitlines()
+        self.assertEqual(len(lines), 1, lines)
+        error_type = re.search(r"error\.type=(\w+)", lines[0])
+        self.assertIsNotNone(error_type, lines[0])
+        self.assertIn(error_type.group(1), errno.errorcode.values(), "error.type は errno の名前")
+        self.assertEqual(list(state_file.parent.glob(".*.tmp")), [], "書きかけの一時ファイルを残さない")
+
 
 class HookProcessTestCase(helpers.TempDirTestCase):
     """サブプロセスで hook を実行するテストの基底(スタブ lint と環境を組み立てる)。"""
@@ -440,6 +485,64 @@ class HookProcessTestCase(helpers.TempDirTestCase):
         self.assertTrue(proc.stdout.strip(), "JSON 出力が無い")
         return json.loads(proc.stdout)
 
+    def state_file(self) -> Path:
+        """hook が使う状態ファイルのパス(hook と同じく一時ディレクトリを self.state_dir として求める)。"""
+        with mock.patch.object(lib.tempfile, "gettempdir", return_value=str(self.state_dir)):
+            return lib.state_path(self.project, "sess-1")
+
+
+class StateFileTest(HookProcessTestCase):
+    def test_状態ファイルがリンクでもリンク先を書き換えない(self) -> None:
+        victim = self.tmp / "victim.txt"
+        victim.write_text("original", encoding="utf-8")
+        state = self.state_file()
+        state.parent.mkdir(mode=0o700)
+        state.symlink_to(victim)
+        path = self.write_doc("doc.md", "NGWORD")
+        self.assertIn("forbidden_phrase", self.write_reason(path))
+        self.run_hook(INSPECT_STOP, self.stop_payload())
+        self.assertEqual(victim.read_text(encoding="utf-8"), "original")
+
+    def test_状態のディレクトリがリンクなら状態を書かず警告は返す(self) -> None:
+        elsewhere = self.tmp / "elsewhere"
+        elsewhere.mkdir()
+        self.state_file().parent.symlink_to(elsewhere)
+        path = self.write_doc("doc.md", "NGWORD")
+        proc = self.run_hook(INSPECT_WRITE, self.write_payload(path))
+        self.assertIn("forbidden_phrase", self.decision(proc)["reason"])
+        self.assertEqual(list(elsewhere.iterdir()), [])
+        self.assertIn("error.type=state_dir_not_owned", proc.stderr)
+        self.assertEqual(len(proc.stderr.splitlines()), 1, proc.stderr)
+        planted = {"files": [str(path.resolve())], "notified": [], "stop_blocks": 0}
+        (elsewhere / self.state_file().name).write_text(json.dumps(planted), encoding="utf-8")
+        self.assertEqual(self.run_hook(INSPECT_STOP, self.stop_payload()).stdout, "", "リンク先の状態を読まない")
+
+    def test_リンクの先の状態を読んで完了をブロックしない(self) -> None:
+        path = self.write_doc("doc.md", "NGWORD")
+        planted = self.tmp / "planted.json"
+        planted.write_text(json.dumps({"files": [str(path.resolve())], "notified": [], "stop_blocks": 0}), encoding="utf-8")
+        state = self.state_file()
+        state.parent.mkdir(mode=0o700)
+        state.symlink_to(planted)
+        proc = self.run_hook(INSPECT_STOP, self.stop_payload())
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        self.assertEqual(proc.stdout, "")
+
+    def test_状態のディレクトリとファイルは所有者だけが読み書きできる(self) -> None:
+        self.write_reason(self.write_doc("doc.md"))
+        state = self.state_file()
+        self.assertEqual(state.parent.stat().st_mode & 0o777, 0o700)
+        self.assertEqual(state.stat().st_mode & 0o777, 0o600)
+
+    def test_対になっていないサロゲートを含むパスの状態を保存しても完了をブロックする(self) -> None:
+        path = self.write_doc("doc.md", "NGWORD")
+        state = self.state_file()
+        state.parent.mkdir(mode=0o700)
+        files = [str(self.tmp / "missing" / "\udce9.md"), str(path.resolve())]
+        state.write_text(json.dumps({"files": files, "notified": [], "stop_blocks": 0}), encoding="ascii")
+        self.assertEqual(self.decision(self.run_hook(INSPECT_STOP, self.stop_payload()))["decision"], "block")
+        self.assertEqual(json.loads(state.read_text(encoding="ascii"))["stop_blocks"], 1, "ブロックの回数を状態に保存した")
+
 
 class InspectWriteTest(HookProcessTestCase):
     def test_検出があれば警告を返し処理は止めない(self) -> None:
@@ -484,7 +587,8 @@ class InspectWriteTest(HookProcessTestCase):
 
     def test_検査したファイルを状態に記録する(self) -> None:
         path = self.write_doc("doc.md")
-        self.run_hook(INSPECT_WRITE, self.write_payload(path))
+        proc = self.run_hook(INSPECT_WRITE, self.write_payload(path))
+        self.assertEqual(proc.stderr, "")
         states = list(self.state_dir.rglob("*.json"))
         self.assertEqual(len(states), 1)
         state = json.loads(states[0].read_text(encoding="utf-8"))
