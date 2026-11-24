@@ -1,6 +1,6 @@
 # dev-skills
 
-Claude Code のプラグインである。開発作業で使うスキルとサブエージェントを提供し、セッション開始時に respond を注入し、日本語 Markdown を書き込むたびに検査し、コミットと PR 本文のセッション URL を拒否し、本人への質問をまとめたフォームを出す前に止める hooks も提供する。
+Claude Code のプラグインである。開発作業で使うスキルとサブエージェントを提供し、セッション開始時に respond を注入し、日本語 Markdown を書き込むたびに検査し、コミットと PR 本文のセッション URL を拒否し、本人への質問をまとめたフォームを出す前に止める hooks も提供する。gate-reviewer の判定を記録し、`gh pr merge` の前にゲートの記録と照合する hook もある。
 
 ## 1. 提供するもの
 
@@ -30,8 +30,16 @@ Claude Code のプラグインである。開発作業で使うスキルとサ�
 | `hooks/guard_ask_one_question.py` | hook(PreToolUse) | 本人への質問を 2 問以上まとめた AskUserQuestion を、フォームを出す前に止める |
 | `hooks/inspect_write.py` | hook(PostToolUse) | 日本語 Markdown の書き込み直後に `lint.py` を実行し、検出があれば書き直しを促す警告を、見出しが 10 を超える文書では推敲の分担の通知を返す(通知は同じファイルに対して状態ファイルが削除されるまで初回だけ出す。Stop は重大カテゴリの検出が残っていない完了のときに状態ファイルを削除するので、通常は 1 回の応答につき初回だけになる。検出が残ったままブロックの上限に達すると、重大カテゴリの検出がすべて解消された完了(状態ファイルの削除)まで再び出ない) |
 | `hooks/inspect_stop.py` | hook(Stop) | セッション完了時に再検査し、重大カテゴリの検出が残るあいだ完了を差し戻す |
+| `hooks/merge_gate.py` | hook(PreToolUse・PostToolUse・SubagentStop) | gate-reviewer の判定を記録し、`gh pr merge` の前に PR の head と本文を記録と照合する |
 
-スキルは Claude Code が用途を判断して自動で読み込む。`/dev-skills:<スキル名>` で明示的に呼んでもよい。サブエージェントは `dev-skills:planner` のように plugin 名つきで起動する。respond は SessionStart hook が常時適用する。hooks に呼び出しの操作はない。プラグインを有効にしたセッションで、セッション開始、`git commit`・`gh pr create`・`gh pr edit` の実行前、AskUserQuestion の実行前、日本語 Markdown の書き込み、セッション完了のたびに自動で発火する。
+スキルは Claude Code が用途を判断して自動で読み込む。`/dev-skills:<スキル名>` で明示的に呼んでもよい。サブエージェントは `dev-skills:planner` のように plugin 名つきで起動する。respond は SessionStart hook が常時適用する。hooks に呼び出しの操作はない。プラグインを有効にしたセッションでは、次のときに自動で発火する。
+
+- セッション開始
+- `git commit`・`gh pr create`・`gh pr edit`・`gh pr merge` の実行前
+- AskUserQuestion の実行前
+- gate-reviewer の報告の受け取り
+- 日本語 Markdown の書き込み
+- セッション完了
 
 依頼は次のように書く。統括は依頼を要件の 4 行にまとめて確認する。4 行の形式は `skills/develop/references/requirements.md` にある。
 
@@ -88,17 +96,48 @@ hooks はセッション開始時に読み込まれるため、有効化した�
 | :-- | :-- | :-- |
 | SessionStart(すべての source) | セッション開始時 | `skills/respond/SKILL.md` の本文を frontmatter を除いて注入する |
 | PreToolUse(Bash) | `git commit`・`gh pr create`・`gh pr edit` の実行前 | セッション URL か `Claude-Session:` の行があれば exit 2 で止め、理由を 1 行で返す |
+| PreToolUse(Bash) | `gh pr merge` の実行前 | PR の head と本文を gate-reviewer の判定の記録と照合する。記録どおりなら何も返さずに通し、ゲートの後に本文を変えたかコミットを追加したなら deny し、記録が無いか照合できなければ本人の確認(ask)を求める |
 | PreToolUse(AskUserQuestion) | AskUserQuestion の実行前 | `questions` が 2 問以上なら deny し、1 問ずつ聞くよう理由を返す |
+| PostToolUse(SubagentHandback) | gate-reviewer が SubagentHandback で報告を返した直後 | 報告の「## 判定」を読み、「マージ可」なら記録を書き、「差し戻し」なら同じ SHA の記録を削除する |
 | PostToolUse(Write / Edit / MultiEdit / NotebookEdit) | 日本語 Markdown の書き込み直後 | `lint.py` を `--json` で実行し、検出があるか、`lint.py` が分担の通知を出したとき(見出しが 10 を超える文書)に警告を返す。通知は同じファイルに対して状態ファイルが削除されるまで初回だけ出す。Stop は重大カテゴリの検出が残っていない完了のときに状態ファイルを削除するので、通常は 1 回の応答につき初回だけになる。検出が残ったままブロックの上限に達すると、重大カテゴリの検出がすべて解消された完了(状態ファイルの削除)まで再び出ない。書き込みは取り消さない |
 | Stop | セッション完了時 | そのセッションで検査したファイルを再検査し、重大カテゴリの検出が残るあいだ完了をブロックする |
+| SubagentStop(gate-reviewer) | gate-reviewer の終了時 | PostToolUse(SubagentHandback)と同じく判定を記録する。同じ判定を 2 回読んでも記録は 1 つである |
 
-PreToolUse(Bash)の対象は、`git commit`(`git -C <path> commit` を含む)・`gh pr create`・`gh pr edit` を含む Bash のコマンドである。`claude.ai/code/session_` の URL と `Claude-Session:` の行(大文字と小文字を区別しない)を、コマンド文字列全体と、`-F`・`--file`・`--body-file` で渡した本文ファイルから探す。相対パスは `cwd` から解決し、`-` は読まない。`Co-Authored-By` と `Generated with` の行は止めない。再利用するメッセージ(`--amend --no-edit`・`-C <commit>`)と、中身がコマンド文字列に現れない `--body "$(cat body.md)"`・`-m "$(cat msg.txt)"` は検査しない。
+`guard_session_url.py`(PreToolUse(Bash))の対象は、`git commit`(`git -C <path> commit` を含む)・`gh pr create`・`gh pr edit` を含む Bash のコマンドである。`claude.ai/code/session_` の URL と `Claude-Session:` の行(大文字と小文字を区別しない)を、コマンド文字列全体と、`-F`・`--file`・`--body-file` で渡した本文ファイルから探す。相対パスは `cwd` から解決し、`-` は読まない。`Co-Authored-By` と `Generated with` の行は止めない。再利用するメッセージ(`--amend --no-edit`・`-C <commit>`)と、中身がコマンド文字列に現れない `--body "$(cat body.md)"`・`-m "$(cat msg.txt)"` は検査しない。
 
-PreToolUse(Bash)は、対象と判定したコマンドを、本文が読めないときや検査に失敗したときも止める(fail-closed)。同じコマンドで作ったファイルや `cd` のあとの相対パスも止まるため、先に作って絶対パスで渡す。
+`guard_session_url.py` は、対象と判定したコマンドを、本文が読めないときや検査に失敗したときも止める(fail-closed)。同じコマンドで作ったファイルや `cd` のあとの相対パスも止まるため、先に作って絶対パスで渡す。
 
 PreToolUse(AskUserQuestion)は、止めた直後に同じ内容で呼び直した 1 回だけを通す。ほかのプラグインの手順が複数の問いを 1 回で聞くと定めている場合のためである。止めた内容を一時ディレクトリに記録できないときや、記録を消せないときは、呼び直しも止める。入力を読めないときは止めずに通す。
 
-PostToolUse と Stop は日本語文書の検査を行う。発火するのは、拡張子が `.md` / `.markdown` で、日本語文字が 30 文字以上あり、除外パターンに一致しないファイルへの書き込みに限る。警告には、検出の一覧、検出箇所を含む文をカテゴリ別の指針に従って直す指示(指針が残すとする文は残す)、語ごとの言い換え例、カテゴリ別の指針と、見出しが 10 を超える文書では分担の通知が入る。通知は同じファイルに対して状態ファイルが削除されるまで初回だけ出す。Stop は重大カテゴリの検出が残っていない完了のときに状態ファイルを削除するので、通常は 1 回の応答につき初回だけになる。検出が残ったままブロックの上限に達すると、重大カテゴリの検出がすべて解消された完了(状態ファイルの削除)まで再び出ない。
+`merge_gate.py` の照合は、ゲートの後の変更を判定の取り直しなしにマージすることを止める。対象は Bash のコマンドの中の `gh pr merge` である。PR は URL・番号・ブランチ名で指定するか、指定を省いて作業ツリーのブランチで決める。URL・`-R`・`GH_REPO` でリポジトリを示さない指定は、hook の `cwd` とコマンドの `cd`・`pushd` の行き先の作業ツリーで PR を引く。hook は `gh pr view` で PR の head・本文・コミットを取り、(リポジトリ, head) の記録と次のように照らす。
+
+| 判定 | 条件 |
+| :-- | :-- |
+| 通す | 今の head に記録があり、PR の本文のハッシュ(帰属の行を除く)が記録と一致する |
+| 通す(main の取り込み) | 記録の head から今の head までが、PR の base(通常は main)を競合なしで取り込んだマージコミットだけ(20 回まで)で、本文のハッシュが記録と一致する |
+| deny(本文の変更) | 上の 2 つで本文のハッシュが記録と違う |
+| deny(コミットの追加) | 今の head に記録が無く、PR の古いコミットに記録があり、その後が main の取り込みだけと確かめられない |
+| ask(本人の確認) | 記録が無い、PR を特定できない(行き先を追えない `cd`・`$` を含む指定・シェルや起動役(`sh -c`・`xargs` など)に渡したマージなど)、URL・`-R`・`GH_REPO`・`GH_HOST` で示した host が github.com でない、`gh pr view` が失敗した、照合が途中で失敗した |
+
+1 つのコマンドに複数のマージがあれば、deny > ask > 通すの強いほうにする。URL・`-R`・`GH_REPO`・`GH_HOST` で示した host が github.com でなければ `gh pr view` を走らせない。gh の認証情報をその host へ送らないためである。権限の確認に答える人がいない `claude -p`(build のループ)では ask は拒否になる。
+
+記録は次のすべてが成り立つときだけ `${CLAUDE_PLUGIN_DATA}/merge-gate/` に保存する。
+
+- 作業ツリーの HEAD が判定の SHA と一致する。
+- origin が host/owner/name に直せる。
+- 本文案が読める。
+
+照合と記録の結果は同じディレクトリの `events.jsonl` に 1 行ずつ追記し、本文・報告の中身・origin の URL は書かない。
+
+次は照合の範囲の外である。
+
+- `gh api` でのマージ
+- Web の画面からのマージ
+- `--auto` を有効にした後の変更
+- URL・`-R`・`GH_REPO`・`GH_HOST` の無いマージで gh が cwd の git remote から決める host
+- 偽造(記録のファイルを直接書く・追跡 ref を書き換える・hook を避けて組んだコマンド)
+
+`inspect_write.py`(PostToolUse)と `inspect_stop.py`(Stop)は日本語文書の検査を行う。発火するのは、拡張子が `.md` / `.markdown` で、日本語文字が 30 文字以上あり、除外パターンに一致しないファイルへの書き込みに限る。警告には、検出の一覧、検出箇所を含む文をカテゴリ別の指針に従って直す指示(指針が残すとする文は残す)、語ごとの言い換え例、カテゴリ別の指針と、見出しが 10 を超える文書では分担の通知が入る。通知は同じファイルに対して状態ファイルが削除されるまで初回だけ出す。Stop は重大カテゴリの検出が残っていない完了のときに状態ファイルを削除するので、通常は 1 回の応答につき初回だけになる。検出が残ったままブロックの上限に達すると、重大カテゴリの検出がすべて解消された完了(状態ファイルの削除)まで再び出ない。
 
 重大カテゴリとは、Stop が完了をブロックする検出カテゴリの宣言で、既定は `forbidden_phrase`(severity warn 以上。動詞カタログのうち空虚な動詞 4 語と、比喩語 5 語(`壊れる`・`静かに`・`黙って`・`沈黙`・`逃がす`))と `antithesis_repetition`(critical のみ)である。ブロックは既定 3 回で打ち切るため、解消できない検出があっても完了できない状態は続かない。
 
