@@ -365,5 +365,17 @@ class GuardReaderContextTest(unittest.TestCase):
         self.assertEqual(err.splitlines(), ["guard_reader_context: 内部エラー RuntimeError"])
 
 
+class RegistrationTest(unittest.TestCase):
+    def setUp(self) -> None:
+        hooks = json.loads((helpers.REPO_ROOT / "hooks" / "hooks.json").read_text(encoding="utf-8"))
+        self.commands = [hook["command"] for entry in hooks["hooks"]["Stop"] for hook in entry["hooks"]]
+
+    def test_Stopにhookを登録し第1段とinspect_stopも残す(self) -> None:
+        self.assertIn('python3 "${CLAUDE_PLUGIN_ROOT}/hooks/guard_reader_context.py"', self.commands)
+        for name in ("guard_next_line.py", "inspect_stop.py"):
+            with self.subTest(name=name):
+                self.assertTrue(any(f"${{CLAUDE_PLUGIN_ROOT}}/hooks/{name}" in c for c in self.commands), self.commands)
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -8,6 +8,7 @@
     python3 loop.py <進捗ファイル> [--max-iterations N] [-- <claude に渡す引数>...]
 
 起動するコマンドは環境変数 BUILD_AGENT_CMD で差し替えられる(既定は `claude -p`)。
+起動するコマンドの環境には DEV_SKILLS_BUILD_ITERATION=1 を渡す(dev-skills の hooks が build の反復で省く検査を判定する)。
 
 解析する進捗ファイルの形式:
     - 失敗の上限: 3
@@ -34,6 +35,7 @@ import sys
 from pathlib import Path
 
 AGENT_CMD_ENV = "BUILD_AGENT_CMD"
+ITERATION_ENV = "DEV_SKILLS_BUILD_ITERATION"
 PROMPT = "dev-skills の build スキルの「反復する」工程を 1 回行う。進捗ファイル: {path}"
 
 _STOP = "- 停止:"
@@ -126,7 +128,7 @@ def main(argv: list[str]) -> int:
 
         print(f"反復 {i}: 起動", flush=True)
         try:
-            proc = subprocess.run(cmd)
+            proc = subprocess.run(cmd, env={**os.environ, ITERATION_ENV: "1"})
         except FileNotFoundError:
             print(f"コマンドが見つからない: {cmd[0]}", file=sys.stderr)
             return 1
