@@ -12,7 +12,7 @@ lint.py で再検査し、重大カテゴリの宣言(`inspection.config.json` �
   重大カテゴリが解消された時点で状態ファイルを削除し、以後の Stop は素通しになる。
 
 入出力の契約:
-  標準入力  Stop の JSON(`session_id`・`stop_hook_active` を読む)
+  標準入力  Stop の JSON(`session_id` を読む)
   exit 0    ブロックなし(何も出力しない)
   exit 0 + JSON 出力  ブロック。`{"decision": "block", "reason": <理由>}` を返す
 
