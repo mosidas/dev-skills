@@ -7,6 +7,7 @@ Python 3 標準ライブラリのみを使用する。
 from __future__ import annotations
 
 import json
+import os
 import subprocess
 import sys
 import unittest
@@ -25,13 +26,18 @@ class GuardSessionUrlTest(helpers.TempDirTestCase):
         payload = {"tool_name": tool_name, "tool_input": {"command": command}, "cwd": str(self.tmp)}
         return self.run_raw(json.dumps(payload))
 
-    def run_raw(self, stdin: str) -> subprocess.CompletedProcess:
+    def run_raw(self, stdin: str, env: dict[str, str] | None = None) -> subprocess.CompletedProcess:
         return subprocess.run(
             [sys.executable, str(GUARD)],
             input=stdin,
             capture_output=True,
-            text=True,
+            encoding="utf-8",
+            env={**os.environ, **(env or {})},
         )
+
+    def run_ascii(self, command: str) -> subprocess.CompletedProcess:
+        payload = {"tool_name": "Bash", "tool_input": {"command": command}, "cwd": str(self.tmp)}
+        return self.run_raw(json.dumps(payload, ensure_ascii=False), env={"PYTHONIOENCODING": "ascii"})
 
     def assertBlocked(self, proc: subprocess.CompletedProcess, needle: str = "消して") -> None:
         self.assertEqual(proc.returncode, 2, proc.stderr)
@@ -85,6 +91,12 @@ class GuardSessionUrlTest(helpers.TempDirTestCase):
     def test_本文ファイルが読めなければ止める(self) -> None:
         self.assertBlocked(self.run_hook("git commit -F missing.txt"), needle="読めない")
 
+    def test_標準入力の符号化が日本語を表せなくてもUTF8の日本語のコミットメッセージにあるURLを止める(self) -> None:
+        self.assertBlocked(self.run_ascii(f'git commit -m "修正: 日本語の本文 {URL}"'))
+
+    def test_標準エラーの符号化が日本語を表せなくても理由をUTF8で書く(self) -> None:
+        self.assertBlocked(self.run_ascii(f'git commit -m "fix: x {URL}"'))
+
     # 通す
 
     def test_Co_Authored_Byだけのコミットは通す(self) -> None:
@@ -121,6 +133,9 @@ class GuardSessionUrlTest(helpers.TempDirTestCase):
 
     def test_標準入力から読むFは通す(self) -> None:
         self.assertPassed(self.run_hook("git commit -F -"))
+
+    def test_標準入力の符号化が日本語を表せなくてもURLの無い日本語のコミットは通す(self) -> None:
+        self.assertPassed(self.run_ascii('git commit -m "修正: 日本語の本文"'))
 
     def test_Bash以外のツールは通す(self) -> None:
         self.assertPassed(self.run_hook(f'git commit -m "{URL}"', tool_name="Write"))

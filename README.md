@@ -107,7 +107,7 @@ hooks はセッション開始時に読み込まれるため、有効化した�
 
 `guard_session_url.py`(PreToolUse(Bash))の対象は、`git commit`(`git -C <path> commit` を含む)・`gh pr create`・`gh pr edit` を含む Bash のコマンドである。`claude.ai/code/session_` の URL と `Claude-Session:` の行(大文字と小文字を区別しない)を、コマンド文字列全体と、`-F`・`--file`・`--body-file` で渡した本文ファイルから探す。相対パスは `cwd` から解決し、`-` は読まない。`Co-Authored-By` と `Generated with` の行は止めない。再利用するメッセージ(`--amend --no-edit`・`-C <commit>`)と、中身がコマンド文字列に現れない `--body "$(cat body.md)"`・`-m "$(cat msg.txt)"` は検査しない。
 
-`guard_session_url.py` は、対象と判定したコマンドを、本文が読めないときや検査に失敗したときも止める(fail-closed)。同じコマンドで作ったファイルや `cd` のあとの相対パスも止まるため、先に作って絶対パスで渡す。
+`guard_session_url.py` は、対象と判定したコマンドを、本文が読めないときや検査に失敗したときも止める(fail-closed)。同じコマンドで作ったファイルや `cd` のあとの相対パスも止まるため、先に作って絶対パスで渡す。標準入力の JSON は、環境の符号化(`PYTHONIOENCODING`・ロケール)に依らず UTF-8 として読む。
 
 PreToolUse(AskUserQuestion)は、止めた直後に同じ内容で呼び直した 1 回だけを通す。ほかのプラグインの手順が複数の問いを 1 回で聞くと定めている場合のためである。止めた内容を一時ディレクトリに記録できないときや、記録を消せないときは、呼び直しも止める。入力を読めないときは止めずに通す。
 
