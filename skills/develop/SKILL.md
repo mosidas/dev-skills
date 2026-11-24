@@ -98,18 +98,27 @@ backlog task edit <id> --append-notes $'判断: <選んだこと・したこと>
 
 ## 7. ゲートを通す
 
-- 全ステップが承認されたら、push の前に gate-reviewer サブエージェント(`dev-skills:gate-reviewer`)を起動する。渡すのは、対象リポジトリのパス、レビューする範囲(`main..HEAD`)、要件の 3 行(目的・完了条件・対象外)、計画の全体、PR 本文案である。
+- 全ステップが承認されたら、push の前に gate-reviewer サブエージェント(`dev-skills:gate-reviewer`)を起動する。渡すのは、対象リポジトリのパス、レビューする範囲(`main..HEAD`)、要件の 3 行(目的・完了条件・対象外)、計画の全体、作業ツリーの外のファイル(セッションの scratchpad など)に書いた PR 本文案の絶対パスである。
 - 品質がプロダクトのとき、gate-reviewer を起動する前に統括が claude-security プラグイン(`claude-security@claude-plugins-official`)の Scan changes を効果 `high` で実行する(`/claude-security scan my branch at high`)。報告は対象リポジトリの `CLAUDE-SECURITY-<timestamp>/` に書き出される。プラグインが導入されていないときは組み込みの `/security-review` で代える。指摘があれば implementer に渡して直させ、直したあとで gate-reviewer を起動する。
 - gate-reviewer の前に敵対役(`references/parallel.md` 5.)を任意で起動できる。統括が再実行して確かめた敵対役の所見は gate-reviewer に渡す。Codex CLI がある環境で gate-reviewer と `codex review --base main` を並走させる(同 6.)。
 - gate-reviewer はブランチ全体でしか分からないことを見る。見るのは完了条件の充足・ステップ間の整合・残骸・PR 本文との一致である。そのうえで「マージ可」か「差し戻し」を返す。ステップごとの reviewer が見た内容は蒸し返さない。品質がプロダクトのとき、計画に含まれる secure・observe・recover 由来の変更(ヘルスチェック・メトリクス・拒否のテスト・タイムアウト・エラーページなど)は要件内として扱う。
 - 差し戻しなら、修正点を implementer に渡して直させ、再びゲートを通す。2 回直しても通らないときは、統括がユーザーに状況を報告して判断を仰ぐ。ゲートを push の前に通すのは、CI を回す前に直すほうが安いからである。
+- gate-reviewer が「マージ可」を返すと、hook がリポジトリ・head の SHA・本文案のハッシュ(帰属の行を除く)をプラグインのデータの置き場(`${CLAUDE_PLUGIN_DATA}/merge-gate/`)に記録する。「差し戻し」はその SHA の記録を削除する。統括は記録を書かない。記録は 8. のマージの前の照合に使う。
+- 統括はゲートの判定を受けたら、判定の行の 40 桁の SHA を Implementation Notes に控える。8. の渡し直しの `<前回の SHA>` に使う。
 
 ## 8. PR を出す
 
-- ゲートを通ったら push し、PR を作る。本文はゲートに渡した本文案を、指摘があれば直して使う。
+- ゲートを通ったら push し、PR を作る。本文はゲートに渡した本文案のファイルを `gh pr create --body-file <本文案の絶対パス>` にそのまま使う。書き換えると、マージの前の照合で記録した本文案のハッシュと合わなくなる。
 - PR のレビューコメントを `references/review-triage.md` に従って fix・dismiss・ask に分ける。fix は implementer に直させる。dismiss には反証を返信する。ask はユーザーに 1 問で聞く。修正は 1 回の push にまとめる。push のたびに CI が最初から実行されるためである。レビューコメントと CI の失敗が両方あるときは先にコメントを仕分ける。CI の失敗の直しも同じ push に含める。
 - CI の結果を確認する。失敗したら `references/git-flow.md` 4. の分類に従って直させるか再実行する。
-- CI が通り、gate-reviewer が「マージ可」を返し、レビューコメントに ask が残っていなければ、統括はユーザーの指示を待たずにマージする。手順は `references/git-flow.md` 5. に従う。条件が 1 つでも欠けていればマージせず、欠けた条件をユーザーに報告する。
+- ゲートの後にコミットを追加したとき(レビューコメントの fix・CI の直し)と本文案を直したときは、gate-reviewer に渡し直して判定を取り直す。渡し直しは修正をまとめた push の後に 1 回だけ行う。差し戻しの扱いは 7. と同じである。本文案を直すときは、直す前の本文案を作業ツリーの外に写す(または `gh pr view <番号> --json body -q .body` の出力を保存する)。直した後に直す前との差分を取ってから `gh pr edit <番号> --body-file <本文案の絶対パス>` で PR の本文に反映する。渡すのは次の 5 つである。
+  - 対象リポジトリのパス
+  - 前回の判定の SHA から HEAD までの範囲(`<前回の SHA>..HEAD`)
+  - 本文案の差分
+  - 要件の 3 行(目的・完了条件・対象外)
+  - 本文案のファイルの絶対パス
+- main の取り込みだけのコミット(`references/git-flow.md` 4. の `git merge origin/main` で競合が無かったもの)は渡し直さない。照合が競合の無い取り込みだけと確かめて通すためである。競合を手で解消した取り込みは渡し直す。
+- CI が通り、gate-reviewer が「マージ可」を返し、レビューコメントに ask が残っていなければ、統括はユーザーの指示を待たずにマージする。手順は `references/git-flow.md` 5. に従う。条件が 1 つでも欠けていればマージせず、欠けた条件をユーザーに報告する。`gh pr merge` の前に hook が PR の head と本文を 7. の記録と照合し、記録が無ければ本人の確認を求める。照合される指定の形と止まったときの扱いは `references/git-flow.md` 5. で確かめる。
 
 ## 9. 閉じる
 

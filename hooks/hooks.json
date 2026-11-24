@@ -19,6 +19,11 @@
             "type": "command",
             "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/guard_session_url.py\"",
             "timeout": 10
+          },
+          {
+            "type": "command",
+            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/merge_gate.py\"",
+            "timeout": 40
           }
         ]
       },
@@ -43,6 +48,16 @@
             "timeout": 150
           }
         ]
+      },
+      {
+        "matcher": "SubagentHandback",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/merge_gate.py\"",
+            "timeout": 20
+          }
+        ]
       }
     ],
     "Stop": [
@@ -52,6 +67,18 @@
             "type": "command",
             "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/inspect_stop.py\"",
             "timeout": 150
+          }
+        ]
+      }
+    ],
+    "SubagentStop": [
+      {
+        "matcher": "^dev-skills:gate-reviewer$",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/merge_gate.py\"",
+            "timeout": 20
           }
         ]
       }

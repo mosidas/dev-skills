@@ -20,7 +20,7 @@ git switch -c <type>/<TASK-id>-<slug>     # 例: feat/TASK-021-export-csv。タ�
 
 ```sh
 git push -u origin <ブランチ名>
-gh pr create --base main --title "<type>: <変更内容>" --body "<本文>"   # 本文が長いときは --body-file
+gh pr create --base main --title "<type>: <変更内容>" --body-file <本文案の絶対パス>   # ゲートに渡した本文案のファイル(develop 8.)
 ```
 
 PR 本文の冒頭には利用者(画面の利用者と呼び出し側の開発者)と次の保守者にとって何が変わるかを書く。冒頭の段落の後に次の節を `##` の見出しでこの順に並べる。対象範囲の節は常に書く。ほかの節は書くことが無ければ省く。本文は差分を手元に持つレビュアーが 1 分で読める量にする。ファイルごとの説明と SHA の一覧は書かない。
@@ -44,7 +44,7 @@ gh run view <run-id> --log-failed        # 失敗したステップのログだ�
 - 失敗したら直すか再実行する前に失敗を次の 3 つに分ける。分けずに再実行を重ねると本当の失敗を flake として見逃す。
   - 差分の内側の失敗: ログの該当箇所を implementer に渡して直させる。直したコミットを再 push する。
   - flake(不安定なテスト・CI の基盤の一時的な障害): `gh run rerun <run-id>` で新しいビルドを 1 回だけ実行する。`--failed` は付けない。同じ失敗が 2 回続いたら flake ではない。再実行せずにログを読んで原因を探す。
-  - 差分の外の失敗(差分が触れていないコードの失敗): ブランチが古い main から切られたことを疑う。`git fetch origin main` の後に `git merge-base --is-ancestor origin/main HEAD` で確かめる。終了コードが 0 でなければ `git merge origin/main` で main を取り込んで再 push する。取り込みで競合したら解消せずに `git merge --abort` で戻してからユーザーに報告する。取り込み済みなら main 側の失敗としてユーザーに報告する。
+  - 差分の外の失敗(差分が触れていないコードの失敗): ブランチが古い main から切られたことを疑う。`git fetch origin main` の後に `git merge-base --is-ancestor origin/main HEAD` で確かめる。終了コードが 0 でなければ `git merge origin/main` で main を取り込んで再 push する。取り込みで競合したら解消せずに `git merge --abort` で戻してからユーザーに報告する。競合の無い取り込みだけならゲートを通し直さない(develop 8.)。取り込み済みなら main 側の失敗としてユーザーに報告する。
 - 再 push と再実行の後は `gh pr checks --watch` を再実行する。
 - CI が無いリポジトリでは、pre-push hook のテスト結果を CI の代わりとし、PR 本文の検証の節にその旨を書く。
 
@@ -53,8 +53,15 @@ gh run view <run-id> --log-failed        # 失敗したステップのログだ�
 CI の通過・gate-reviewer の「マージ可」・ask のレビューコメントが無いこと、の 3 つが揃ったら統括が実行する(develop 8.)。ユーザーの指示は待たない。
 
 ```sh
-gh pr merge <番号> --merge --delete-branch   # 承認が必須で自己承認できないリポジトリでは --admin を足す
+gh pr merge <PR の URL> --merge --delete-branch   # 承認が必須で自己承認できないリポジトリでは --admin を足す
 git switch main
 git pull --ff-only
 git branch -D <ブランチ名>               # ローカルに残ったとき
 ```
+
+`gh pr merge` の前に hook が PR の head と本文を gate-reviewer の判定の記録(develop 7.)と照合する。PR は URL で指定する。番号で指定するときは `cd <絶対パス> && gh pr merge <番号> --merge --delete-branch` とする。hook は `cd` の行き先の作業ツリーで PR を引く。シェルや起動役(`sh -c`・`xargs` など)に渡したマージと `$` を含む指定は照合されず、本人の確認になる。
+
+hook が止めたときは次のように扱う。
+
+- deny(ゲートの後の本文の変更かコミットの追加): 理由に示された範囲を develop 8. の手順で gate-reviewer に渡し直し、「マージ可」を得てから実行し直す。本文の変更なら、渡し直す前に本文案のファイルと `gh pr view <番号> --json body -q .body` の差分を取り、その後で本文案のファイルと PR の本文を同じ内容にする。
+- 本人の確認(ask): ユーザーの判断を待つ。

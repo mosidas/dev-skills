@@ -8,7 +8,9 @@ Python 3 標準ライブラリのみを使用する(追加インストール不�
 
 from __future__ import annotations
 
+import functools
 import json
+import os
 import subprocess
 import sys
 import tempfile
@@ -16,6 +18,22 @@ import unittest
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
+
+
+@functools.lru_cache(maxsize=None)
+def _git_local_env() -> frozenset[str]:
+    return frozenset(
+        subprocess.run(["git", "rev-parse", "--local-env-vars"], capture_output=True, text=True, check=True).stdout.split()
+    )
+
+
+def git_isolated_env() -> dict[str, str]:
+    """テストを走らせる環境から `git rev-parse --local-env-vars` の変数を外した環境。
+
+    git は hook(pre-push など)に GIT_DIR などを渡す。受け継いだ git は `-C` の先でなくその値のリポジトリを操作する。
+    """
+    local = _git_local_env()
+    return {key: value for key, value in os.environ.items() if key not in local}
 
 
 def run_script(script: Path, *args: object) -> subprocess.CompletedProcess:
