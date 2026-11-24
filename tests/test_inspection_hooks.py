@@ -49,6 +49,9 @@ if "INFOONLY" in text:
 output = {"findings": findings}
 if "NOTICE" in text:
     output["notice"] = "" if "EMPTYNOTICE" in text else "通知の文"
+if "BADSTDERR" in text:
+    sys.stderr.buffer.write(b"\\xff\\xfe")
+    sys.stderr.flush()
 print(json.dumps(output))
 '''
 
@@ -553,6 +556,12 @@ class InspectWriteTest(HookProcessTestCase):
         self.assertIn("forbidden_phrase", decision["reason"])
         self.assertIn("丸ごと書き直す", decision["reason"])
         self.assertIn("→ OK: 前置きを消して主張をそのまま書く", decision["reason"])
+
+    def test_lintの標準エラーがUTF8でなくても警告を返す(self) -> None:
+        path = self.write_doc("doc.md", "NGWORD BADSTDERR")
+        decision = self.decision(self.run_hook(INSPECT_WRITE, self.write_payload(path)))
+        self.assertEqual(decision["decision"], "block")
+        self.assertIn("forbidden_phrase", decision["reason"])
 
     def test_カタログが無くても警告は成立する(self) -> None:
         (self.plugin / Path(lib.PHRASE_CATALOG_REL)).unlink()

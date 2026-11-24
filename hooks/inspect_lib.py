@@ -202,7 +202,7 @@ def run_lint(path: Path, genre: str | None, config: dict) -> LintResult | None:
     notice は lint.py が見出しの多い文書に出す工程の指示であり、出さなければ None である。
     子には PYTHONIOENCODING=utf-8 を渡して UTF-8 の出力を求め、UTF-8 として読む。hook の環境の
     符号化(ASCII など)を受け継ぐと、子が日本語を含む JSON を書けずに失敗するためである。
-    UTF-8 として読めない出力は検査を諦める側に倒す。
+    UTF-8 として読めない出力は検査を諦める側に倒す。標準エラーは読まずに捨てる。
     """
     cmd = lint_command()
     if cmd is None:
@@ -213,7 +213,8 @@ def run_lint(path: Path, genre: str | None, config: dict) -> LintResult | None:
     try:
         proc = subprocess.run(
             args,
-            capture_output=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL,
             encoding="utf-8",
             env={**os.environ, "PYTHONIOENCODING": "utf-8"},
             timeout=float(config.get("lint_timeout_seconds", 120)),
