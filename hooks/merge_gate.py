@@ -77,7 +77,7 @@ BASE_REF = re.compile(r"(?!-)(?!.*\.\.)[A-Za-z0-9._/-]+")
 # 全体の期限 30 秒は hooks.json の timeout 40 秒より短く、gh pr view の上限 15 秒は実測 0.4〜0.7 秒の約 20 倍
 CHECK_DEADLINE = 30
 GH_TIMEOUT = 15
-ATTRIBUTION = "Generated with [Claude Code]"
+ATTRIBUTION = re.compile(r"(?:🤖 ?)?Generated with \[Claude Code\]\(https://(?:claude\.com/claude-code|claude\.ai/code)\)")
 VIEW_FIELDS = "headRefOid,body,url,baseRefName,commits"
 GITHUB = "github.com"
 
@@ -103,7 +103,8 @@ HEREDOCS = ("<<", "<<-")
 # 単純コマンドの先頭で剥がす語。OPENERS は複合コマンドを始め、RUNNERS は後ろのコマンドを起動する
 OPENERS = {"{", "if", "while", "until", "for", "case", "select"}
 KEYWORDS = {"!", "then", "do", "else", "elif"}
-RUNNERS = {"time", "command", "nohup", "exec", "env", "timeout"}
+# builtin は bash と zsh の、noglob は zsh の前置き
+RUNNERS = {"time", "command", "nohup", "exec", "env", "timeout", "noglob", "builtin"}
 # 渡した文字列・標準入力・引数をコマンドとして走らせる。先頭にあればそのコマンドのマージを読まずに確認を求める
 LAUNCHERS = {
     "sh", "bash", "zsh", "dash", "ksh", "fish", "eval", "source", ".",
@@ -313,7 +314,7 @@ def git(repo_path: Path, *args: str) -> str | None:
 
 def body_digest(text: str) -> str:
     lines = [line.rstrip() for line in text.replace("\r\n", "\n").replace("\r", "\n").split("\n")]
-    kept = "\n".join(line for line in lines if ATTRIBUTION not in line).strip("\n")
+    kept = "\n".join(line for line in lines if not ATTRIBUTION.fullmatch(line)).strip("\n")
     return hashlib.sha256(kept.encode("utf-8", "surrogatepass")).hexdigest()
 
 
@@ -805,9 +806,9 @@ def strip_prefix(words: list[str]) -> tuple[list[str], dict[str, str], bool, boo
             env[m.group(1)] = m.group(2)
         elif head in OPENERS:
             opened = True
-        elif head in RUNNERS:
+        elif (name := os.path.basename(head)) in RUNNERS:
             runner = True
-            if head == "timeout" and len(words) > 1 and DURATION.fullmatch(words[1]):
+            if name == "timeout" and len(words) > 1 and DURATION.fullmatch(words[1]):
                 words = words[1:]
         elif head not in KEYWORDS:
             break

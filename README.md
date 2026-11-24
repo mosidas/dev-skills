@@ -113,7 +113,7 @@ PreToolUse(AskUserQuestion)は、止めた直後に同じ内容で呼び直し�
 
 | 判定 | 条件 |
 | :-- | :-- |
-| 通す | 今の head に記録があり、PR の本文のハッシュ(帰属の行を除く)が記録と一致する |
+| 通す | 今の head に記録があり、PR の本文のハッシュ(行の全体が `🤖 Generated with [Claude Code](https://claude.com/claude-code)` の形の帰属の行を除く。絵文字は任意、リンク先は `https://claude.com/claude-code` か `https://claude.ai/code`)が記録と一致する |
 | 通す(main の取り込み) | 記録の head から今の head までが、PR の base(通常は main)を競合なしで取り込んだマージコミットだけ(20 回まで)で、本文のハッシュが記録と一致する |
 | deny(本文の変更) | 上の 2 つで本文のハッシュが記録と違う |
 | deny(コミットの追加) | 今の head に記録が無く、PR の古いコミットに記録があり、その後が main の取り込みだけと確かめられない |

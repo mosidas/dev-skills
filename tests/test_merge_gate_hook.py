@@ -550,9 +550,30 @@ class MergeGateCheckTest(MergeGateCheckCase):
         )
         self.assertEqual(self.checked(), [("warn", "body_changed", PR_URL, self.head)])
 
+    def test_帰属の語を含む説明の行を足した_PR_のマージを止める(self) -> None:
+        for line in (
+            "- Generated with [Claude Code] を含む説明",
+            "🤖 Generated with [Claude Code](https://claude.com/claude-code) で書いた",
+            "> 🤖 Generated with [Claude Code](https://claude.com/claude-code)",
+        ):
+            with self.subTest(line=line):
+                self.views({"7": pr_view(self.head, body=BODY_NORMALIZED + "\n" + line + "\n")})
+                result = self.merge("gh pr merge 7 --merge")
+                self.assertIsNotNone(result, "本文の変更を見落として通した")
+                self.assertEqual(result[0], "deny")
+                self.assertEqual(self.checked()[-1], ("warn", "body_changed", PR_URL, self.head))
+
     def test_ゲートの後に何も変えていない_PR_は何も出力せずに通る(self) -> None:
         attributed = BODY_NORMALIZED + "\r\n\r\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\r\n"
-        for body in (BODY, BODY_NORMALIZED, attributed):
+        variants = [
+            BODY_NORMALIZED + "\n\n" + line + "  \n"
+            for line in (
+                "Generated with [Claude Code](https://claude.com/claude-code)",
+                "🤖Generated with [Claude Code](https://claude.com/claude-code)",
+                "🤖 Generated with [Claude Code](https://claude.ai/code)",
+            )
+        ]
+        for body in (BODY, BODY_NORMALIZED, attributed, *variants):
             with self.subTest(body=body):
                 self.views({"7": pr_view(self.head, body=body)})
                 self.assertIsNone(self.merge("gh pr merge 7 --merge --delete-branch"))
@@ -560,7 +581,7 @@ class MergeGateCheckTest(MergeGateCheckCase):
                 self.assertEqual([c["argv"] for c in calls], [view_argv("7")], "gh pr view で照合した")
                 self.assertEqual(os.path.realpath(calls[0]["cwd"]), os.path.realpath(self.repo), "hook の cwd で引く")
                 self.assertEqual(calls[0]["prompt_disabled"], "1")
-        self.assertEqual(self.checked(), [("info", "pass", PR_URL, self.head)] * 3)
+        self.assertEqual(self.checked(), [("info", "pass", PR_URL, self.head)] * 6)
 
     def test_記録の無い_PR_は確認を求める(self) -> None:
         self.views({"7": pr_view(NEXT, commits=["0" * 40, NEXT])})
@@ -664,6 +685,12 @@ class MergeGateCheckTest(MergeGateCheckCase):
             ("nohup gh pr merge 7", "7", None, {}),
             ("exec gh pr merge 7", "7", None, {}),
             ("timeout 60 gh pr merge 7", "7", None, {}),
+            ("/usr/bin/env gh pr merge 7", "7", None, {}),
+            ("/usr/bin/time gh pr merge 7", "7", None, {}),
+            ("/usr/bin/timeout 60 gh pr merge 7", "7", None, {}),
+            ("noglob gh pr merge 7", "7", None, {}),
+            ("builtin command gh pr merge 7", "7", None, {}),
+            ("/usr/bin/env GH_REPO=o/r gh pr merge 7", "7", None, {"GH_REPO": "o/r"}),
             ("env GH_REPO=o/r gh pr merge 7", "7", None, {"GH_REPO": "o/r"}),
             ("GIT_DIR=x gh pr merge 7", "7", None, {"GIT_DIR": "x"}),
             (
@@ -702,6 +729,7 @@ class MergeGateCheckTest(MergeGateCheckCase):
             ("cd repo && gh pr merge 7", "7", self.repo),
             (f"cd '{self.repo}'\ngh pr merge 7", "7", self.repo),
             (f"pushd {self.repo}; gh pr merge 7", "7", self.repo),
+            (f"builtin cd {self.repo} && gh pr merge 7", "7", self.repo),
             (f"cd {self.repo}; cd ../elsewhere && gh pr merge 7", "7", elsewhere),
             (f"cd {self.repo} && cd ../elsewhere && gh pr merge 7", "7", elsewhere),
             (f"cd {self.repo} && gh pr merge --merge", None, self.repo),
@@ -820,6 +848,8 @@ class MergeGateCheckTest(MergeGateCheckCase):
             "x=`y=$(bash -c 'gh pr merge 7')`",
             "/bin/zsh -c 'gh pr merge 7'",
             "env bash -c 'gh pr merge 7'",
+            "/usr/bin/env bash -c 'gh pr merge 7'",
+            'builtin eval "gh pr merge 7"',
             "env -i bash <<'EOF'\ngh pr merge 7\nEOF",
             "cat <<EOF | timeout -s KILL 60 sh\ngh pr merge 7\nEOF",
             "source ./merge.sh  # gh pr merge 7",
