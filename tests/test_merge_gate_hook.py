@@ -17,8 +17,10 @@ import os
 import shutil
 import subprocess
 import sys
+import tempfile
 import time
 from pathlib import Path
+from unittest import mock
 
 import helpers
 
@@ -64,8 +66,8 @@ SHORT_TIMEOUT = (
     "runpy.run_path(sys.argv[1], run_name='__main__')\n"
 )
 PR_URL = "https://github.com/example/demo/pull/7"
-# テストを走らせる環境から受け継ぐと、照合の対象と cd の行き先が変わる変数
-INHERITED = ("CLAUDE_PLUGIN_DATA", "GH_REPO", "GH_HOST", "GIT_DIR", "GIT_WORK_TREE", "GH_PROMPT_DISABLED", "CDPATH")
+# テストを走らせる環境から受け継ぐと、照合の対象と cd の行き先が変わる git 以外の変数(git の変数は helpers が外す)
+INHERITED = ("CLAUDE_PLUGIN_DATA", "GH_REPO", "GH_HOST", "GH_PROMPT_DISABLED", "CDPATH")
 VIEW = ["--json", "headRefOid,body,url,baseRefName,commits"]
 
 
@@ -106,7 +108,7 @@ def git(repo: Path, *args: str) -> str:
         capture_output=True,
         text=True,
         check=True,
-        env={**os.environ, **GIT_ENV},
+        env={**helpers.git_isolated_env(), **GIT_ENV},
     )
     return proc.stdout.strip()
 
@@ -181,7 +183,7 @@ class MergeGateCase(helpers.TempDirTestCase):
         extra_env: dict[str, str] | None = None,
     ) -> bytes:
         """hook を実行し、標準出力を返す。exit 0 で標準エラーが空であることを確かめる。"""
-        env = {k: v for k, v in os.environ.items() if k not in INHERITED}
+        env = {k: v for k, v in helpers.git_isolated_env().items() if k not in INHERITED}
         env.update(GIT_ENV)
         env.update(extra_env or {})
         if path is not None:
@@ -1085,7 +1087,7 @@ class MergeGateMainMergeTest(MergeGateCheckCase):
         conflicted = subprocess.run(
             ["git", "-C", str(self.repo), "merge", "-q", "--no-edit", "origin/main"],
             capture_output=True,
-            env={**os.environ, **GIT_ENV},
+            env={**helpers.git_isolated_env(), **GIT_ENV},
         )
         self.assertNotEqual(conflicted.returncode, 0, "README.md が競合する")
         (self.repo / "README.md").write_text("demo\nfeat\nmain\n", encoding="utf-8")
@@ -1221,3 +1223,38 @@ class MergeGateMainMergeTest(MergeGateCheckCase):
         elsewhere = {"GIT_DIR": str(self.upstream / ".git"), "GIT_WORK_TREE": str(self.upstream)}
         self.assertIsNone(self.merge("gh pr merge 7 --merge", extra_env=elsewhere))
         self.assertEqual(self.merge_events(), [("pass", "main_merge_only", merged)])
+
+
+class TestRunEnvironmentTest(MergeGateCase):
+    """git の hook(pre-push)の中でテストを走らせたときの、一時のリポジトリの git と hook の起動。
+
+    git は hook に GIT_DIR を渡す。本物の git dir は submodule の `.git/modules/...` のように `/.git` で終わらない。
+    """
+
+    def setUp(self) -> None:
+        outer = tempfile.TemporaryDirectory()
+        self.addCleanup(outer.cleanup)
+        work = Path(outer.name) / "work"
+        self.decoy = Path(outer.name) / "modules" / "decoy"
+        self.decoy.parent.mkdir()
+        git(Path(outer.name), "init", "-q", "--separate-git-dir", str(self.decoy), str(work))
+        (work / "a.txt").write_text("a\n", encoding="utf-8")
+        git(work, "add", "a.txt")
+        git(work, "commit", "-q", "-m", "a")
+        self.before = self.snapshot()
+        patcher = mock.patch.dict(os.environ, {"GIT_DIR": str(self.decoy)})
+        patcher.start()
+        self.addCleanup(patcher.stop)
+        super().setUp()
+
+    def snapshot(self) -> dict[str, bytes]:
+        return {str(p.relative_to(self.decoy)): p.read_bytes() for p in sorted(self.decoy.rglob("*")) if p.is_file()}
+
+    def test_環境の_GIT_DIR_のリポジトリを変えずに一時のリポジトリで動く(self) -> None:
+        origin = self.tmp / "origin.git"
+        git(self.tmp, "init", "-q", "--bare", str(origin))
+        git(self.repo, "push", "-q", str(origin), "HEAD:refs/heads/main")
+        self.record(handback(self.approve()))
+        self.assertEqual(git(origin, "rev-parse", "main"), self.head, "一時の bare リポジトリへ push した")
+        self.assertTrue(self.record_path().exists(), "hook は一時のリポジトリの head を記録した")
+        self.assertEqual(self.snapshot(), self.before, "GIT_DIR のリポジトリの config・HEAD・ref は変わらない")
