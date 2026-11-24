@@ -1,6 +1,6 @@
 # dev-skills
 
-Claude Code のプラグインである。開発作業で使うスキルとサブエージェントを提供し、セッション開始時に respond を注入し、日本語 Markdown を書き込むたびに検査し、コミットと PR 本文のセッション URL を拒否し、本人への質問をまとめたフォームを出す前に止める hooks も提供する。gate-reviewer の判定を記録し、`gh pr merge` の前にゲートの記録と照合する hook もある。応答の最後の「次:」の行が記号で名付けた案を選ばせるときに完了を止める hook もある。
+Claude Code のプラグインである。開発作業で使うスキルとサブエージェントを提供し、セッション開始時に respond を、会話の要約の後に In Progress のタスクの Notes を読み直す指示を注入し、日本語 Markdown を書き込むたびに検査し、コミットと PR 本文のセッション URL を拒否し、本人への質問をまとめたフォームを出す前に止める hooks も提供する。gate-reviewer の判定を記録し、`gh pr merge` の前にゲートの記録と照合する hook もある。応答の最後の「次:」の行が記号で名付けた案を選ばせるときに完了を止める hook もある。
 
 ## 1. 提供するもの
 
@@ -26,6 +26,7 @@ Claude Code のプラグインである。開発作業で使うスキルとサ�
 | `write-page` | スキル | HTML で配布する 1 ページの説明資料を作る・直すときの入口 |
 | `design-ui` | スキル | 画面・コンポーネント・ページを設計・実装する規範と、実装の前に UI モックを本人と往復して作る工程 |
 | `hooks/inject_respond.py` | hook(SessionStart) | セッション開始時に `skills/respond/SKILL.md` の本文を注入する |
+| `hooks/inject_reread_notes.py` | hook(SessionStart の compact) | 会話の要約の後に、In Progress のタスクの一覧と、要約に書かれたタスクの Implementation Notes を読み直す指示を注入する |
 | `hooks/guard_session_url.py` | hook(PreToolUse) | コミットと PR 本文に入るセッション URL を実行前に止める |
 | `hooks/guard_ask_one_question.py` | hook(PreToolUse) | 本人への質問を 2 問以上まとめた AskUserQuestion を、フォームを出す前に止める |
 | `hooks/inspect_write.py` | hook(PostToolUse) | 日本語 Markdown の書き込み直後に `lint.py` を実行し、検出があれば書き直しを促す警告を、見出しが 10 を超える文書では推敲の分担の通知を返す(通知は同じファイルに対して状態ファイルが削除されるまで初回だけ出す。Stop は重大カテゴリの検出が残っていない完了のときに状態ファイルを削除するので、通常は 1 回の応答につき初回だけになる。検出が残ったままブロックの上限に達すると、重大カテゴリの検出がすべて解消された完了(状態ファイルの削除)まで再び出ない) |
@@ -36,6 +37,7 @@ Claude Code のプラグインである。開発作業で使うスキルとサ�
 スキルは Claude Code が用途を判断して自動で読み込む。`/dev-skills:<スキル名>` で明示的に呼んでもよい。サブエージェントは `dev-skills:planner` のように plugin 名つきで起動する。respond は SessionStart hook が常時適用する。hooks に呼び出しの操作はない。プラグインを有効にしたセッションでは、次のときに自動で発火する。
 
 - セッション開始
+- 会話の要約の後
 - `git commit`・`gh pr create`・`gh pr edit`・`gh pr merge` の実行前
 - AskUserQuestion の実行前
 - gate-reviewer の報告の受け取り
@@ -96,6 +98,7 @@ hooks はセッション開始時に読み込まれるため、有効化した�
 | hook | 発火 | 動作 |
 | :-- | :-- | :-- |
 | SessionStart(すべての source) | セッション開始時 | `skills/respond/SKILL.md` の本文を frontmatter を除いて注入する |
+| SessionStart(compact) | 会話の要約の後 | In Progress のタスクの一覧と、要約に書かれたタスクの Implementation Notes を読んで再開点を決めてから続ける指示を注入する |
 | PreToolUse(Bash) | `git commit`・`gh pr create`・`gh pr edit` の実行前 | セッション URL か `Claude-Session:` の行があれば exit 2 で止め、理由を 1 行で返す |
 | PreToolUse(Bash) | `gh pr merge` の実行前 | PR の head と本文を gate-reviewer の判定の記録と照合する。記録どおりなら何も返さずに通し、ゲートの後に本文を変えたかコミットを追加したなら deny し、記録が無いか照合できなければ本人の確認(ask)を求める |
 | PreToolUse(AskUserQuestion) | AskUserQuestion の実行前 | `questions` が 2 問以上なら deny し、1 問ずつ聞くよう理由を返す |
@@ -104,6 +107,17 @@ hooks はセッション開始時に読み込まれるため、有効化した�
 | Stop | セッション完了時 | そのセッションで検査したファイルを再検査し、重大カテゴリの検出が残るあいだ完了をブロックする |
 | Stop | 応答の完了時 | 最後の「次:」の行が記号で名付けた案を選ばせていれば、1 ターンに 1 回だけ完了をブロックし、中身を書いた「次:」の行への書き直しを求める |
 | SubagentStop(gate-reviewer) | gate-reviewer の終了時 | PostToolUse(SubagentHandback)と同じく判定を記録する。同じ判定を 2 回読んでも記録は 1 つである |
+
+`inject_reread_notes.py`(SessionStart(compact))は、会話の要約の後の作業を develop 11.(再開する)の手順に戻す。hook は `backlog task list --status "In Progress" --json` を入力の `cwd` で走らせ、`cwd` が使えなければ `CLAUDE_PROJECT_DIR` で走らせる。環境に `BACKLOG_CWD` があれば、backlog CLI は `cwd` でなくその値のプロジェクトを読む。プロジェクトを上のディレクトリへたどって探すのは CLI に任せる。一覧は更新の新しい順に 20 件まで並べ、残りは件数だけを書く。標準入力の JSON は、環境の符号化(`PYTHONIOENCODING`・ロケール)に依らず UTF-8 として読み、出力は ASCII の JSON で書く。hook は指示を注入するだけで、Notes を読んだかを確かめない。
+
+`inject_reread_notes.py` は次のときに何も注入しない。
+
+- In Progress のタスクが 0 件である。
+- `cwd` と `CLAUDE_PROJECT_DIR` がどちらも使えない。
+- backlog CLI を起動できない。
+- backlog CLI が 0 以外の終了コードで終わった。
+
+CLI が 3 秒以内に応答しないときと、出力が想定の形でないときは、一覧なしの固定の指示を注入する。一覧を取らなかったときは、理由を `error.type` 付きの 1 行で標準エラーに書く。
 
 `guard_session_url.py`(PreToolUse(Bash))の対象は、`git commit`(`git -C <path> commit` を含む)・`gh pr create`・`gh pr edit` を含む Bash のコマンドである。`claude.ai/code/session_` の URL と `Claude-Session:` の行(大文字と小文字を区別しない)を、コマンド文字列全体と、`-F`・`--file`・`--body-file` で渡した本文ファイルから探す。相対パスは `cwd` から解決し、`-` は読まない。`Co-Authored-By` と `Generated with` の行は止めない。再利用するメッセージ(`--amend --no-edit`・`-C <commit>`)と、中身がコマンド文字列に現れない `--body "$(cat body.md)"`・`-m "$(cat msg.txt)"` は検査しない。
 
@@ -157,6 +171,7 @@ PreToolUse(AskUserQuestion)は、止めた直後に同じ内容で呼び直し�
 - lint がタイムアウトした、または異常終了した。
 - 検査対象の条件(拡張子・日本語文字数・除外パターン・文書種別)を満たさない。
 - `skills/respond/SKILL.md` が読めない(SessionStart は何も注入しない)。
+- `inject_reread_notes.py` が backlog の一覧を取れない(何も注入しないか、一覧なしの指示を注入する)。
 - `guard_next_line.py` が Stop の入力を読めない、または想定外の例外で終了した。
 
 検査が発火しているかは、カタログに登録した語を含む Markdown を書いて警告が返ることで確かめる。
