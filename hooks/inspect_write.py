@@ -14,10 +14,13 @@ lint.py(`skills/write-doc/scripts/lint.py`)を `--json` で実行し、検出が
 検査したファイルはセッション状態に記録し、Stop hook(`inspect_stop.py`)の再検査対象にする。
 
 入出力の契約:
-  標準入力  PostToolUse の JSON(`tool_name`・`tool_input`・`cwd`・`session_id` を読む)
+  標準入力  PostToolUse の UTF-8 の JSON(`tool_name`・`tool_input`・`cwd`・`session_id` を読む)。
+            環境の符号化(PYTHONIOENCODING など)に依らず UTF-8 のバイト列として読む
   exit 0    検出も分担の通知もなし・検査対象外・検査不能(何も出力しない)
   exit 0 + JSON 出力  検出または分担の通知あり。`{"decision": "block", "reason": <警告文>}` が
-            エージェントへ自動フィードバックされる(ツールの実行は取り消されない)
+            エージェントへ自動フィードバックされる(ツールの実行は取り消されない)。
+            出力は ASCII の JSON(非 ASCII の文字は \\uXXXX)であり、環境の符号化に依らず書ける
+  標準エラー  状態を保存できないとき、error.type 付きの 1 行を UTF-8 で書く(警告の出力は続ける)
 
 uv・lint.py・設定が欠けている場合や lint が失敗した場合は検査を諦めて何もしない
 (hook 自身の不具合や環境差で書き込みを止めない)。
@@ -25,7 +28,6 @@ uv・lint.py・設定が欠けている場合や lint が失敗した場合は�
 
 from __future__ import annotations
 
-import json
 import sys
 from pathlib import Path
 
@@ -37,11 +39,8 @@ HOOK_DIR = Path(__file__).resolve().parent
 
 
 def main() -> None:
-    try:
-        payload = json.load(sys.stdin)
-    except (json.JSONDecodeError, UnicodeDecodeError):
-        return
-    if not isinstance(payload, dict):
+    payload = lib.read_payload(sys.stdin.buffer)
+    if payload is None:
         return
     if payload.get("tool_name") not in lib.WRITE_TOOLS:
         return

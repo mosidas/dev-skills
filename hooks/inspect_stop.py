@@ -12,9 +12,12 @@ lint.py で再検査し、重大カテゴリの宣言(`inspection.config.json` �
   重大カテゴリが解消された時点で状態ファイルを削除し、以後の Stop は素通しになる。
 
 入出力の契約:
-  標準入力  Stop の JSON(`session_id` を読む)
-  exit 0    ブロックなし(何も出力しない)
-  exit 0 + JSON 出力  ブロック。`{"decision": "block", "reason": <理由>}` を返す
+  標準入力  Stop の UTF-8 の JSON(`session_id` を読む)。環境の符号化(PYTHONIOENCODING など)に
+            依らず UTF-8 のバイト列として読む
+  exit 0    ブロックなし(何も出力しない)。ブロックの上限で許可したときは標準エラーに UTF-8 で 1 行書く
+  exit 0 + JSON 出力  ブロック。`{"decision": "block", "reason": <理由>}` を ASCII の JSON
+            (非 ASCII の文字は \\uXXXX)で返す。環境の符号化に依らず書ける
+  標準エラー  状態を保存できないとき、error.type 付きの 1 行を UTF-8 で書く
 
 uv・lint.py が欠けている場合や lint が失敗した場合、そのファイルの検査を諦めて許可側に
 倒す(hook 自身の不具合や環境差で完了を止めない)。
@@ -22,7 +25,6 @@ uv・lint.py が欠けている場合や lint が失敗した場合、そのフ�
 
 from __future__ import annotations
 
-import json
 import sys
 from pathlib import Path
 
@@ -34,11 +36,8 @@ HOOK_DIR = Path(__file__).resolve().parent
 
 
 def main() -> None:
-    try:
-        payload = json.load(sys.stdin)
-    except (json.JSONDecodeError, UnicodeDecodeError):
-        return
-    if not isinstance(payload, dict):
+    payload = lib.read_payload(sys.stdin.buffer)
+    if payload is None:
         return
 
     project = lib.project_dir(payload)
@@ -71,10 +70,9 @@ def main() -> None:
 
     max_blocks = int(config.get("stop_max_blocks", 3))
     if state["stop_blocks"] >= max_blocks:
-        print(
+        lib.warn(
             f"write-doc 検査: 重大カテゴリの検出が残るがブロック上限({max_blocks} 回)に"
-            "達したため完了を許可する",
-            file=sys.stderr,
+            "達したため完了を許可する"
         )
         return
     state["stop_blocks"] += 1

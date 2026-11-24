@@ -7,10 +7,12 @@
 `Co-Authored-By` と `Generated with` の行は止めない。
 
 入出力の契約:
-  標準入力  PreToolUse の JSON(`tool_name`・`tool_input.command`・`cwd` を読む)
+  標準入力  PreToolUse の JSON(`tool_name`・`tool_input.command`・`cwd` を読む)。環境の符号化
+            (`PYTHONIOENCODING`・ロケール)に依らず UTF-8 のバイト列として読み、UTF-8 の JSON
+            として読めない入力は通す
   exit 0    対象外のコマンド、または検出なし(何も出力しない)
-  exit 2    検出あり、本文ファイルが読めない、または検査が失敗した。標準エラーに 1 行を書き、
-            その行がエージェントへ返る(ツールは実行されない)
+  exit 2    検出あり、本文ファイルが読めない、または検査が失敗した。標準エラーに UTF-8 で 1 行を
+            書き、その行がエージェントへ返る(ツールは実行されない)
 
 対象のコマンドと判定したあとは、検査できないときも止める(fail-closed)。検査の失敗を素通しすると、
 混入を防ぐ hook が黙って無効になるためである。
@@ -76,7 +78,7 @@ def find_violation(command: str, cwd: str) -> str | None:
 
 def main() -> int:
     try:
-        payload = json.load(sys.stdin)
+        payload = json.loads(sys.stdin.buffer.read().decode("utf-8"))
     except (json.JSONDecodeError, UnicodeDecodeError):
         return 0
     if not isinstance(payload, dict) or payload.get("tool_name") != "Bash":
@@ -94,7 +96,8 @@ def main() -> int:
         reason = FAILED.format(name=type(exc).__name__)
     if reason is None:
         return 0
-    print(reason, file=sys.stderr)
+    sys.stderr.buffer.write((reason + "\n").encode("utf-8", "backslashreplace"))
+    sys.stderr.buffer.flush()
     return 2
 
 
