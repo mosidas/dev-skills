@@ -27,7 +27,11 @@ from __future__ import annotations
 import json
 import re
 import sys
-from typing import BinaryIO
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+
+import response_text as rt  # noqa: E402
 
 REASON = (
     "respond 3.2 の検査: 最後の「次:」の行が、記号で名付けた案(「{label}」)を選ばせている。"
@@ -38,17 +42,7 @@ REASON = (
 # 理由に書く当たった部分の長さの上限。「案」と記号の間の空白は長さに上限が無いため
 LABEL_MAX = 40
 
-FENCE = re.compile(r"[ \t]*(`{3,}|~{3,})")
 NEXT = re.compile(r"\s*次\s*[:：]")
-BACKTICKS = re.compile(r"`+")
-# 始まりを英数字の並びの先頭に限る(並びの途中の各位置から末尾まで読み直さない)
-URL = re.compile(r"(?<![A-Za-z0-9+.-])[A-Za-z][A-Za-z0-9+.-]*://\S+")
-# 空白か開き括弧の後に始まり、斜線を含む語(docs/a.md・./x/y・~/z)。始まりの前に置ける括弧を語に含めない
-# (「【【…」の各位置から末尾まで読み直さない)
-PATH = re.compile(r"(?<![^\s(（「『【])(?:~|\.{1,2})?/?[^\s/()（）「」『』【】、。]+(?:/[^\s/()（）「」『』【】、。]+)+/?")
-# 空白か開き括弧の後に始まり、英字で始まる拡張子で終わる斜線の無いファイル名(案A.md・x.json)。
-# 拡張子を英字で始まるものに限り、番号(4.1)を消さない。語幹にひらがなを含めず、前に続く文(案Aの内容をnotes.md)を消さない
-FILENAME = re.compile(r"(?<![^\s(（「『【])[^\s/()（）「」『』【】、。ぁ-ん]*?\.[A-Za-z][A-Za-z0-9]*(?![A-Za-z0-9])")
 # 記号の英字(A・b・A1・B12)。英字 2 字以上の語(PR・API)は記号にしない
 LETTER = r"[A-Za-zＡ-Ｚａ-ｚ][0-9０-９]*"
 NUMBER = r"[0-9０-９]+(?:\.[0-9]+)*"
@@ -80,60 +74,9 @@ LABELED_OPTION = re.compile(
 )
 
 
-def read_payload(stdin: BinaryIO) -> dict | None:
-    """UTF-8 のバイト列の JSON を dict で返す。読めないか dict でなければ None。"""
-    try:
-        payload = json.loads(stdin.read().decode("utf-8"))
-    except (json.JSONDecodeError, UnicodeDecodeError):
-        return None
-    return payload if isinstance(payload, dict) else None
-
-
 def last_line(message: str) -> str | None:
-    """コードフェンスの外にある最後の空でない行。閉じないフェンスは文書の終わりまで続く。"""
-    last = None
-    fence = None
-    for line in message.splitlines():
-        m = FENCE.match(line)
-        if fence is None:
-            if m:
-                fence = m.group(1)
-            elif line.strip():
-                last = line
-        elif m and m.group(1)[0] == fence[0] and len(m.group(1)) >= len(fence) and not line[m.end():].strip():
-            fence = None
-    return last
-
-
-def blank(text: str, pattern: re.Pattern[str]) -> str:
-    """当たった部分を同じ長さの空白にする(当たった位置を元の行のまま保つ)。"""
-    return pattern.sub(lambda m: " " * len(m.group(0)), text)
-
-
-def blank_code_spans(line: str) -> str:
-    """CommonMark のコードスパン(同じ本数のバッククォートの対)を同じ長さの空白にする。対の無いバッククォートは残す。
-
-    開きのバッククォートの並びごとに、同じ本数の次の並びを後ろから 1 回の走査で求めておき、行の長さに比例する時間で済ませる。
-    """
-    runs = list(BACKTICKS.finditer(line))
-    closer: list[int | None] = [None] * len(runs)
-    later: dict[int, int] = {}
-    for i in range(len(runs) - 1, -1, -1):
-        width = len(runs[i].group(0))
-        closer[i] = later.get(width)
-        later[width] = i
-    parts: list[str] = []
-    pos = i = 0
-    while i < len(runs):
-        j = closer[i]
-        if j is None:
-            i += 1
-            continue
-        start, end = runs[i].start(), runs[j].end()
-        parts += [line[pos:start], " " * (end - start)]
-        pos, i = end, j + 1
-    parts.append(line[pos:])
-    return "".join(parts)
+    """コードフェンスの外にある最後の空でない行。"""
+    return next((line for line in reversed(rt.prose_lines(message)) if line is not None and line.strip()), None)
 
 
 def labeled_option(message: str) -> str | None:
@@ -141,17 +84,17 @@ def labeled_option(message: str) -> str | None:
     line = last_line(message)
     if line is None or not NEXT.match(line):
         return None
-    prose = PATH.sub(
+    prose = rt.PATH.sub(
         lambda m: m.group(0) if SLASHED_SYMBOLS.match(m.group(0)) else " " * len(m.group(0)),
-        blank(blank_code_spans(line), URL),
+        rt.blank(rt.blank_code_spans(line), rt.URL),
     )
-    prose = blank(prose, FILENAME)
+    prose = rt.blank(prose, rt.FILENAME)
     m = LABELED_OPTION.search(prose)
     return line[m.start():m.end()] if m else None
 
 
 def main() -> int:
-    payload = read_payload(sys.stdin.buffer)
+    payload = rt.read_payload(sys.stdin.buffer)
     if payload is None or payload.get("stop_hook_active"):
         return 0
     message = payload.get("last_assistant_message")
