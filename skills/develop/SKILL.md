@@ -98,11 +98,11 @@ backlog task edit <id> --append-notes $'判断: <選んだこと・したこと>
 
 ## 7. ゲートを通す
 
-- 全ステップが承認されたら、push の前に gate-reviewer サブエージェント(`dev-skills:gate-reviewer`)を起動する。渡すのは、対象リポジトリのパス、レビューする範囲(`main..HEAD`)、要件の 3 行(目的・完了条件・対象外)、計画の全体、作業ツリーの外のファイル(セッションの scratchpad など)に書いた PR 本文案の絶対パスである。
+- 全ステップが承認されたら、push の前に gate-reviewer サブエージェント(`dev-skills:gate-reviewer`)を起動する。渡すのは、対象リポジトリのパス、レビューする範囲(`main..HEAD`)、要件の 4 行(目的・完了条件・対象外・品質)、計画の全体、作業ツリーの外のファイル(セッションの scratchpad など)に書いた PR 本文案の絶対パスである。
 - 品質がプロダクトのとき、gate-reviewer を起動する前に統括が claude-security プラグイン(`claude-security@claude-plugins-official`)の Scan changes を効果 `high` で実行する(`/claude-security scan my branch at high`)。報告は対象リポジトリの `CLAUDE-SECURITY-<timestamp>/` に書き出される。プラグインが導入されていないときは組み込みの `/security-review` で代える。指摘があれば implementer に渡して直させ、直したあとで gate-reviewer を起動する。
 - gate-reviewer の前に敵対役(`references/parallel.md` 5.)を任意で起動できる。統括が再実行して確かめた敵対役の所見は gate-reviewer に渡す。Codex CLI がある環境で gate-reviewer と `codex review --base main` を並走させる(同 6.)。
 - gate-reviewer はブランチ全体でしか分からないことを見る。見るのは完了条件の充足・ステップ間の整合・残骸・PR 本文との一致である。そのうえで「マージ可」か「差し戻し」を返す。ステップごとの reviewer が見た内容は蒸し返さない。品質がプロダクトのとき、計画に含まれる secure・observe・recover 由来の変更(ヘルスチェック・メトリクス・拒否のテスト・タイムアウト・エラーページなど)は要件内として扱う。
-- 差し戻しなら、修正点を implementer に渡して直させ、再びゲートを通す。2 回直しても通らないときは、統括がユーザーに状況を報告して判断を仰ぐ。ゲートを push の前に通すのは、CI を回す前に直すほうが安いからである。
+- 差し戻しなら、修正点を implementer に渡して直させ、再びゲートを通す。計画の失敗の一覧の欠けで差し戻されたときは、統括が失敗の一覧を Implementation Notes の計画に足し、一覧の行で実装に無いものを implementer に直させる。一覧を書くのに planner の起動が必要なら、planner に失敗の一覧を出させて統括が Notes の計画に足す。2 回直しても通らないときは、統括がユーザーに状況を報告して判断を仰ぐ。ゲートを push の前に通すのは、CI を回す前に直すほうが安いからである。
 - gate-reviewer が「マージ可」を返すと、hook がリポジトリ・head の SHA・本文案のハッシュ(帰属の行を除く)をプラグインのデータの置き場(`${CLAUDE_PLUGIN_DATA}/merge-gate/`)に記録する。「差し戻し」はその SHA の記録を削除する。統括は記録を書かない。記録は 8. のマージの前の照合に使う。
 - 統括はゲートの判定を受けたら、判定の行の 40 桁の SHA を Implementation Notes に控える。8. の渡し直しの `<前回の SHA>` に使う。
 
