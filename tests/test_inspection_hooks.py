@@ -392,7 +392,7 @@ class HookProcessTestCase(helpers.TempDirTestCase):
             [sys.executable, str(script)],
             input=json.dumps(payload) if isinstance(payload, (dict, list)) else str(payload),
             capture_output=True,
-            text=True,
+            encoding="utf-8",
             env=env or self.env,
         )
 
@@ -519,6 +519,38 @@ class InspectWriteTest(HookProcessTestCase):
         path = self.write_doc("doc.md", "EMPTYNOTICE")
         self.assertEqual(self.write_reason(path), "")
 
+    def ascii_write(self, path: Path) -> subprocess.CompletedProcess:
+        """標準入出力の符号化が ASCII の環境で、日本語を含む PostToolUse の入力を送る。"""
+        payload = dict(self.write_payload(path), tool_input={"file_path": str(path), "content": "日本語の本文"})
+        return self.run_hook(
+            INSPECT_WRITE,
+            json.dumps(payload, ensure_ascii=False),
+            env={**self.env, "PYTHONIOENCODING": "ascii"},
+        )
+
+    def test_標準入出力の符号化が日本語を表せなくても日本語の入力を検査して警告する(self) -> None:
+        path = self.write_doc("文書/doc.md", "NGWORD")
+        proc = self.ascii_write(path)
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        proc.stdout.encode("ascii")
+        decision = json.loads(proc.stdout)
+        self.assertEqual(decision["decision"], "block")
+        self.assertIn("forbidden_phrase", decision["reason"])
+        self.assertIn("文書/doc.md", decision["reason"])
+
+    def test_標準入出力の符号化が日本語を表せなくても検出が無ければ何も出さない(self) -> None:
+        path = self.write_doc("文書/doc.md")
+        proc = self.ascii_write(path)
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        self.assertEqual(proc.stdout, "")
+        self.assertEqual(len(list(self.state_dir.rglob("*.json"))), 1, "検査が走って状態に記録された")
+
+    def test_符号化が日本語を表せなくても本物のlintの分担の通知を返す(self) -> None:
+        self.use_real_main_lint()
+        path = self.write_body("doc.md", headings(11))
+        decision = self.decision(self.ascii_write(path))
+        self.assertIn("分担:", decision["reason"])
+
 
 class NoticeOnceTest(HookProcessTestCase):
     def test_同じファイルへの通知は初回だけ出す(self) -> None:
@@ -570,11 +602,39 @@ class NoticeOnceTest(HookProcessTestCase):
 
 
 class InspectStopTest(HookProcessTestCase):
-    def record(self, rel: str, marker: str = "") -> Path:
+    def record(self, rel: str, marker: str = "", env: dict | None = None) -> Path:
         """inspect_write を通してファイルを状態へ記録する。"""
         path = self.write_doc(rel, marker)
-        self.run_hook(INSPECT_WRITE, self.write_payload(path))
+        self.run_hook(INSPECT_WRITE, self.write_payload(path), env=env)
         return path
+
+    def ascii_stop(self) -> subprocess.CompletedProcess:
+        """標準入出力の符号化が ASCII の環境で、日本語を含む Stop の入力を送る。"""
+        payload = dict(self.stop_payload(), last_assistant_message="文書を書き直した。")
+        return self.run_hook(INSPECT_STOP, json.dumps(payload, ensure_ascii=False), env=self.ascii_env)
+
+    @property
+    def ascii_env(self) -> dict:
+        return {**self.env, "PYTHONIOENCODING": "ascii"}
+
+    def test_符号化が日本語を表せなくても重大カテゴリの残る完了をブロックする(self) -> None:
+        self.record("doc.md", "NGWORD", env=self.ascii_env)
+        proc = self.ascii_stop()
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        proc.stdout.encode("ascii")
+        decision = json.loads(proc.stdout)
+        self.assertEqual(decision["decision"], "block")
+        self.assertIn("forbidden_phrase", decision["reason"])
+        self.assertIn("doc.md", decision["reason"])
+
+    def test_符号化が日本語を表せなくてもブロックの上限の文をUTF8で書く(self) -> None:
+        self.record("doc.md", "NGWORD", env=self.ascii_env)
+        for _ in range(3):  # 既定の stop_max_blocks = 3
+            self.assertEqual(self.decision(self.ascii_stop())["decision"], "block")
+        proc = self.ascii_stop()
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        self.assertEqual(proc.stdout, "")
+        self.assertIn("上限", proc.stderr)
 
     def test_重大カテゴリが残るあいだ完了をブロックする(self) -> None:
         self.record("doc.md", "NGWORD")

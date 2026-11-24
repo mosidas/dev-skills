@@ -22,7 +22,7 @@ import subprocess
 import sys
 import tempfile
 from pathlib import Path
-from typing import NamedTuple
+from typing import BinaryIO, NamedTuple
 
 WRITE_TOOLS = {"Write", "Edit", "MultiEdit", "NotebookEdit"}
 PATH_KEYS = ("file_path", "notebook_path", "path")
@@ -196,6 +196,9 @@ def run_lint(path: Path, genre: str | None, config: dict) -> LintResult | None:
     """lint.py を `--json` で実行して検出と分担の通知を返す。実行できなければ None(検査を諦める)。
 
     notice は lint.py が見出しの多い文書に出す工程の指示であり、出さなければ None である。
+    子には PYTHONIOENCODING=utf-8 を渡して UTF-8 の出力を求め、UTF-8 として読む。hook の環境の
+    符号化(ASCII など)を受け継ぐと、子が日本語を含む JSON を書けずに失敗するためである。
+    UTF-8 として読めない出力は検査を諦める側に倒す。
     """
     cmd = lint_command()
     if cmd is None:
@@ -207,7 +210,8 @@ def run_lint(path: Path, genre: str | None, config: dict) -> LintResult | None:
         proc = subprocess.run(
             args,
             capture_output=True,
-            text=True,
+            encoding="utf-8",
+            env={**os.environ, "PYTHONIOENCODING": "utf-8"},
             timeout=float(config.get("lint_timeout_seconds", 120)),
         )
     except (OSError, subprocess.TimeoutExpired, ValueError):
@@ -456,6 +460,24 @@ def record_inspected(path: Path, project: Path | None, session_id: str, notify: 
     return first_notice
 
 
+def read_payload(stdin: BinaryIO) -> dict | None:
+    """UTF-8 のバイト列の JSON を dict で返す。読めないか dict でなければ None。"""
+    try:
+        payload = json.loads(stdin.read().decode("utf-8"))
+    except (json.JSONDecodeError, UnicodeDecodeError):
+        return None
+    return payload if isinstance(payload, dict) else None
+
+
 def emit(decision: dict) -> None:
-    """hook の JSON 出力(decision: block / reason)を書き出す。"""
-    json.dump(decision, sys.stdout, ensure_ascii=False)
+    """hook の JSON 出力(decision: block / reason)を ASCII の JSON で書き出す。
+
+    非 ASCII の文字は \\uXXXX で表すので、標準出力の符号化(PYTHONIOENCODING など)に依らず書ける。
+    """
+    json.dump(decision, sys.stdout)
+
+
+def warn(message: str) -> None:
+    """標準エラーへ 1 行を UTF-8 で書く。標準エラーの符号化に依らず日本語を書ける。"""
+    sys.stderr.buffer.write((message + "\n").encode("utf-8", "backslashreplace"))
+    sys.stderr.flush()
