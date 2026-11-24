@@ -148,7 +148,7 @@ backlog task edit <id> -s Done --final-summary "<結果>"
 
 ## 11. 再開する
 
-中断・セッションの終了・別のエージェントからの引き継ぎの後で途中のタスクを続けるときは次の手順で再開点を判断する。記録を読まずにやり直すと済んだステップを二重に行う。
+中断・セッションの終了・会話の要約(compaction)・別のエージェントからの引き継ぎの後で途中のタスクを続けるときは次の手順で再開点を判断する。会話の要約の後は SessionStart の hook が In Progress のタスクの一覧と、要約に書かれたタスクの Implementation Notes を読み直す指示を注入する。注入は読んだかを確かめないので、要約に書かれたタスクについて手順 1 から行う。記録を読まずにやり直すと済んだステップを二重に行う。
 
 1. タスクの Implementation Notes を読んで再開メモ・承認済みのステップ・未決の事項を拾う。Backlog.md が無いリポジトリでは PR 本文を読む。
 2. `git branch --list '*<TASK-id>*'` でタスクのブランチを探す。見つけたブランチへ切り替える。`main` へ直接コミットするリポジトリでは `main` へ切り替える。ブランチと PR の実物を確かめる。`git log --oneline main..HEAD`・`git status`・`git stash list`・`gh pr view --json number,state,statusCheckRollup` を実行する。PR が無ければ `no pull requests found` が出る。PR を出す前として扱う。

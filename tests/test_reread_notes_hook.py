@@ -312,6 +312,31 @@ class FailureTest(RereadNotesCase):
                 self.assertEqual(self.calls(), [], "CLI を呼ばない")
 
 
+class RegistrationTest(unittest.TestCase):
+    def setUp(self) -> None:
+        hooks = json.loads((helpers.REPO_ROOT / "hooks" / "hooks.json").read_text(encoding="utf-8"))
+        self.session_start = hooks["hooks"]["SessionStart"]
+
+    @staticmethod
+    def commands(entry: dict) -> list[str]:
+        return [hook["command"] for hook in entry["hooks"]]
+
+    def test_matcherがcompactの要素にhookを登録する(self) -> None:
+        compact = [entry for entry in self.session_start if entry.get("matcher") == "compact"]
+        self.assertEqual(len(compact), 1)
+        self.assertTrue(
+            any("${CLAUDE_PLUGIN_ROOT}/hooks/inject_reread_notes.py" in c for c in self.commands(compact[0])),
+            self.commands(compact[0]),
+        )
+
+    def test_matcherの無い要素はinject_respondのまま残る(self) -> None:
+        unmatched = [entry for entry in self.session_start if "matcher" not in entry]
+        self.assertEqual(len(unmatched), 1)
+        self.assertEqual(
+            self.commands(unmatched[0]), ['python3 "${CLAUDE_PLUGIN_ROOT}/hooks/inject_respond.py"']
+        )
+
+
 @unittest.skipUnless(shutil.which("backlog"), "backlog CLI が無い")
 class RealCliTest(helpers.TempDirTestCase):
     def test_実物のCLIのIn_Progressのタスクを注入する(self) -> None:

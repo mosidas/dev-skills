@@ -9,6 +9,16 @@
             "timeout": 10
           }
         ]
+      },
+      {
+        "matcher": "compact",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/inject_reread_notes.py\"",
+            "timeout": 10
+          }
+        ]
       }
     ],
     "PreToolUse": [
