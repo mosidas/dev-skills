@@ -26,13 +26,20 @@ host/owner/name に直せて、本文案が読めるときだけ (リポジト�
 ディレクトリを使えないときは、ログも同じディレクトリにあるため何も残せない。
 
 照合は `gh pr view` で PR の head・本文・コミットを取り、(リポジトリ, head) の記録の本文のハッシュが一致すれば
-通す。本文が違えば止める。head に記録が無く古いコミットに記録があれば、ゲートの後にコミットを足したとして止める。
+通す。本文が違えば止める。head に記録が無く古いコミットに記録があれば、記録の作業ツリーの git で、記録の head から
+今の head までが origin の base を競合なしで取り込んだマージコミットだけかを確かめる。取り込みだけなら本文のハッシュで
+通すか止め、そうでなければゲートの後にコミットを足したとして止め、確かめられなければその旨を足して止める。
+git は置き換え(git replace)を読まずに走らせる。
 どれにも無ければ本人に確認を求める。PR を特定できない・取得できない・コマンドの読み取りや照合が途中で失敗したときも確認を求める。
 -R・PR の URL・GH_REPO・GH_HOST(代入か hook の環境)の host が github.com でなければ、gh pr view を走らせずに確認を求める。
 gh pr view は許可の判定の前に走り、その host へ gh の認証情報を送るためである。シェルか起動役(sh・eval・xargs・sudo など)を
 先頭に書いた単純コマンドがあれば、渡した中身を読まずに確認を求める。
 1 つのコマンドに複数のマージがあれば、止める > 確認 > 通すの強いほうにする。照合ごとに `events.jsonl` に
-`merge_checked` を 1 行残し、確認を求めた理由の下位の分類を `detail`(gh の非 0 の終了は `exit_code` も)に載せる。
+`merge_checked` を 1 行残し、確認を求めた理由の下位の分類と、main の取り込みを確かめたときの段を `detail`
+(gh と git の非 0 の終了は `exit_code` も)に載せる。
+
+脅威の範囲: この hook が止めるのは、ゲートの後の変更で判定の取り直しを省くことである。偽造(記録のファイルを
+直接書く・手元の追跡 ref を書き換える・hook を避けるために組んだコマンド)は範囲の外とする。
 """
 
 from __future__ import annotations
@@ -56,6 +63,17 @@ RECORD_LIMIT = 4 * 1024
 BODY_LIMIT = 256 * 1024
 # shortcut: 仮に 5 秒(2 回の git が hooks.json の timeout 20 秒に収まる値), rev-parse と remote get-url の p99.9 を実測したら置き換える
 GIT_TIMEOUT = 5
+# `git rev-parse --local-env-vars` の一覧(git 2.55)。hook の環境にあると -C の先でなくその値のリポジトリを読む
+GIT_LOCAL_ENV = {
+    "GIT_ALTERNATE_OBJECT_DIRECTORIES", "GIT_CONFIG", "GIT_CONFIG_PARAMETERS", "GIT_CONFIG_COUNT",
+    "GIT_OBJECT_DIRECTORY", "GIT_DIR", "GIT_WORK_TREE", "GIT_IMPLICIT_WORK_TREE", "GIT_GRAFT_FILE",
+    "GIT_INDEX_FILE", "GIT_NO_REPLACE_OBJECTS", "GIT_REPLACE_REF_BASE", "GIT_PREFIX", "GIT_SHALLOW_FILE",
+    "GIT_COMMON_DIR",
+}
+# shortcut: main の取り込みは 20 回まで確かめる(1 回に git を 3 回), 長い PR で too_many_merges が続いたら引き上げる
+MERGE_LIMIT = 20
+MAIN_MERGE_ONLY = "main_merge_only"
+BASE_REF = re.compile(r"(?!-)(?!.*\.\.)[A-Za-z0-9._/-]+")
 # 全体の期限 30 秒は hooks.json の timeout 40 秒より短く、gh pr view の上限 15 秒は実測 0.4〜0.7 秒の約 20 倍
 CHECK_DEADLINE = 30
 GH_TIMEOUT = 15
@@ -102,9 +120,10 @@ VALUE_FLAGS = {"--author-email", "--body", "--body-file", "--subject", "--match-
 SHORT_VALUE_FLAGS = "AbFtR"
 
 COMMITS_AFTER_GATE = (
-    "ゲートの判定({gated})の後に head が {head} へ進んだ。{gated}..{head} のコミットと PR 本文の差分を"
+    "ゲートの判定({gated})の後に head が {head} へ進んだ。{note}{gated}..{head} のコミットと PR 本文の差分を"
     " gate-reviewer に渡して判定を取り直してから、実行し直す(develop 8.)。"
 )
+MERGE_UNVERIFIED = "main の取り込みだけと確かめられなかった。"
 BODY_CHANGED = (
     "ゲートの判定の後に PR 本文が変わった。ゲートに渡した本文案のファイルと `gh pr view {number} --json body` の差分を"
     " gate-reviewer に渡して判定を取り直してから、実行し直す(develop 8.)。"
@@ -163,6 +182,7 @@ class PullRequest:
     url: str
     head: str
     body: str
+    base: str
     commits: tuple[str, ...]
 
 
@@ -189,6 +209,14 @@ class ViewFailed(Exception):
     def __init__(self, kind: str, detail: str | None = None, exit_code: int | None = None) -> None:
         super().__init__(kind)
         self.kind, self.detail, self.exit_code = kind, detail, exit_code
+
+
+class MergeUnverified(Exception):
+    """記録の head から今の head までを git で確かめられなかった段。`detail`・`exit_code` は events.jsonl に同じ名前で載る。"""
+
+    def __init__(self, detail: str, exit_code: int | None = None) -> None:
+        super().__init__(detail)
+        self.detail, self.exit_code = detail, exit_code
 
 
 class RecordUnreadable(Exception):
@@ -261,15 +289,22 @@ def repo_key(url: str) -> str | None:
     return f"{m.group(1)}/{slug.group(1)}/{slug.group(2)}".lower()
 
 
+def run_git(repo_path: Path, *args: str, timeout: float = GIT_TIMEOUT) -> subprocess.CompletedProcess[str]:
+    """repo_path で git を走らせる。起動の失敗(OSError・ValueError)と時間切れはそのまま送出する。"""
+    env = {key: value for key, value in os.environ.items() if key not in GIT_LOCAL_ENV}
+    return subprocess.run(
+        ["git", "--no-replace-objects", "-C", str(repo_path), *args],
+        capture_output=True,
+        text=True,
+        timeout=timeout,
+        stdin=subprocess.DEVNULL,
+        env=env,
+    )
+
+
 def git(repo_path: Path, *args: str) -> str | None:
     try:
-        proc = subprocess.run(
-            ["git", "-C", str(repo_path), *args],
-            capture_output=True,
-            text=True,
-            timeout=GIT_TIMEOUT,
-            stdin=subprocess.DEVNULL,
-        )
+        proc = run_git(repo_path, *args)
     # ValueError: パスの NUL・対になっていないサロゲート、出力の復号の失敗
     except (OSError, ValueError, subprocess.TimeoutExpired):
         return None
@@ -827,7 +862,7 @@ def parse_pr(data: object) -> PullRequest:
     """gh pr view の JSON を確かめて PullRequest にする。形が違えば ViewFailed を送出する。"""
     if not isinstance(data, dict):
         raise ViewFailed("view_malformed")
-    head, body, url, commits = (data.get(k) for k in ("headRefOid", "body", "url", "commits"))
+    head, body, url, base, commits = (data.get(k) for k in ("headRefOid", "body", "url", "baseRefName", "commits"))
     m = PR_URL.fullmatch(url) if isinstance(url, str) else None
     repo = repo_key(m.group(1)) if m else None
     if (
@@ -835,11 +870,12 @@ def parse_pr(data: object) -> PullRequest:
         or not isinstance(head, str)
         or not SHA.fullmatch(head)
         or not isinstance(body, str)
+        or not isinstance(base, str)
         or not isinstance(commits, list)
         or not all(isinstance(c, dict) and isinstance(c.get("oid"), str) and SHA.fullmatch(c["oid"]) for c in commits)
     ):
         raise ViewFailed("view_malformed")
-    return PullRequest(repo, m.group(2), m.group(3), url, head, body, tuple(c["oid"] for c in commits))
+    return PullRequest(repo, m.group(2), m.group(3), url, head, body, base, tuple(c["oid"] for c in commits))
 
 
 def view_pr(target: Target, deadline: float) -> PullRequest:
@@ -891,6 +927,81 @@ def find_record(store: Path | None, pr: PullRequest, head: str) -> GateRecord | 
     return record
 
 
+def merge_git(repo_path: Path, deadline: float, *args: str) -> tuple[bool, str]:
+    """git を期限の内側で走らせ、(終了コードが 0 か, 標準出力) を返す。終了コード 0・1 のほか(版が古く引数を知らない
+    129・オブジェクトが無い 128 など)・起動の失敗・時間切れは MergeUnverified を送出する。"""
+    remaining = deadline - time.monotonic()
+    if remaining <= 0:
+        raise MergeUnverified("timeout")
+    try:
+        proc = run_git(repo_path, *args, timeout=min(GIT_TIMEOUT, remaining))
+    except subprocess.TimeoutExpired:
+        raise MergeUnverified("timeout") from None
+    except (OSError, ValueError):
+        raise MergeUnverified("git_failed") from None
+    if proc.returncode not in (0, 1):
+        raise MergeUnverified("git_failed", proc.returncode)
+    return proc.returncode == 0, proc.stdout
+
+
+# shortcut: 第 2 親は手元の追跡 ref refs/remotes/origin/<base> の祖先かで確かめ、その ref を信じる, 追跡 ref が古いか書き換わって誤って通したら gh で取った base の head と照合する
+def main_merge_stage(record: GateRecord, head: str, base: str, deadline: float) -> str:
+    """record.head から head までの first-parent の各コミットが、origin の base を競合なしで取り込んだマージだけかを
+    確かめる。取り込みだけなら MAIN_MERGE_ONLY を、違えば外れた段(not_ancestor・too_many_merges・not_merge・not_base・
+    conflict・tree_mismatch)を返す。確かめられなければ MergeUnverified を送出する。"""
+    repo = Path(record.repo_path)
+    if not repo.is_absolute() or not repo.is_dir():
+        raise MergeUnverified("missing_repo")
+    if not BASE_REF.fullmatch(base):
+        raise MergeUnverified("base_shape")
+    for oid in (record.head, head):
+        if not merge_git(repo, deadline, "rev-parse", "--verify", "--quiet", f"{oid}^{{commit}}")[0]:
+            raise MergeUnverified("missing_commit")
+    if not merge_git(repo, deadline, "merge-base", "--is-ancestor", record.head, head)[0]:
+        return "not_ancestor"
+    ok, out = merge_git(
+        repo, deadline, "rev-list", "--first-parent", "--parents", f"--max-count={MERGE_LIMIT + 1}", f"{record.head}..{head}"
+    )
+    if not ok:
+        raise MergeUnverified("git_failed", 1)
+    rows = [line.split() for line in out.splitlines()]
+    if len(rows) > MERGE_LIMIT:
+        return "too_many_merges"
+    if not rows or any(len(row) != 3 or not all(SHA.fullmatch(oid) for oid in row) for row in rows):
+        return "not_merge"
+    for merge, first, second in rows:
+        if not merge_git(repo, deadline, "merge-base", "--is-ancestor", second, f"refs/remotes/origin/{base}")[0]:
+            return "not_base"
+        clean, merged_tree = merge_git(repo, deadline, "merge-tree", "--write-tree", first, second)
+        if not clean:
+            return "conflict"
+        ok, tree = merge_git(repo, deadline, "rev-parse", "--verify", "--quiet", f"{merge}^{{tree}}")
+        if not ok:
+            raise MergeUnverified("git_failed", 1)
+        if merged_tree.split("\n", 1)[0] != tree.strip():
+            return "tree_mismatch"
+    return MAIN_MERGE_ONLY
+
+
+def body_outcome(record: GateRecord, pr: PullRequest, detail: str | None = None) -> Outcome:
+    if record.body_sha256 == body_digest(pr.body):
+        return Outcome("pass", "pass", pr=pr, detail=detail)
+    return Outcome("deny", "body_changed", BODY_CHANGED.format(number=pr.number), pr, detail=detail)
+
+
+def after_gate(record: GateRecord, pr: PullRequest, deadline: float) -> Outcome:
+    """ゲートの後に head が進んだ PR を、main の取り込みだけかで判定する。"""
+    try:
+        stage = main_merge_stage(record, pr.head, pr.base, deadline)
+    except MergeUnverified as e:
+        reason = COMMITS_AFTER_GATE.format(gated=record.head[:7], head=pr.head[:7], note=MERGE_UNVERIFIED)
+        return Outcome("deny", "merge_unverified", reason, pr, detail=e.detail, exit_code=e.exit_code)
+    if stage == MAIN_MERGE_ONLY:
+        return body_outcome(record, pr, stage)
+    reason = COMMITS_AFTER_GATE.format(gated=record.head[:7], head=pr.head[:7], note="")
+    return Outcome("deny", "commits_after_gate", reason, pr, detail=stage)
+
+
 def check(target: Target | Unresolved, deadline: float, store: Path | None) -> Outcome:
     if isinstance(target, Unresolved):
         return Outcome("ask", "target_unresolved", UNRESOLVED, detail=target.detail)
@@ -900,13 +1011,11 @@ def check(target: Target | Unresolved, deadline: float, store: Path | None) -> O
         return Outcome("ask", e.kind, VIEW_FAILED, detail=e.detail, exit_code=e.exit_code)
     record = find_record(store, pr, pr.head)
     if record is not None:
-        if record.body_sha256 == body_digest(pr.body):
-            return Outcome("pass", "pass", pr=pr)
-        return Outcome("deny", "body_changed", BODY_CHANGED.format(number=pr.number), pr)
+        return body_outcome(record, pr)
     for oid in reversed(pr.commits):
-        if oid != pr.head and find_record(store, pr, oid) is not None:
-            reason = COMMITS_AFTER_GATE.format(gated=oid[:7], head=pr.head[:7])
-            return Outcome("deny", "commits_after_gate", reason, pr)
+        gated = find_record(store, pr, oid) if oid != pr.head else None
+        if gated is not None:
+            return after_gate(gated, pr, deadline)
     return Outcome("ask", "no_record", NO_RECORD.format(slug=pr.slug, number=pr.number), pr)
 
 

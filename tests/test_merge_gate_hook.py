@@ -4,7 +4,8 @@ hook は `sys.exit` を呼び、`CLAUDE_PLUGIN_DATA` の下に記録とログを
 一時ディレクトリに向けたサブプロセスで確かめる。入力は実機で観測した形にする。auto モードでは
 PostToolUse(SubagentHandback)の `tool_input.message` に、default モードでは SubagentStop の
 `last_assistant_message` に報告が入る。記録する入力と記録しない入力を対で書く。
-照合は PATH の先頭に置いた偽の gh で確かめ、ネットワークを使わない。
+照合は PATH の先頭に置いた偽の gh で確かめ、ネットワークを使わない。main の取り込みは一時の bare リポジトリを
+origin にした実際の git で確かめる。
 Python 3 標準ライブラリのみを使用する。
 """
 
@@ -13,6 +14,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import shutil
 import subprocess
 import sys
 import time
@@ -128,13 +130,15 @@ def report(verdict: str, repo: Path, body: Path | None) -> str:
     return "\n".join(lines) + "\n\n## 確認したこと\n- テスト: 通過\n"
 
 
-def pr_view(head: str, body: str = BODY, commits: list[str] | None = None, url: str = PR_URL) -> dict:
+def pr_view(
+    head: str, body: str = BODY, commits: list[str] | None = None, url: str = PR_URL, base: str = "main"
+) -> dict:
     """gh pr view の応答(views.json の 1 件)を作る。"""
     data = {
         "headRefOid": head,
         "body": body,
         "url": url,
-        "baseRefName": "main",
+        "baseRefName": base,
         "commits": [{"oid": oid} for oid in (commits or [head])],
     }
     return {"stdout": json.dumps(data, ensure_ascii=False)}
@@ -449,7 +453,7 @@ class MergeGateRecordTest(MergeGateCase):
         self.assertFalse(self.store.exists())
 
 
-class MergeGateCheckTest(MergeGateCase):
+class MergeGateCheckCase(MergeGateCase):
     def setUp(self) -> None:
         super().setUp()
         self.bin = self.tmp / "bin"
@@ -510,16 +514,30 @@ class MergeGateCheckTest(MergeGateCase):
         self.assertNotIn("\n", output["permissionDecisionReason"], "理由は 1 行")
         return output["permissionDecision"], output["permissionDecisionReason"]
 
+    def commit_after_gate(self, name: str = "after.txt") -> str:
+        """作業ツリーにマージでないコミットを 1 つ足し、その SHA を返す。"""
+        (self.repo / name).write_text(f"{name}\n", encoding="utf-8")
+        git(self.repo, "add", name)
+        git(self.repo, "commit", "-q", "-m", name)
+        return git(self.repo, "rev-parse", "HEAD")
+
+    def merge_events(self) -> list[tuple]:
+        return [(e["reason"], e.get("detail"), e["head"]) for e in self.events() if e["event"] == "merge_checked"]
+
+
+class MergeGateCheckTest(MergeGateCheckCase):
     def test_ゲートの後に_1_コミットを足した_PR_のマージを止める(self) -> None:
-        self.views({"7": pr_view(NEXT, commits=[self.head, NEXT])})
+        after = self.commit_after_gate()
+        self.views({"7": pr_view(after, commits=[self.head, after])})
         decision, reason = self.merge("gh pr merge 7 --merge --delete-branch")
         self.assertEqual(decision, "deny")
         self.assertEqual(
             reason,
-            f"ゲートの判定({self.head[:7]})の後に head が {NEXT[:7]} へ進んだ。{self.head[:7]}..{NEXT[:7]} のコミットと"
+            f"ゲートの判定({self.head[:7]})の後に head が {after[:7]} へ進んだ。{self.head[:7]}..{after[:7]} のコミットと"
             " PR 本文の差分を gate-reviewer に渡して判定を取り直してから、実行し直す(develop 8.)。",
         )
-        self.assertEqual(self.checked(), [("warn", "commits_after_gate", PR_URL, NEXT)])
+        self.assertEqual(self.checked(), [("warn", "commits_after_gate", PR_URL, after)])
+        self.assertEqual([e.get("detail") for e in self.events()], ["not_merge"], "マージでないコミットで止めた")
 
     def test_ゲートの後に_PR_本文を追記した_PR_のマージを止める(self) -> None:
         self.views({"7": pr_view(self.head, body=BODY + "ゲートの後に足した行\n")})
@@ -569,6 +587,7 @@ class MergeGateCheckTest(MergeGateCase):
             ("view_malformed", {"stdout": json.dumps({**good, "commits": [{"oid": "abc"}]})}),
             ("view_malformed", {"stdout": json.dumps({**good, "commits": None})}),
             ("view_malformed", {"stdout": json.dumps({**good, "body": None})}),
+            ("view_malformed", {"stdout": json.dumps({**good, "baseRefName": None})}),
             ("view_malformed", {"stdout": json.dumps({**good, "url": "https://github.com/example/demo/issues/7"})}),
         ]
         for kind, view in cases:
@@ -852,7 +871,8 @@ class MergeGateCheckTest(MergeGateCase):
 
     def test_1_つのコマンドの_2_つのマージは強いほうの判定になる(self) -> None:
         url8 = "https://github.com/example/demo/pull/8"
-        self.views({"7": pr_view(self.head), "8": pr_view(NEXT, commits=[self.head, NEXT], url=url8)})
+        after = self.commit_after_gate()
+        self.views({"7": pr_view(self.head), "8": pr_view(after, commits=[self.head, after], url=url8)})
         for command in ("gh pr merge 7 && gh pr merge 8", "gh pr merge 8\ngh pr merge 7"):
             with self.subTest(command=command):
                 decision, reason = self.merge(command)
@@ -861,10 +881,10 @@ class MergeGateCheckTest(MergeGateCase):
                 self.assertEqual(sorted(c["argv"][-1] for c in self.calls()), ["7", "8"])
         self.assertEqual(
             sorted(self.checked()),
-            sorted([("info", "pass", PR_URL, self.head), ("warn", "commits_after_gate", url8, NEXT)] * 2),
+            sorted([("info", "pass", PR_URL, self.head), ("warn", "commits_after_gate", url8, after)] * 2),
         )
         url9 = "https://github.com/example/demo/pull/9"
-        self.views({"8": pr_view(NEXT, commits=[self.head, NEXT], url=url8), "9": pr_view(NEXT, url=url9)})
+        self.views({"8": pr_view(after, commits=[self.head, after], url=url8), "9": pr_view(NEXT, url=url9)})
         for command in ("gh pr merge 9; gh pr merge 8", "gh pr merge 8; gh pr merge 9"):
             with self.subTest(command=command):
                 self.assertEqual(self.merge(command)[0], "deny", "止めるは確認より強い")
@@ -955,3 +975,219 @@ class MergeGateCheckTest(MergeGateCase):
         self.views({"7": pr_view(self.head, body=BODY + SECRET)})
         self.assertEqual(self.merge("gh pr merge 7")[0], "deny")
         self.assertNotIn(SECRET, json.dumps(self.events(), ensure_ascii=False))
+
+
+class MergeGateMainMergeTest(MergeGateCheckCase):
+    """ゲートの後に origin の main を取り込んだだけのマージコミットの照合。"""
+
+    def setUp(self) -> None:
+        super().setUp()
+        origin = self.tmp / "origin.git"
+        git(self.tmp, "init", "-q", "--bare", str(origin))
+        git(self.repo, "push", "-q", str(origin), "HEAD:refs/heads/main")
+        self.root = self.head
+        self.upstream = self.tmp / "upstream"
+        git(self.tmp, "clone", "-q", "-b", "main", str(origin), str(self.upstream))
+        git(self.repo, "switch", "-q", "-c", "feat")
+        (self.repo / "README.md").write_text("demo\nfeat\n", encoding="utf-8")
+        git(self.repo, "commit", "-q", "-am", "feat")
+        self.gated = git(self.repo, "rev-parse", "HEAD")
+        self.record(handback(self.approve(head=self.gated)))
+        self.assertTrue(self.record_path(self.gated).exists(), "ステップ 1 の形でコミット A にマージ可を記録した")
+        (self.store / "events.jsonl").unlink()
+        git(self.repo, "remote", "set-url", "origin", str(origin))
+
+    def push_upstream(self, name: str, text: str, branch: str = "main") -> None:
+        """origin の branch にファイル name を text にするコミットを積む。"""
+        git(self.upstream, "switch", "-q", "-C", branch, "origin/main")
+        (self.upstream / name).write_text(text, encoding="utf-8")
+        git(self.upstream, "add", name)
+        git(self.upstream, "commit", "-q", "-m", name)
+        git(self.upstream, "push", "-q", "origin", f"HEAD:refs/heads/{branch}")
+
+    def merge_origin(self, branch: str = "main") -> str:
+        git(self.repo, "fetch", "-q", "origin")
+        git(self.repo, "merge", "-q", "--no-edit", f"origin/{branch}")
+        return git(self.repo, "rev-parse", "HEAD")
+
+    def merge_origin_with(self, name: str) -> str:
+        """origin の main を取り込むマージに、ゲートを通していないファイル name を足してコミットし、その SHA を返す。"""
+        git(self.repo, "fetch", "-q", "origin")
+        git(self.repo, "merge", "-q", "--no-commit", "--no-ff", "origin/main")
+        (self.repo / name).write_text("ゲートを通していない変更\n", encoding="utf-8")
+        git(self.repo, "add", name)
+        git(self.repo, "commit", "-q", "--no-edit")
+        return git(self.repo, "rev-parse", "HEAD")
+
+    def assertDenied(self, head: str, commits: list[str], kind: str, detail: str, **kwargs: object) -> str:
+        """照合が kind で止め、events.jsonl の merge_checked が kind と detail を載せることを確かめ、理由を返す。"""
+        self.views({"7": pr_view(head, commits=commits)})
+        decision, reason = self.merge("gh pr merge 7 --merge", **kwargs)
+        self.assertEqual(decision, "deny")
+        self.assertEqual(self.merge_events(), [(kind, detail, head)])
+        return reason
+
+    def test_main_を競合なしで取り込んだだけの_PR_は通る(self) -> None:
+        self.push_upstream("main.txt", "main\n")
+        merged = self.merge_origin()
+        self.views({"7": pr_view(merged, commits=[self.gated, merged])})
+        self.assertIsNone(self.merge("gh pr merge 7 --merge"))
+        self.assertEqual(self.merge_events(), [("pass", "main_merge_only", merged)])
+        (self.store / "events.jsonl").unlink()
+        self.push_upstream("main2.txt", "main2\n")
+        again = self.merge_origin()
+        self.views({"7": pr_view(again, commits=[self.gated, merged, again])})
+        self.assertIsNone(self.merge("gh pr merge 7 --merge"), "2 回の取り込みも通る")
+        self.assertEqual(self.merge_events(), [("pass", "main_merge_only", again)])
+
+    def test_main_を取り込んだ後に本文を追記した_PR_は止める(self) -> None:
+        self.push_upstream("main.txt", "main\n")
+        merged = self.merge_origin()
+        self.views({"7": pr_view(merged, body=BODY + "ゲートの後に足した行\n", commits=[self.gated, merged])})
+        decision, reason = self.merge("gh pr merge 7 --merge")
+        self.assertEqual(decision, "deny")
+        self.assertIn("ゲートの判定の後に PR 本文が変わった。", reason)
+        self.assertEqual(self.merge_events(), [("body_changed", "main_merge_only", merged)])
+
+    def test_競合を手で解いたマージは止める(self) -> None:
+        self.push_upstream("README.md", "demo\nmain\n")
+        git(self.repo, "fetch", "-q", "origin")
+        conflicted = subprocess.run(
+            ["git", "-C", str(self.repo), "merge", "-q", "--no-edit", "origin/main"],
+            capture_output=True,
+            env={**os.environ, **GIT_ENV},
+        )
+        self.assertNotEqual(conflicted.returncode, 0, "README.md が競合する")
+        (self.repo / "README.md").write_text("demo\nfeat\nmain\n", encoding="utf-8")
+        git(self.repo, "commit", "-q", "-am", "resolve")
+        resolved = git(self.repo, "rev-parse", "HEAD")
+        self.assertDenied(resolved, [self.gated, resolved], "commits_after_gate", "conflict")
+
+    def test_取り込みに別の変更を足したマージは止める(self) -> None:
+        self.push_upstream("main.txt", "main\n")
+        evil = self.merge_origin_with("extra.txt")
+        self.assertDenied(evil, [self.gated, evil], "commits_after_gate", "tree_mismatch")
+
+    def test_古い取り込みに別の変更を足し新しい取り込みが正しいマージは止める(self) -> None:
+        self.push_upstream("main.txt", "main\n")
+        evil = self.merge_origin_with("extra.txt")
+        self.push_upstream("main2.txt", "main2\n")
+        merged = self.merge_origin()
+        self.assertDenied(merged, [self.gated, evil, merged], "commits_after_gate", "tree_mismatch")
+
+    def test_古い取り込みが正しく新しい取り込みに別の変更を足したマージは止める(self) -> None:
+        self.push_upstream("main.txt", "main\n")
+        merged = self.merge_origin()
+        self.push_upstream("main2.txt", "main2\n")
+        evil = self.merge_origin_with("extra.txt")
+        self.assertDenied(evil, [self.gated, merged, evil], "commits_after_gate", "tree_mismatch")
+
+    def test_main_でない枝の取り込みは止める(self) -> None:
+        self.push_upstream("other.txt", "other\n", branch="other")
+        merged = self.merge_origin("other")
+        self.assertDenied(merged, [self.gated, merged], "commits_after_gate", "not_base")
+
+    def test_取り込みの後の通常のコミットは止める(self) -> None:
+        self.push_upstream("main.txt", "main\n")
+        merged = self.merge_origin()
+        after = self.commit_after_gate()
+        reason = self.assertDenied(after, [self.gated, merged, after], "commits_after_gate", "not_merge")
+        self.assertNotIn("main の取り込みだけと確かめられなかった。", reason)
+
+    def test_通常のコミットの後の取り込みは止める(self) -> None:
+        self.push_upstream("main.txt", "main\n")
+        after = self.commit_after_gate()
+        merged = self.merge_origin()
+        self.assertDenied(merged, [self.gated, after, merged], "commits_after_gate", "not_merge")
+
+    def test_git_replace_で取り込みに見せた通常のコミットは止める(self) -> None:
+        self.push_upstream("main.txt", "main\n")
+        after = self.commit_after_gate("evil.txt")
+        git(self.repo, "switch", "-q", "--detach", self.gated)
+        disguise = self.merge_origin()
+        git(self.repo, "replace", after, disguise)
+        git(self.repo, "switch", "-q", "feat")
+        self.assertEqual(len(git(self.repo, "rev-list", "--parents", "-1", after).split()), 3, "置き換えで親が 2 つに見える")
+        self.assertDenied(after, [self.gated, after], "commits_after_gate", "not_merge")
+
+    def test_main_と別の枝を一度に取り込んだマージは止める(self) -> None:
+        self.push_upstream("other.txt", "other\n", branch="other")
+        self.push_upstream("main.txt", "main\n")
+        git(self.repo, "fetch", "-q", "origin")
+        git(self.repo, "merge", "-q", "--no-edit", "origin/main", "origin/other")
+        octopus = git(self.repo, "rev-parse", "HEAD")
+        self.assertEqual(len(git(self.repo, "rev-list", "--parents", "-1", octopus).split()), 4, "親が 3 つのマージ")
+        self.assertDenied(octopus, [self.gated, octopus], "commits_after_gate", "not_merge")
+
+    def test_ゲートのコミットを含まない枝のマージは止める(self) -> None:
+        self.push_upstream("main.txt", "main\n")
+        git(self.repo, "switch", "-q", "-c", "side", self.root)
+        git(self.repo, "fetch", "-q", "origin")
+        git(self.repo, "merge", "-q", "--no-edit", "--no-ff", "origin/main")
+        merged = git(self.repo, "rev-parse", "HEAD")
+        self.assertDenied(merged, [self.gated, merged], "commits_after_gate", "not_ancestor")
+
+    def test_取り込みは_20_回まで通し_21_回目で止める(self) -> None:
+        commits = [self.gated]
+        for i in range(21):
+            self.push_upstream(f"main{i}.txt", f"{i}\n")
+            commits.append(self.merge_origin())
+        twenty = commits[20]
+        self.views({"7": pr_view(twenty, commits=commits[:21])})
+        self.assertIsNone(self.merge("gh pr merge 7 --merge"), "20 回の取り込みは通る")
+        (self.store / "events.jsonl").unlink()
+        self.assertDenied(commits[21], commits, "commits_after_gate", "too_many_merges")
+
+    def test_確かめられない取り込みは理由を足して止める(self) -> None:
+        self.push_upstream("main.txt", "main\n")
+        merged = self.merge_origin()
+        real_git = shutil.which("git")
+        old_git = self.tmp / "old-git"
+        old_git.mkdir()
+        fake = old_git / "git"
+        fake.write_text(
+            f'#!/bin/sh\nfor a; do [ "$a" = merge-tree ] && exit 129; done\nexec {real_git} "$@"\n', encoding="ascii"
+        )
+        fake.chmod(0o755)
+        slow_git = self.tmp / "slow-git"
+        slow_git.mkdir()
+        (slow_git / "git").write_text("#!/bin/sh\nexec sleep 30\n", encoding="ascii")
+        (slow_git / "git").chmod(0o755)
+        gh_path = f"{self.bin}{os.pathsep}{os.environ['PATH']}"
+        cases = [
+            ("missing_commit", None, NEXT, {}),
+            ("git_failed", 129, merged, {"path": f"{old_git}{os.pathsep}{gh_path}"}),
+            ("git_failed", None, merged, {"path": str(self.bin)}),
+            ("timeout", None, merged, {"path": f"{slow_git}{os.pathsep}{gh_path}", "launcher": ("-c", SHORT_TIMEOUT)}),
+        ]
+        for detail, exit_code, head, kwargs in cases:
+            with self.subTest(detail=detail, exit_code=exit_code):
+                started = time.monotonic()
+                reason = self.assertDenied(head, [self.gated, head], "merge_unverified", detail, **kwargs)
+                self.assertLess(time.monotonic() - started, 10, "git の上限で打ち切る")
+                self.assertEqual(
+                    [e.get("exit_code") for e in self.events()], [exit_code], "git の非 0 の終了だけ終了コードを載せる"
+                )
+                (self.store / "events.jsonl").unlink()
+                self.assertEqual(
+                    reason,
+                    f"ゲートの判定({self.gated[:7]})の後に head が {head[:7]} へ進んだ。main の取り込みだけと確かめられなかった。"
+                    f"{self.gated[:7]}..{head[:7]} のコミットと PR 本文の差分を gate-reviewer に渡して判定を取り直してから、"
+                    "実行し直す(develop 8.)。",
+                )
+        for base in ("../main", "-main", "ma in"):
+            with self.subTest(base=base):
+                self.views({"7": pr_view(merged, commits=[self.gated, merged], base=base)})
+                self.assertEqual(self.merge("gh pr merge 7 --merge")[0], "deny")
+                self.assertEqual(self.merge_events(), [("merge_unverified", "base_shape", merged)])
+                (self.store / "events.jsonl").unlink()
+        shutil.rmtree(self.repo)
+        self.assertDenied(merged, [self.gated, merged], "merge_unverified", "missing_repo", cwd=self.tmp)
+
+    def test_hook_の環境の_GIT_DIR_に依らず記録の作業ツリーで確かめる(self) -> None:
+        self.push_upstream("main.txt", "main\n")
+        merged = self.merge_origin()
+        self.views({"7": pr_view(merged, commits=[self.gated, merged])})
+        elsewhere = {"GIT_DIR": str(self.upstream / ".git"), "GIT_WORK_TREE": str(self.upstream)}
+        self.assertIsNone(self.merge("gh pr merge 7 --merge", extra_env=elsewhere))
+        self.assertEqual(self.merge_events(), [("pass", "main_merge_only", merged)])
