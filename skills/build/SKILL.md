@@ -181,6 +181,7 @@ python3 <プラグインのパス>/skills/build/scripts/loop.py backlog/build/<s
 - `--` より後ろの引数は claude に渡す。
 - 終了コードは、0 が全 Done、1 がそれ以外の停止、2 が進捗ファイルの不備(読めない・形式が不正)または引数の誤りである。
 - 起動するコマンドは環境変数 `BUILD_AGENT_CMD` で差し替えられる(既定は `claude -p`)。
+- 起動するコマンドの環境には `DEV_SKILLS_BUILD_ITERATION=1` を渡す。`hooks/guard_reader_context.py` はこの値を見て反復の応答を検査しない。
 - 反復のプロンプトは loop.py の `PROMPT` にある「dev-skills の build スキルの「反復する」工程を 1 回行う。進捗ファイル: <絶対パス>」である。
 - `claude -p` は、バックグラウンドのサブエージェントの完了を待ってから終了する(Claude Code 2.1.290 で確認した)。
 

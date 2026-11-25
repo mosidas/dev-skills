@@ -44,7 +44,7 @@ def _row(task: str, result: str) -> str:
 
 
 STUB = r'''
-import json, sys
+import json, os, sys
 from pathlib import Path
 
 here = Path(__file__).resolve().parent
@@ -53,6 +53,8 @@ count = int(count_file.read_text()) if count_file.exists() else 0
 count_file.write_text(str(count + 1))
 with (here / "args.jsonl").open("a", encoding="utf-8") as f:
     f.write(json.dumps(sys.argv[1:], ensure_ascii=False) + "\n")
+with (here / "env.jsonl").open("a", encoding="utf-8") as f:
+    f.write(json.dumps(os.environ.get("DEV_SKILLS_BUILD_ITERATION")) + "\n")
 
 steps = json.loads((here / "steps.json").read_text(encoding="utf-8"))
 step = steps[count]
@@ -118,7 +120,8 @@ class LoopRunTest(helpers.TempDirTestCase):
         self.progress = self.write("progress.md", progress_text)
         self.write("steps.json", json.dumps(steps, ensure_ascii=False))
         stub = self.write("stub.py", STUB)
-        env = dict(os.environ, BUILD_AGENT_CMD=shlex.join([sys.executable, str(stub)]))
+        env = {k: v for k, v in os.environ.items() if k != "DEV_SKILLS_BUILD_ITERATION"}
+        env["BUILD_AGENT_CMD"] = shlex.join([sys.executable, str(stub)])
         return subprocess.run(
             [sys.executable, str(SCRIPT), str(self.progress), *args],
             capture_output=True,
@@ -204,6 +207,13 @@ class LoopRunTest(helpers.TempDirTestCase):
         args = json.loads((self.tmp / "args.jsonl").read_text(encoding="utf-8").splitlines()[0])
         prompt = loop.PROMPT.format(path=self.progress.resolve())
         self.assertEqual(args, [prompt, "--model", "opus", "--verbose"])
+
+    def test_反復の子プロセスにbuildの反復の印を渡す(self) -> None:
+        steps = [{"op": "append", "line": _row("TASK-1", "完了")}, {"op": "stop", "value": "全 Done"}]
+        proc = self.run_loop(_progress(), steps)
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        values = [json.loads(l) for l in (self.tmp / "env.jsonl").read_text(encoding="utf-8").splitlines()]
+        self.assertEqual(values, ["1", "1"], "反復のたびに DEV_SKILLS_BUILD_ITERATION=1 が子に入る")
 
     def test_停止の行が無い進捗ファイルでは2で終わる(self) -> None:
         proc = self.run_loop(_progress().replace("- 停止: なし\n", ""), [])
