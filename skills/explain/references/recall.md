@@ -26,9 +26,9 @@
 
 | 入力 | 取り方 |
 | :-- | :-- |
-| backlog | `backlog search "<話題>" --type task --plain` で探す。`backlog task list --status "In Progress" --plain` で進行中を拾う。`backlog task <id> --plain` で状態と Implementation Notes を読む |
-| gh | `gh pr list --state all --author "@me" --search "<話題>" --json number,title,state,headRefName,mergedAt,url` |
-| git | `git log --since="<期間>" --oneline --all`・`git branch --list`・`git status`・`git stash list` |
+| backlog | `backlog task list --status "In Progress" --plain` で進行中を拾う。`backlog search "<話題>" --type task --plain` で探す。`backlog task <id> --plain` で状態と Implementation Notes を読む。閉じたタスクの経過は backlog でなく gh と git の行で読む。タスクを閉じるときに本文を削除するリポジトリがある |
+| gh | `gh pr list --state all --author "@me" --search "<話題>" --json number,title,state,headRefName,mergedAt,url`。PR の本文は `gh pr view <番号> --json body` で読む |
+| git | `git log --since="<期間>" --oneline --all`・`git branch --list`・`git status`・`git stash list`。コミットメッセージの本文は `git log -1 --format=%B <コミット>` で読む |
 | 会話の記録 | `~/.claude/projects/<slug>/*.jsonl` |
 
 - 会話の記録の `<slug>` は retro 3.(集める)の memory の段落と同じ規則で求める。
